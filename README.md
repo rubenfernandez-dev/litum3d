@@ -90,12 +90,13 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## GitHub
+# GitHub
 ```bash
 git init
 git add .
 git commit -m "Init LITUM3D"
-# Crear repo en GitHub y enlazar
-# git remote add origin https://github.com/TU_USUARIO/litum3d.git
-# git push -u origin main
+# Crear repo en GitHub (https://github.com/new) y enlazar
+git remote add origin https://github.com/rubenfernandez-dev/litum3d.git
+git branch -M main
+git push -u origin main
 ```
