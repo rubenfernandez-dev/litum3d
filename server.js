@@ -2,6 +2,7 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
+const session = require('express-session');
 
 const { pool } = require('./config/db');
 const baseRoutes = require('./routes/index');
@@ -11,6 +12,7 @@ const productosRoutes = require('./routes/productos');
 const pedidosRoutes = require('./routes/pedidos');
 const estadosRoutes = require('./routes/estados');
 const paymentsRoutes = require('./routes/payments');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +21,19 @@ const PORT = process.env.PORT || 3000;
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'litum3d-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { 
+    secure: false, // Set to true if using HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Healthcheck
@@ -39,6 +54,7 @@ app.use(productosRoutes);
 app.use(pedidosRoutes);
 app.use(estadosRoutes);
 app.use('/api', paymentsRoutes);
+app.use('/admin', adminRoutes);
 
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
