@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedido Confirmado - LITUM3D</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .success-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 120px);
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .success-icon {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 30px;
+      animation: scaleIn 0.6s ease-out;
+    }
+
+    .success-icon svg {
+      width: 100%;
+      height: 100%;
+      fill: #4ade80;
+      filter: drop-shadow(0 0 20px rgba(74, 222, 128, 0.5));
+    }
+
+    .success-content h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      color: var(--primary);
+    }
+
+    .success-content p {
+      font-size: 1.1em;
+      color: #aaa;
+      margin-bottom: 20px;
+    }
+
+    .order-details {
+      background: rgba(30, 30, 46, 0.6);
+      border: 1px solid var(--gold);
+      border-radius: 15px;
+      padding: 30px;
+      margin: 30px 0;
+      max-width: 500px;
+      backdrop-filter: blur(10px);
+    }
+
+    .order-details-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(224, 173, 97, 0.2);
+      color: #bbb;
+    }
+
+    .order-details-item:last-child {
+      border-bottom: none;
+      font-size: 1.3em;
+      font-weight: 600;
+      color: var(--gold);
+      padding-top: 20px;
+    }
+
+    .order-number {
+      font-size: 2em;
+      color: var(--gold);
+      font-weight: 700;
+      margin: 20px 0;
+    }
+
+    .next-steps {
+      background: rgba(74, 222, 128, 0.05);
+      border-left: 4px solid #4ade80;
+      padding: 20px;
+      margin: 30px 0;
+      max-width: 500px;
+      border-radius: 8px;
+      text-align: left;
+    }
+
+    .next-steps h3 {
+      color: #4ade80;
+      margin-bottom: 15px;
+    }
+
+    .next-steps ol {
+      margin: 0;
+      padding-left: 20px;
+      color: #bbb;
+    }
+
+    .next-steps li {
+      margin: 8px 0;
+      line-height: 1.6;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 40px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary, .btn-secondary {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold), #f0c77a);
+      color: #1a1a2e;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(224, 173, 97, 0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 2px solid var(--gold);
+      color: var(--gold);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(224, 173, 97, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .email-notification {
+      color: #aaa;
+      font-size: 0.95em;
+      margin-top: 30px;
+      max-width: 500px;
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .success-content h1 {
+        font-size: 2em;
+      }
+
+      .order-details {
+        margin: 20px auto;
+        max-width: 100%;
+      }
+
+      .next-steps {
+        max-width: 100%;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .btn-primary, .btn-secondary {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="logo">LITUM3D</a>
+      <ul class="nav-links">
+        <li><a href="/">Inicio</a></li>
+        <li><a href="/gallery">Galería</a></li>
+        <li><a href="/about">Nosotros</a></li>
+        <li><a href="/contact">Contacto</a></li>
+      </ul>
+      <div class="cart-icon-wrapper">
+        <a href="/cart" class="cart-icon">
+          🛒
+          <span class="cart-badge" id="cart-badge">0</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="success-container">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+      </div>
+
+      <div class="success-content">
+        <h1>¡Pedido Confirmado!</h1>
+        <p>Tu pago ha sido procesado exitosamente</p>
+
+        <div class="order-number" id="order-number">Cargando...</div>
+
+        <div class="order-details">
+          <div class="order-details-item">
+            <span>Estado:</span>
+            <span style="color: #4ade80;">Pendiente de Envío</span>
+          </div>
+          <div class="order-details-item">
+            <span>Total Pagado:</span>
+            <span id="total-paid">€0.00</span>
+          </div>
+          <div class="order-details-item">
+            <span>Fecha:</span>
+            <span id="order-date">Hoy</span>
+          </div>
+        </div>
+
+        <div class="next-steps">
+          <h3>Próximos Pasos</h3>
+          <ol>
+            <li>Recibirás un email de confirmación con los detalles completos</li>
+            <li>Nuestro equipo preparará tu pedido para envío</li>
+            <li>Te notificaremos cuando tu paquete esté en tránsito</li>
+            <li>Recibirás un número de seguimiento para monitorear tu entrega</li>
+          </ol>
+        </div>
+
+        <div class="action-buttons">
+          <a href="/" class="btn-primary">Volver al Inicio</a>
+          <a href="/gallery" class="btn-secondary">Continuar Comprando</a>
+        </div>
+
+        <div class="email-notification">
+          <p>✉️ Se han enviado confirmaciones a tu dirección de email. Por favor, revisa tu bandeja de entrada y spam.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-section">
+        <h3>LITUM3D</h3>
+        <p>Premium 3D Litofanías</p>
+      </div>
+      <div class="footer-section">
+        <h3>Enlaces</h3>
+        <ul>
+          <li><a href="/">Inicio</a></li>
+          <li><a href="/gallery">Galería</a></li>
+          <li><a href="/about">Nosotros</a></li>
+          <li><a href="/contact">Contacto</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h3>Soporte</h3>
+        <ul>
+          <li><a href="mailto:contact@litum3d.com">contact@litum3d.com</a></li>
+          <li><a href="tel:+34600000000">+34 600 000 000</a></li>
+          <li><a href="#">Política de Privacidad</a></li>
+          <li><a href="#">Términos de Servicio</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h3>Síguenos</h3>
+        <div class="social-links">
+          <a href="#">Facebook</a>
+          <a href="#">Instagram</a>
+          <a href="#">Twitter</a>
+          <a href="#">LinkedIn</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 LITUM3D. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="/js/cart.js"></script>
+  <script>
+    // Update cart badge on page load
+    document.getElementById('cart-badge').textContent = getCartCount();
+
+    // Get order ID from URL
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('orderId') || '---';
+
+    document.getElementById('order-number').textContent = `Pedido #${orderId}`;
+    document.getElementById('total-paid').textContent = `€${(parseFloat(localStorage.getItem('cart-total') || 0) * 1.21).toFixed(2)}`;
+
+    // Format date
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('order-date').textContent = dateStr;
+  </script>
+</body>
+</html>

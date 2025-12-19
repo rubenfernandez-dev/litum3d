@@ -1,6 +1,6 @@
-// Fetch and display featured products
-async function loadFeaturedProducts() {
-  const container = document.getElementById('featured-products');
+// Load all products for gallery
+async function loadGallery() {
+  const container = document.getElementById('gallery-products');
   try {
     const res = await fetch('/api/productos');
     if (!res.ok) throw new Error('Error al obtener productos');
@@ -11,12 +11,9 @@ async function loadFeaturedProducts() {
       container.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No hay productos disponibles.</p>';
       return;
     }
-
-    // Show only first 3
-    products = products.slice(0, 3);
     
-    container.innerHTML = products.map(p => `
-      <div class="product-card">
+    container.innerHTML = products.map((p, idx) => `
+      <div class="product-card" style="animation-delay: ${idx * 0.1}s;">
         <div class="product-image">
           ${getEmojiForProduct(p.nombre)}
         </div>
@@ -28,18 +25,17 @@ async function loadFeaturedProducts() {
             <span class="product-stock">${p.stock > 0 ? '✓ Stock' : 'Agotado'}</span>
           </div>
           <button class="product-buy-btn" onclick="addToCart(${p.id}, '${escapeHtml(p.nombre)}', ${p.precio})" ${p.stock > 0 ? '' : 'disabled'}>
-            ${p.stock > 0 ? '🛒 Añadir al Carrito' : 'Agotado'}
+            ${p.stock > 0 ? '🛒 Comprar Ahora' : 'Agotado'}
           </button>
         </div>
       </div>
     `).join('');
   } catch (err) {
     console.error(err);
-    container.innerHTML = '<p style="grid-column: 1/-1; color: #ff6b6b; text-align: center;">Error al cargar productos.</p>';
+    container.innerHTML = '<p style="grid-column: 1/-1; color: #ff6b6b; text-align: center;">Error al cargar galería.</p>';
   }
 }
 
-// Helper: escape HTML
 function escapeHtml(text) {
   const map = {
     '&': '&amp;',
@@ -51,7 +47,6 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-// Helper: emoji por tipo de producto
 function getEmojiForProduct(name) {
   if (name.toLowerCase().includes('dragon')) return '🐉';
   if (name.toLowerCase().includes('busto')) return '🗿';
@@ -60,9 +55,4 @@ function getEmojiForProduct(name) {
   return '✨';
 }
 
-// Load on page ready
-document.addEventListener('DOMContentLoaded', loadFeaturedProducts);
-
-
-
-
+document.addEventListener('DOMContentLoaded', loadGallery);

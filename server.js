@@ -10,6 +10,7 @@ const usuariosRoutes = require('./routes/usuarios');
 const productosRoutes = require('./routes/productos');
 const pedidosRoutes = require('./routes/pedidos');
 const estadosRoutes = require('./routes/estados');
+const paymentsRoutes = require('./routes/payments');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +38,7 @@ app.use(usuariosRoutes);
 app.use(productosRoutes);
 app.use(pedidosRoutes);
 app.use(estadosRoutes);
+app.use('/api', paymentsRoutes);
 
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));

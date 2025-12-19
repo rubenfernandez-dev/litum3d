@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Contacto - LITUM3D</title>
+  <title>Carrito - LITUM3D</title>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
@@ -15,48 +15,36 @@
         <a href="/gallery">Galería</a>
         <a href="/about">Sobre</a>
         <a href="/contact">Contacto</a>
+        <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
+          🛒
+          <span class="cart-badge" id="cart-badge">0</span>
+        </a>
       </div>
     </nav>
   </header>
 
   <main>
-    <h2>Ponte en Contacto</h2>
+    <h2>Tu Carrito</h2>
 
-    <div style="max-width: 700px; margin: 0 auto;">
-      <section style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(224, 173, 97, 0.2); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
-        <h3 style="color: var(--gold); margin-top: 0;">Enviarnos tu Mensaje</h3>
-        <form id="contact-form">
-          <label>
-            Nombre *
-            <input type="text" name="name" required />
-          </label>
-          <label>
-            Email *
-            <input type="email" name="email" required />
-          </label>
-          <label>
-            Asunto
-            <input type="text" name="asunto" placeholder="Ej: Consulta sobre litofanía personalizada" />
-          </label>
-          <label>
-            Mensaje *
-            <textarea name="message" required placeholder="Cuéntanos en qué podemos ayudarte..."></textarea>
-          </label>
-          <button type="submit">Enviar Mensaje</button>
-          <div id="status"></div>
-        </form>
-      </section>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+      <div>
+        <div id="cart-items-container">
+          <p style="text-align: center; color: rgba(245, 245, 247, 0.7);">Carrito vacío</p>
+        </div>
+      </div>
 
-      <section style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(224, 173, 97, 0.2); padding: 2rem; border-radius: 12px;">
-        <h3 style="color: var(--gold); margin-top: 0;">Información de Contacto</h3>
-        <ul style="list-style: none; padding: 0; line-height: 2.2;">
-          <li>📧 <strong>Email:</strong> contact@litum3d.com</li>
-          <li>📞 <strong>Teléfono:</strong> +34 123 456 789</li>
-          <li>📍 <strong>Ubicación:</strong> Barcelona, España</li>
-          <li>⏰ <strong>Horario:</strong> Lunes-Viernes 9:00-18:00</li>
-          <li>🚀 <strong>Respuesta:</strong> 24-48 horas</li>
-        </ul>
-      </section>
+      <div>
+        <div class="cart-summary" id="cart-summary" style="display: none;">
+          <h3 style="margin-top: 0; color: var(--gold);">Resumen del Pedido</h3>
+          <div id="summary-content"></div>
+          <button onclick="goToCheckout()" style="width: 100%; margin-top: 1.5rem;">
+            Proceder al Pago
+          </button>
+          <button onclick="continueShopping()" style="width: 100%; margin-top: 0.5rem; background: rgba(224, 173, 97, 0.2); color: var(--gold);">
+            Continuar Comprando
+          </button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -104,8 +92,11 @@
     </div>
   </footer>
 
-  <script src="/js/contact.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/cart-page.js"></script>
+  <script>
+    // Update cart badge on page load
+    document.getElementById('cart-badge').textContent = getCartCount();
+  </script>
 </body>
 </html>
-
-
