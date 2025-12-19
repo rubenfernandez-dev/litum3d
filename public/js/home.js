@@ -18,7 +18,10 @@ async function loadFeaturedProducts() {
     container.innerHTML = products.map(p => `
       <div class="product-card">
         <div class="product-image">
-          ${getEmojiForProduct(p.nombre)}
+          ${p.imagen 
+            ? `<img src="/img/productos/${p.imagen}" alt="${escapeHtml(p.nombre)}" onerror="this.onerror=null; this.parentElement.innerHTML='${getEmojiForProduct(p.nombre)}';">` 
+            : getEmojiForProduct(p.nombre)
+          }
         </div>
         <div class="product-content">
           <h3 class="product-name">${escapeHtml(p.nombre)}</h3>

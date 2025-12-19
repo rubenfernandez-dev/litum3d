@@ -74,8 +74,6 @@ function updateQty(productId, newQty) {
   renderCartItems();
   updateCartBadge();
 }
-  renderCartItems();
-}
 
 function continueShopping() {
   window.location.href = '/gallery';

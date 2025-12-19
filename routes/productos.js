@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { pool } = require('../config/db');
 
 const router = express.Router();
@@ -75,6 +77,28 @@ router.delete('/api/productos/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al desactivar producto' });
+  }
+});
+
+// GET imágenes estáticas de la carpeta public/img/productos
+router.get('/api/galeria-estatica', async (req, res) => {
+  try {
+    const dir = path.join(__dirname, '..', 'public', 'img', 'productos');
+    const files = await fs.promises.readdir(dir);
+    const items = files
+      .filter(f => /\.(png|jpg|jpeg|webp|gif)$/i.test(f))
+      .map((filename, idx) => ({
+        id: `static-${idx}`,
+        nombre: path.parse(filename).name.replace(/[-_]/g, ' '),
+        descripcion: 'Imagen de galería',
+        precio: 0,
+        stock: 0,
+        imagen: filename
+      }));
+    res.json(items);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al leer imágenes' });
   }
 });
 

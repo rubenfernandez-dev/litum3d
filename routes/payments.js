@@ -4,7 +4,7 @@ const nodemailer = require('nodemailer');
 const { pool } = require('../config/db');
 
 const router = express.Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51QsLCsJqC7yL3rEX92K4z1L6R7Z9qW8vE5tY2uO3pA4bB6cC7dD8eE9fF0gG1hH2');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
@@ -36,6 +36,10 @@ router.post('/pay', async (req, res) => {
       currency: 'eur',
       payment_method: paymentMethodId,
       confirm: true,
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: 'never'
+      },
       description: `Pedido LITUM3D - ${customerData.name}`,
       receipt_email: customerData.email,
       metadata: {
@@ -56,7 +60,7 @@ router.post('/pay', async (req, res) => {
 
       // Insert into pedidos
       const [orderResult] = await conn.query(
-        'INSERT INTO pedidos (usuario_id, estado_id, total_pedido, fecha_pedido) VALUES (?, ?, ?, NOW())',
+        'INSERT INTO pedidos (usuario_id, estado_id, total) VALUES (?, ?, ?)',
         [null, 1, total] // null usuario_id = guest, 1 = estado_pedido "Pendiente"
       );
 
@@ -72,15 +76,19 @@ router.post('/pay', async (req, res) => {
 
       // Store payment intent ID for reference
       await conn.query(
-        'UPDATE pedidos SET nota_pedido = ? WHERE id = ?',
+        'UPDATE pedidos SET notas = ? WHERE id = ?',
         [`Stripe ID: ${paymentIntent.id}`, orderId]
       );
 
       await conn.commit();
 
+      console.log(`📦 Pedido #${orderId} creado en BD`);
+      console.log(`📧 Intentando enviar emails...`);
+
       // Send confirmation emails
       await sendConfirmationEmails(orderId, customerData, cart, total);
 
+      console.log(`✓ Proceso completado para pedido #${orderId}`);
       res.json({ ok: true, orderId });
     } finally {
       conn.release();
@@ -211,8 +219,11 @@ async function sendConfirmationEmails(orderId, customerData, cart, total) {
     });
 
     console.log(`✓ Emails enviados para pedido #${orderId}`);
+    console.log(`  Cliente: ${customerData.email}`);
+    console.log(`  Admin: ${process.env.ADMIN_EMAIL}`);
   } catch (err) {
-    console.error('Email sending error:', err);
+    console.error('❌ Email sending error:', err.message);
+    console.error('Detalles:', err);
   }
 }
 

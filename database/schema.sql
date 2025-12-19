@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS productos (
 -- Tabla: pedidos
 CREATE TABLE IF NOT EXISTS pedidos (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  usuario_id INT NOT NULL,
+  usuario_id INT,
   estado_id INT NOT NULL DEFAULT 1,
   total DECIMAL(10, 2) NOT NULL,
   notas TEXT,

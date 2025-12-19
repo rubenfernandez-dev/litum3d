@@ -1,10 +1,12 @@
 // Stripe Checkout
-const stripe = Stripe('pk_test_51QsLCsJqC7yL3rEXLO5S9CqJIQaHwL4QNePdJLW5RrG7C9OqXB8jEPqLZxzqVQD2ItMJr3JQ5PqHdYlkPGQ200vd00R3bxXA3L');
+const stripe = Stripe('pk_test_51SJ8AN5cIO4mUIxs5UYdUSVOT1lN3CSu2YNDEtI1kayJH9tYyioND7nLcmZWxA1MpdZjuEebZM8PB3BgoDKeU3Sj00YdMnl7UN');
 let cardElement;
 
 function initializeCheckout() {
   const elements = stripe.elements();
-  cardElement = elements.create('card');
+  cardElement = elements.create('card', {
+    hidePostalCode: true
+  });
   cardElement.mount('#card-element');
 
   // Render order summary
@@ -96,7 +98,14 @@ async function handleCheckout(e) {
       card: cardElement,
       billing_details: {
         name: customerData.name,
-        email: customerData.email
+        email: customerData.email,
+        address: {
+          line1: customerData.address,
+          city: customerData.city,
+          postal_code: customerData.zip,
+          country: 'ES'
+        },
+        phone: customerData.phone
       }
     });
 
