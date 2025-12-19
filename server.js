@@ -6,6 +6,10 @@ const morgan = require('morgan');
 const { pool } = require('./config/db');
 const baseRoutes = require('./routes/index');
 const contactRoutes = require('./routes/contact');
+const usuariosRoutes = require('./routes/usuarios');
+const productosRoutes = require('./routes/productos');
+const pedidosRoutes = require('./routes/pedidos');
+const estadosRoutes = require('./routes/estados');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +33,10 @@ app.get('/health', async (req, res) => {
 // Routes
 app.use(baseRoutes);
 app.use(contactRoutes);
+app.use(usuariosRoutes);
+app.use(productosRoutes);
+app.use(pedidosRoutes);
+app.use(estadosRoutes);
 
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));

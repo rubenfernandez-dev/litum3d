@@ -13,6 +13,13 @@ cp .env.example .env
 # Edita .env con tus credenciales
 ```
 
+## BD - Crear estructura
+Ejecuta el script SQL en tu servidor MySQL (local o VPS):
+```bash
+mysql -h HOST -u USER -p DB_NAME < database/schema.sql
+```
+Esto crea todas las tablas y algunos datos de prueba.
+
 ## Scripts
 ```bash
 # Desarrollo con live reload
@@ -20,27 +27,76 @@ npm run dev
 
 # Producción local
 npm start
+
+# PM2 (VPS)
+npm run pm2
 ```
+
+## API Endpoints
+
+### Usuarios
+- `GET /api/usuarios` - Listar usuarios
+- `GET /api/usuarios/:id` - Obtener usuario
+- `POST /api/usuarios` - Crear usuario
+- `PUT /api/usuarios/:id` - Actualizar usuario
+- `DELETE /api/usuarios/:id` - Desactivar usuario
+
+### Productos
+- `GET /api/productos` - Listar productos
+- `GET /api/productos/:id` - Obtener producto
+- `POST /api/productos` - Crear producto
+- `PUT /api/productos/:id` - Actualizar producto
+- `DELETE /api/productos/:id` - Desactivar producto
+
+### Pedidos
+- `GET /api/pedidos` - Listar pedidos
+- `GET /api/pedidos/:id` - Obtener pedido con detalles
+- `POST /api/pedidos` - Crear pedido (con detalles)
+- `PUT /api/pedidos/:id/estado` - Cambiar estado del pedido
+
+### Contacto
+- `GET /api/contactos` - Listar contactos
+- `GET /api/contactos/:id` - Obtener contacto
+- `POST /api/contact` - Enviar contacto (desde formulario web)
+- `PUT /api/contactos/:id/respondido` - Marcar como respondido
+
+### Estados de Pedido
+- `GET /api/estados` - Listar estados disponibles
+- `POST /api/estados` - Crear nuevo estado
 
 ## Estructura
 - `server.js`: servidor Express
 - `config/db.js`: pool MySQL
-- `routes/`: rutas HTTP (`/`, `/about`, `/contact`, `/api/contact`)
-- `views/`: HTML sin motor de plantillas
-- `public/`: assets estáticos (`css`, `js`, `img`)
+- `database/schema.sql`: estructura BD (ejecutar en MySQL)
+- `routes/`: rutas HTTP CRUD
+- `views/`: HTML (sin motor de plantillas)
+- `public/`: assets (`css`, `js`, `img`)
 
-## MySQL
-Ejemplo de creación de base y usuario:
+## MySQL (local para test)
 ```sql
 CREATE DATABASE litum3d CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'litum'@'%' IDENTIFIED BY 'strong_password';
 GRANT ALL PRIVILEGES ON litum3d.* TO 'litum'@'%';
 FLUSH PRIVILEGES;
 ```
-Ajusta variables en `.env`.
+Luego ejecuta el script SQL.
 
-## Contacto (Nodemailer)
-Configura SMTP en `.env` (`SMTP_*`) y el destinatario `CONTACT_TO`.
+## .env (ejemplo)
+```
+PORT=3000
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=litum
+DB_PASSWORD=strong_password
+DB_NAME=litum3d
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=tu_email@gmail.com
+SMTP_PASS=tu_contraseña_app
+CONTACT_TO=contacto@tudominio.com
+```
 
 ## PM2 (VPS)
 En el servidor (Ubuntu):
@@ -51,11 +107,14 @@ sudo apt-get install -y nodejs
 sudo npm i -g pm2
 
 # Clonar repo y preparar
-git clone https://github.com/TU_USUARIO/litum3d.git
+git clone https://github.com/rubenfernandez-dev/litum3d.git
 cd litum3d
 npm ci
 cp .env.example .env
 nano .env # configura variables
+
+# Crear BD en tu VPS
+mysql -h DB_HOST -u DB_USER -pDB_PASSWORD < database/schema.sql
 
 # Iniciar con PM2
 pm2 start ecosystem.config.cjs
