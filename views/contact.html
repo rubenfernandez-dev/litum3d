@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contacto - LITUM3D</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/">Inicio</a>
+      <a href="/about">Sobre</a>
+      <a href="/contact">Contacto</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Contacto</h1>
+    <form id="contact-form">
+      <label>
+        Nombre
+        <input type="text" name="name" required />
+      </label>
+      <label>
+        Email
+        <input type="email" name="email" required />
+      </label>
+      <label>
+        Mensaje
+        <textarea name="message" required></textarea>
+      </label>
+      <button type="submit">Enviar</button>
+    </form>
+    <p id="status"></p>
+  </main>
+  <script src="/js/contact.js"></script>
+</body>
+</html>
