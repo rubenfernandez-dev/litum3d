@@ -29,6 +29,18 @@ router.get('/checkout', (req, res) => {
   res.sendFile(path.join(viewsDir, 'checkout.html'));
 });
 
+router.get('/privacy-policy', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'privacy-policy.html'));
+});
+
+router.get('/cookies-policy', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'cookies-policy.html'));
+});
+
+router.get('/terms-conditions', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'terms-conditions.html'));
+});
+
 router.get('/success', (req, res) => {
   res.sendFile(path.join(viewsDir, 'success.html'));
 });
