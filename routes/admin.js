@@ -287,15 +287,27 @@ router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Pedido no encontrado' });
         }
 
-        // Líneas del pedido
+        // Líneas del pedido con modelo y notas
         const [items] = await pool.query(`
             SELECT dp.id, dp.cantidad, dp.precio_unitario, (dp.cantidad * dp.precio_unitario) AS subtotal,
-                   prod.id AS producto_id, prod.nombre AS producto_nombre, prod.imagen
+                   dp.personalizacion_notas,
+                   prod.id AS producto_id, prod.nombre AS producto_nombre, prod.imagen,
+                   pm.id AS modelo_id, pm.nombre AS modelo_nombre, pm.sku AS modelo_sku
             FROM detalle_pedidos dp
             JOIN productos prod ON dp.producto_id = prod.id
+            LEFT JOIN product_models pm ON dp.modelo_id = pm.id
             WHERE dp.pedido_id = ?
             ORDER BY dp.id ASC
         `, [id]);
+
+        // Obtener imágenes por cada línea
+        for (const item of items) {
+            const [images] = await pool.query(
+                'SELECT id, ruta FROM detalle_pedido_imagenes WHERE detalle_pedido_id = ?',
+                [item.id]
+            );
+            item.imagenes = images;
+        }
 
         res.json({ order: orders[0], items });
     } catch (error) {
@@ -522,6 +534,122 @@ router.delete('/productos/:id', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error al eliminar producto:', error);
         res.status(500).json({ error: 'Error al eliminar producto' });
+    }
+});
+
+// GET /admin/productos/:id/modelos - Listar modelos de un producto
+router.get('/productos/:id/modelos', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await pool.query(
+            `SELECT id, product_id, nombre, sku, price_delta, stock, imagen, is_default, activo, created_at, updated_at
+             FROM product_models
+             WHERE product_id = ?
+             ORDER BY is_default DESC, nombre ASC`,
+            [id]
+        );
+        res.json({ success: true, modelos: rows });
+    } catch (error) {
+        console.error('Error al obtener modelos:', error);
+        res.status(500).json({ error: 'Error al obtener modelos' });
+    }
+});
+
+// POST /admin/productos/:id/modelos - Crear modelo
+router.post('/productos/:id/modelos', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre, sku, price_delta, stock, imagen, is_default } = req.body || {};
+
+        if (!nombre) {
+            return res.status(400).json({ error: 'Nombre requerido' });
+        }
+
+        // Asegurar producto existe
+        const [productExists] = await pool.query('SELECT id FROM productos WHERE id = ? LIMIT 1', [id]);
+        if (productExists.length === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+
+        // Si se marca como default, desmarcar otros
+        if (is_default) {
+            await pool.query('UPDATE product_models SET is_default = FALSE WHERE product_id = ?', [id]);
+        }
+
+        const [result] = await pool.query(
+            `INSERT INTO product_models (product_id, nombre, sku, price_delta, stock, imagen, is_default)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [id, nombre, sku || null, price_delta || 0, stock || 0, imagen || null, !!is_default]
+        );
+
+        res.json({ success: true, modeloId: result.insertId });
+    } catch (error) {
+        console.error('Error al crear modelo:', error);
+        res.status(500).json({ error: 'Error al crear modelo' });
+    }
+});
+
+// PUT /admin/productos/:productId/modelos/:modelId - Actualizar modelo
+router.put('/productos/:productId/modelos/:modelId', requireAuth, async (req, res) => {
+    try {
+        const { productId, modelId } = req.params;
+        const { nombre, sku, price_delta, stock, imagen, is_default, activo } = req.body || {};
+
+        // Validar existencia
+        const [modelRows] = await pool.query('SELECT id FROM product_models WHERE id = ? AND product_id = ? LIMIT 1', [modelId, productId]);
+        if (modelRows.length === 0) {
+            return res.status(404).json({ error: 'Modelo no encontrado' });
+        }
+
+        if (is_default) {
+            await pool.query('UPDATE product_models SET is_default = FALSE WHERE product_id = ?', [productId]);
+        }
+
+        const fields = [];
+        const values = [];
+        if (nombre !== undefined) { fields.push('nombre = ?'); values.push(nombre); }
+        if (sku !== undefined) { fields.push('sku = ?'); values.push(sku || null); }
+        if (price_delta !== undefined) { fields.push('price_delta = ?'); values.push(price_delta || 0); }
+        if (stock !== undefined) { fields.push('stock = ?'); values.push(stock || 0); }
+        if (imagen !== undefined) { fields.push('imagen = ?'); values.push(imagen || null); }
+        if (is_default !== undefined) { fields.push('is_default = ?'); values.push(!!is_default); }
+        if (activo !== undefined) { fields.push('activo = ?'); values.push(!!activo); }
+
+        if (!fields.length) {
+            return res.status(400).json({ error: 'Nada que actualizar' });
+        }
+
+        values.push(modelId, productId);
+
+        await pool.query(
+            `UPDATE product_models SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ? AND product_id = ?`,
+            values
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error al actualizar modelo:', error);
+        res.status(500).json({ error: 'Error al actualizar modelo' });
+    }
+});
+
+// DELETE /admin/productos/:productId/modelos/:modelId - Desactivar modelo
+router.delete('/productos/:productId/modelos/:modelId', requireAuth, async (req, res) => {
+    try {
+        const { productId, modelId } = req.params;
+        const [result] = await pool.query(
+            'UPDATE product_models SET activo = FALSE, updated_at = NOW() WHERE id = ? AND product_id = ?',
+            [modelId, productId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Modelo no encontrado' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error al desactivar modelo:', error);
+        res.status(500).json({ error: 'Error al desactivar modelo' });
     }
 });
 

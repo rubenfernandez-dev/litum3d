@@ -3,6 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Litofanías premium en 3D con personalización. Tecnología FDM, calidad garantizada. 8 años de experiencia en impresión 3D." />
+  <meta name="keywords" content="litofanía, impresión 3D, personalizado, arte 3D, resina" />
+  <meta name="author" content="LITUM3D" />
+  <meta name="robots" content="index, follow" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://litum3d.com/" />
+  <meta property="og:title" content="LITUM3D - Litofanías Premium en 3D" />
+  <meta property="og:description" content="Litofanías premium con diseño personalizado. Calidad garantizada, 8 años de experiencia." />
+  <meta property="og:image" content="https://litum3d.com/img/productos/carrusel1.jpeg" />
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://litum3d.com/" />
+  <meta property="twitter:title" content="LITUM3D - Litofanías Premium en 3D" />
+  <meta property="twitter:description" content="Litofanías premium con diseño personalizado." />
+  <meta property="twitter:image" content="https://litum3d.com/img/productos/carrusel1.jpeg" />
+  
+  <!-- Canonical -->
+  <link rel="canonical" href="https://litum3d.com/" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%23e0ad61'>✨</text></svg>" />
+  
   <title>LITUM3D - Litofanías Premium</title>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
@@ -27,25 +52,19 @@
     <!-- Carrusel -->
     <section class="carousel-section">
       <div class="carousel-container" id="carousel">
-        <div class="carousel-slide active">
+        <div class="carousel-slide active" style="background-image: url('/img/productos/carrusel1.jpeg');">
           <div class="carousel-content">
-            <h1>Litofanías Premium</h1>
-            <p class="subtitle">Arte en 3D que brilla con luz</p>
-            <a href="/gallery" class="cta">Ver Colección</a>
+
           </div>
         </div>
-        <div class="carousel-slide">
+        <div class="carousel-slide" style="background-image: url('/img/productos/carrusel2.jpeg');">
           <div class="carousel-content">
-            <h1>Diseño Personalizado</h1>
-            <p class="subtitle">Tu foto, tu historia, tu litofanía</p>
-            <a href="/contact" class="cta">Solicitar Presupuesto</a>
+
           </div>
         </div>
-        <div class="carousel-slide">
+        <div class="carousel-slide" style="background-image: url('/img/productos/carrusel3.png');">
           <div class="carousel-content">
-            <h1>Calidad Excepcional</h1>
-            <p class="subtitle">Materiales premium + técnica experta</p>
-            <a href="/about" class="cta">Conocer Más</a>
+
           </div>
         </div>
       </div>
@@ -63,12 +82,228 @@
     </div>
   </main>
 
+  <!-- Por qué elegirnos -->
+  <section class="benefits-section">
+    <div class="benefits-header">
+      <h2>¿Por qué elegir <span class="brand">LITUM3D</span>?</h2>
+      <p>Beneficios clave que nos diferencian.</p>
+    </div>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-icon">🏆</div>
+        <h3>Calidad Premium</h3>
+        <p>Materiales de primera y acabados perfectos en cada pieza.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🎨</div>
+        <h3>Originalidad</h3>
+        <p>Diseños exclusivos y personalización real adaptada a tu idea.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🧰</div>
+        <h3>Profesionalidad y Experiencia</h3>
+        <p>8 años ofreciendo impresión 3D profesional, proceso claro y entrega cuidada.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">✅</div>
+        <h3>Garantía</h3>
+        <p>Satisfacción garantizada y revisión previa al envío.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal de personalización -->
+  <div class="customization-modal" id="customization-modal">
+    <div class="customization-dialog">
+      <button class="custom-close" onclick="closeCustomization()">✕</button>
+      <h3 id="custom-modal-title">Personalizar</h3>
+      <p style="opacity:0.8; margin-bottom: 10px;">Selecciona modelo y sube hasta 3 fotos (JPG/PNG).</p>
+
+      <div class="custom-section">
+        <h4>Modelo</h4>
+        <div id="custom-models" class="custom-models">Cargando modelos...</div>
+      </div>
+
+      <div class="custom-section">
+        <h4>Notas de personalización</h4>
+        <textarea id="custom-notes" placeholder="Indicaciones especiales"></textarea>
+      </div>
+
+      <div class="custom-section">
+        <h4>Fotos (máx 3)</h4>
+        <input type="file" id="custom-files" accept="image/jpeg,image/png" multiple onchange="handleFileSelection(this)">
+        <div id="custom-file-list" class="custom-file-list"></div>
+      </div>
+
+      <div class="custom-section">
+        <h4>Extras opcionales</h4>
+        <div class="custom-extras">
+          <label class="extra-option">
+            <input type="checkbox" id="extra-upscale" onchange="onExtraChange()">
+            <span>Upscale de imágenes del cliente (+5 EUR/CHF)</span>
+          </label>
+          <label class="extra-option">
+            <input type="checkbox" id="extra-qr" onchange="onExtraChange()">
+            <span>Mensaje en QR integrado (+5 EUR/CHF)</span>
+          </label>
+          <input type="text" id="extra-qr-message" placeholder="Mensaje/URL para el QR" oninput="onExtraChange()" disabled>
+          <label class="extra-option">
+            <input type="checkbox" id="extra-adapter" onchange="onExtraChange()">
+            <span>Incluir adaptador de enchufe USB (+4 EUR/CHF)</span>
+          </label>
+        </div>
+        <small style="opacity:0.8; display:block; margin-top:6px;">Los extras se añaden por artículo.</small>
+      </div>
+
+      <div class="custom-summary">
+        <div>Precio base: €<span id="custom-base-price">0.00</span></div>
+        <div>Total con extras y modelo: €<span id="custom-total">0.00</span></div>
+      </div>
+
+      <div class="custom-actions">
+        <button class="custom-btn ghost" onclick="closeCustomization()">Cancelar</button>
+        <button class="custom-btn primary" onclick="confirmCustomization()">Añadir al carrito</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Testimonios -->
+  <section class="testimonials-section">
+    <div class="testimonials-header">
+      <h2>Testimonios</h2>
+      <p>Lo que dicen nuestros clientes</p>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="testimonial-quote">“</div>
+        <div class="testimonial-flag">🇪🇸 España</div>
+        <p class="testimonial-text">Impresión impecable y trato excelente. Repetiré.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">MG</div>
+          <div class="testimonial-author">María G.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">“</div>
+        <div class="testimonial-flag">🇬🇧 United Kingdom</div>
+        <p class="testimonial-text">Outstanding quality and fast delivery. Highly recommend.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">JT</div>
+          <div class="testimonial-author">James T.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">“</div>
+        <div class="testimonial-flag">🇫🇷 France</div>
+        <p class="testimonial-text">Qualité exceptionnelle et service professionnel.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">CD</div>
+          <div class="testimonial-author">Claire D.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">“</div>
+        <div class="testimonial-flag">🇩🇪 Deutschland</div>
+        <p class="testimonial-text">Hervorragende Qualität und sehr zuverlässig.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">AK</div>
+          <div class="testimonial-author">Anna K.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">“</div>
+        <div class="testimonial-flag">🇮🇹 Italia</div>
+        <p class="testimonial-text">Qualità superiore e grande attenzione ai dettagli.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">LR</div>
+          <div class="testimonial-author">Luca R.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">“</div>
+        <div class="testimonial-flag">🇵🇹 Portugal</div>
+        <p class="testimonial-text">Qualidade excelente e atendimento impecável.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">IM</div>
+          <div class="testimonial-author">Inês M.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="faq-section">
+    <div class="container">
+      <h2>Preguntas Frecuentes</h2>
+      <p class="faq-subtitle">Resuelve tus dudas sobre nuestros productos y servicios</p>
+      
+      <div class="faq-container">
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>¿Qué es una litofanía?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Una litofanía es una obra de arte en 3D que, cuando se ilumina desde atrás, proyecta una imagen. Creamos litofanías personalizadas usando impresoras FDM de alta precisión con resultados de altísima calidad y detalle.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>¿Cuánto tiempo tarda un pedido?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>El tiempo de producción es de 3-5  días hábiles. El envío depende de tu ubicación. Para expediciones especiales, contáctanos directamente por WhatsApp.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>¿Qué formato de imagen debo enviar?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Aceptamos JPG y PNG. Recomendamos subir 3 imágenes en formato vertical o 2 imágenes en formato horizontal.</p>
+          </div>
+        </div>
+
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>¿Hacen envíos internacionales?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Sí, enviamos a toda Europa y mundialmente. Los costos de envío se calculan al momento del pago según el destino y tamaño del producto.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>¿Puedo hacer devoluciones?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Las devoluciones se aceptan dentro de 7 días si el producto llega roto o con desperfectos. Debe estar en perfecto estado. El cliente cubre gastos de retorno.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <footer>
     <div class="footer-content">
       <div class="footer-section">
         <h4>✨ LITUM3D</h4>
         <ul>
-          <li>Litofanías premium con tecnología SLA</li>
+          <li>Litofanías premium con tecnología FDM</li>
           <li>Diseño personalizado y exclusivo</li>
           <li>Calidad garantizada 100%</li>
         </ul>
@@ -90,6 +325,15 @@
           <li>📍 Barcelona, España</li>
           <li>⏰ Lun-Vie 9:00-18:00</li>
         </ul>
+      </div>
+      <div class="footer-section">
+        <h4>🔔 Newsletter</h4>
+        <p style="font-size: 0.9rem; margin-bottom: 0.8rem;">Suscríbete para obtener ofertas exclusivas y novedades.</p>
+        <form class="newsletter-form" onsubmit="subscribeNewsletter(event)">
+          <input type="email" placeholder="Tu email..." required aria-label="Email para newsletter">
+          <button type="submit">Suscribir</button>
+        </form>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem; color: rgba(255,255,255,0.6);">Sin spam, solo noticias excelentes.</p>
       </div>
       <div class="footer-section">
         <h4>Síguenos</h4>
@@ -155,6 +399,18 @@
       }
     }
   </style>
+
+  <!-- Google Analytics placeholder - Replace with your GA4 tracking ID -->
+  <!-- 
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+  -->
+
 </body>
 </html>
 

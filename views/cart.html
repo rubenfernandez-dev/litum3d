@@ -25,6 +25,15 @@
 
   <main>
     <h2>Tu Carrito</h2>
+    <div style="margin: 0 0 1rem 0; display:flex; gap:10px; align-items:center;">
+      <label style="opacity:0.8;">País:&nbsp;
+        <select id="cart_country" onchange="onCartCountryChange()">
+          <option value="ES" selected>España / Europa (EUR)</option>
+          <option value="CH">Suiza (CHF)</option>
+        </select>
+      </label>
+      <span id="cart_currency_symbol" style="opacity:0.8;"></span>
+    </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
       <div>

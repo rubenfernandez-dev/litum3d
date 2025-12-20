@@ -1,0 +1,24 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /api
+Disallow: /*.json$
+Disallow: /uploads
+
+# Google specific
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+# Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Sitemap
+Sitemap: https://litum3d.com/sitemap.xml
+
+# Cache control
+Crawl-delay: 1
+Request-rate: 1/1s

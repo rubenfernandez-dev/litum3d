@@ -43,6 +43,24 @@ CREATE TABLE IF NOT EXISTS productos (
   INDEX idx_stock (stock)
 ) ENGINE=InnoDB;
 
+-- Tabla: modelos de producto (variantes)
+CREATE TABLE IF NOT EXISTS product_models (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  product_id INT NOT NULL,
+  nombre VARCHAR(150) NOT NULL,
+  sku VARCHAR(100),
+  price_delta DECIMAL(10, 2) DEFAULT 0,
+  stock INT DEFAULT 0,
+  imagen VARCHAR(255),
+  is_default BOOLEAN DEFAULT FALSE,
+  activo BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id) REFERENCES productos(id) ON DELETE CASCADE,
+  INDEX idx_product_id (product_id),
+  INDEX idx_model_active (activo)
+) ENGINE=InnoDB;
+
 -- Tabla: pedidos
 CREATE TABLE IF NOT EXISTS pedidos (
   id INT PRIMARY KEY AUTO_INCREMENT,
@@ -64,14 +82,28 @@ CREATE TABLE IF NOT EXISTS detalle_pedidos (
   id INT PRIMARY KEY AUTO_INCREMENT,
   pedido_id INT NOT NULL,
   producto_id INT NOT NULL,
+  modelo_id INT,
   cantidad INT NOT NULL,
   precio_unitario DECIMAL(10, 2) NOT NULL,
   subtotal DECIMAL(10, 2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED,
+  personalizacion_notas TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
   FOREIGN KEY (producto_id) REFERENCES productos(id),
+  FOREIGN KEY (modelo_id) REFERENCES product_models(id) ON DELETE SET NULL,
   INDEX idx_pedido_id (pedido_id),
-  INDEX idx_producto_id (producto_id)
+  INDEX idx_producto_id (producto_id),
+  INDEX idx_modelo_id (modelo_id)
+) ENGINE=InnoDB;
+
+-- Tabla: imágenes por línea de pedido (hasta 3)
+CREATE TABLE IF NOT EXISTS detalle_pedido_imagenes (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  detalle_pedido_id INT NOT NULL,
+  ruta VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (detalle_pedido_id) REFERENCES detalle_pedidos(id) ON DELETE CASCADE,
+  INDEX idx_detalle_pedido_id (detalle_pedido_id)
 ) ENGINE=InnoDB;
 
 -- Tabla: contacto

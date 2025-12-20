@@ -138,6 +138,7 @@
         .product-actions {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .btn-edit {
@@ -170,6 +171,22 @@
 
         .btn-delete:hover {
             background: rgba(255, 68, 68, 0.3);
+        }
+
+        .btn-models {
+            flex: 1;
+            padding: 8px;
+            background: rgba(100, 255, 200, 0.16);
+            color: #8cf3d8;
+            border: 1px solid rgba(100, 255, 200, 0.35);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-models:hover {
+            background: rgba(100, 255, 200, 0.28);
         }
 
         .modal {
@@ -212,6 +229,10 @@
 
         .modal-body {
             padding: 20px;
+        }
+
+        .modal-body + .modal-body {
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .form-group {
@@ -293,6 +314,49 @@
         .empty-state-text {
             font-size: 18px;
         }
+
+        .models-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .model-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .model-card h4 {
+            margin-bottom: 6px;
+            color: #8cf3d8;
+        }
+
+        .model-meta {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 6px;
+        }
+
+        .model-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            margin-right: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .badge-default { color: #fbd38d; border-color: rgba(251, 211, 141, 0.4); }
+        .badge-inactive { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.4); }
     </style>
 </head>
 <body>
@@ -349,8 +413,64 @@
         </div>
     </div>
 
+    <!-- Modal para gestionar modelos/variantes -->
+    <div class="modal" id="modelsModal">
+        <div class="modal-content">
+            <div class="modal-header" id="modelsModalTitle">🧩 Modelos</div>
+            <div class="modal-body">
+                <div id="modelsList" class="models-list">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🧩</div>
+                        <div class="empty-state-text">Selecciona un producto</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <h3 style="margin-bottom: 12px; color: #8cf3d8;">Añadir / editar modelo</h3>
+                <form id="modelForm">
+                    <input type="hidden" id="modelId">
+                    <div class="form-group">
+                        <label for="modelName">Nombre *</label>
+                        <input type="text" id="modelName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modelSku">SKU</label>
+                        <input type="text" id="modelSku" placeholder="Opcional">
+                    </div>
+                    <div class="form-group">
+                        <label for="modelPriceDelta">Ajuste de precio (€) *</label>
+                        <input type="number" id="modelPriceDelta" step="0.01" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modelStock">Stock *</label>
+                        <input type="number" id="modelStock" min="0" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modelImage">URL de imagen</label>
+                        <input type="url" id="modelImage" placeholder="https://...">
+                    </div>
+                    <div class="form-group" style="display:flex; gap: 10px; align-items: center;">
+                        <label style="display:flex; gap:6px; align-items:center;">
+                            <input type="checkbox" id="modelIsDefault"> Modelo por defecto
+                        </label>
+                        <label style="display:flex; gap:6px; align-items:center;">
+                            <input type="checkbox" id="modelActive" checked> Activo
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModelsModal()">Cerrar</button>
+                <button class="btn-save" onclick="saveModel()">Guardar modelo</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let products = [];
+        let currentModels = [];
+        let currentProductIdForModels = null;
+        let currentProductNameForModels = '';
 
         async function loadProducts() {
             try {
@@ -391,11 +511,165 @@
                     <div class="product-price">€${parseFloat(p.precio).toFixed(2)}</div>
                     <div class="product-stock">Stock: ${p.stock} unidades</div>
                     <div class="product-actions">
+                        <button class="btn-models" onclick="openModels(${p.id})">🧩 Modelos</button>
                         <button class="btn-edit" onclick="editProduct(${p.id})">✏️ Editar</button>
                         <button class="btn-delete" onclick="deleteProduct(${p.id}, '${p.nombre}')">🗑️ Eliminar</button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        async function openModels(productId) {
+            const product = products.find(p => p.id === productId);
+            currentProductIdForModels = productId;
+            currentProductNameForModels = product ? product.nombre : 'Modelos';
+            document.getElementById('modelsModalTitle').textContent = `🧩 Modelos: ${currentProductNameForModels}`;
+            await loadModels(productId);
+            document.getElementById('modelsModal').classList.add('show');
+        }
+
+        async function loadModels(productId) {
+            try {
+                const response = await fetch(`/admin/productos/${productId}/modelos`);
+                if (!response.ok) throw new Error('Error al cargar modelos');
+
+                const data = await response.json();
+                currentModels = data.modelos || [];
+                renderModels();
+                resetModelForm();
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('modelsList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-text">Error al cargar modelos</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderModels() {
+            const list = document.getElementById('modelsList');
+            if (!currentModels.length) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🧩</div>
+                        <div class="empty-state-text">No hay modelos aún</div>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = currentModels.map(m => `
+                <div class="model-card">
+                    <h4>${m.nombre}</h4>
+                    <div class="model-meta">SKU: ${m.sku || '—'}</div>
+                    <div class="model-meta">Precio extra: €${parseFloat(m.price_delta || 0).toFixed(2)}</div>
+                    <div class="model-meta">Stock: ${m.stock} unidades</div>
+                    <div class="model-meta">Imagen: ${m.imagen ? 'Sí' : '—'}</div>
+                    <div style="margin-top:6px;">
+                        ${m.is_default ? '<span class="badge badge-default">Por defecto</span>' : ''}
+                        ${m.activo ? '' : '<span class="badge badge-inactive">Inactivo</span>'}
+                    </div>
+                    <div class="model-actions">
+                        <button class="btn-edit" onclick="editModel(${m.id})">Editar</button>
+                        <button class="btn-delete" onclick="deleteModel(${m.id}, '${m.nombre}')">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editModel(modelId) {
+            const model = currentModels.find(m => m.id === modelId);
+            if (!model) return;
+            document.getElementById('modelId').value = model.id;
+            document.getElementById('modelName').value = model.nombre;
+            document.getElementById('modelSku').value = model.sku || '';
+            document.getElementById('modelPriceDelta').value = model.price_delta || 0;
+            document.getElementById('modelStock').value = model.stock;
+            document.getElementById('modelImage').value = model.imagen || '';
+            document.getElementById('modelIsDefault').checked = !!model.is_default;
+            document.getElementById('modelActive').checked = model.activo !== false;
+        }
+
+        function resetModelForm() {
+            document.getElementById('modelForm').reset();
+            document.getElementById('modelId').value = '';
+            document.getElementById('modelPriceDelta').value = 0;
+            document.getElementById('modelStock').value = 0;
+            document.getElementById('modelActive').checked = true;
+            document.getElementById('modelIsDefault').checked = false;
+        }
+
+        async function saveModel() {
+            if (!currentProductIdForModels) {
+                alert('Selecciona un producto primero');
+                return;
+            }
+
+            const modelId = document.getElementById('modelId').value;
+            const nombre = document.getElementById('modelName').value.trim();
+            const sku = document.getElementById('modelSku').value.trim();
+            const price_delta = parseFloat(document.getElementById('modelPriceDelta').value || '0');
+            const stock = parseInt(document.getElementById('modelStock').value || '0');
+            const imagen = document.getElementById('modelImage').value.trim();
+            const is_default = document.getElementById('modelIsDefault').checked;
+            const activo = document.getElementById('modelActive').checked;
+
+            if (!nombre) {
+                alert('Nombre requerido');
+                return;
+            }
+
+            const payload = { nombre, sku, price_delta, stock, imagen, is_default, activo };
+            const url = modelId
+                ? `/admin/productos/${currentProductIdForModels}/modelos/${modelId}`
+                : `/admin/productos/${currentProductIdForModels}/modelos`;
+            const method = modelId ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('Error al guardar modelo');
+                const data = await response.json();
+                if (data.success) {
+                    await loadModels(currentProductIdForModels);
+                    resetModelForm();
+                } else {
+                    alert(data.error || 'No se pudo guardar');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al guardar modelo');
+            }
+        }
+
+        async function deleteModel(modelId, name) {
+            if (!confirm(`¿Eliminar el modelo "${name}"?`)) return;
+            try {
+                const response = await fetch(`/admin/productos/${currentProductIdForModels}/modelos/${modelId}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) throw new Error('Error al eliminar modelo');
+                const data = await response.json();
+                if (data.success) {
+                    await loadModels(currentProductIdForModels);
+                } else {
+                    alert(data.error || 'No se pudo eliminar');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar modelo');
+            }
+        }
+
+        function closeModelsModal() {
+            document.getElementById('modelsModal').classList.remove('show');
+            resetModelForm();
         }
 
         function openNewProductModal() {
@@ -490,6 +764,12 @@
         document.getElementById('productModal').addEventListener('click', (e) => {
             if (e.target.id === 'productModal') {
                 closeProductModal();
+            }
+        });
+
+        document.getElementById('modelsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'modelsModal') {
+                closeModelsModal();
             }
         });
 

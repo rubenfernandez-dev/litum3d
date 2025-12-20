@@ -28,6 +28,24 @@ router.get('/api/productos/:id', async (req, res) => {
   }
 });
 
+// GET modelos activos de un producto
+router.get('/api/productos/:id/modelos', async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const [rows] = await pool.query(
+      `SELECT id, product_id, nombre, sku, price_delta, stock, imagen, is_default, activo
+       FROM product_models
+       WHERE product_id = ? AND activo = TRUE
+       ORDER BY is_default DESC, nombre ASC`,
+      [productId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener modelos' });
+  }
+});
+
 // POST crear producto
 router.post('/api/productos', async (req, res) => {
   try {

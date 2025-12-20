@@ -14,23 +14,43 @@ function saveCart(cart) {
   updateCartBadge();
 }
 
-function addToCart(productId, productName, productPrice) {
+function addToCart(productId, productName, productPrice, options = {}) {
+  const {
+    modelId = null,
+    modelName = null,
+    priceDelta = 0,
+    images = [],
+    notes = '',
+    extras = { upscale: false, qr: false, qrMessage: '', adapter: false, extrasTotal: 0, currency: 'CHF' }
+  } = options;
+
+  const unitPrice = parseFloat(productPrice) + parseFloat(priceDelta || 0) + parseFloat(extras?.extrasTotal || 0);
   const cart = getCart();
-  const existing = cart.find(item => item.id === productId);
-  
+
+  // Si no hay personalización ni modelo, agrupar por producto
+  const canMerge = !modelId && (!images || images.length === 0) && !notes;
+  const existing = canMerge ? cart.find(item => item.id === productId && !item.modelId) : null;
+
   if (existing) {
     existing.quantity += 1;
   } else {
     cart.push({
       id: productId,
+      modelId,
+      modelName,
       name: productName,
-      price: parseFloat(productPrice),
-      quantity: 1
+      basePrice: parseFloat(productPrice),
+      priceDelta: parseFloat(priceDelta || 0),
+      extras: extras,
+      price: unitPrice,
+      quantity: 1,
+      images: Array.isArray(images) ? images.slice(0, 3) : [],
+      notes: notes || ''
     });
   }
   
   saveCart(cart);
-  showCartNotification(`${productName} añadido al carrito`);
+  showCartNotification(`${productName}${modelName ? ' - ' + modelName : ''} añadido al carrito`);
 }
 
 function removeFromCart(productId) {

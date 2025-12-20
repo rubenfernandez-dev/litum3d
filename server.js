@@ -13,6 +13,7 @@ const pedidosRoutes = require('./routes/pedidos');
 const estadosRoutes = require('./routes/estados');
 const paymentsRoutes = require('./routes/payments');
 const adminRoutes = require('./routes/admin');
+const uploadsRoutes = require('./routes/uploads');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,6 +36,7 @@ app.use(session({
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Healthcheck
 app.get('/health', async (req, res) => {
@@ -54,6 +56,7 @@ app.use(productosRoutes);
 app.use(pedidosRoutes);
 app.use(estadosRoutes);
 app.use('/api', paymentsRoutes);
+app.use(uploadsRoutes);
 app.use('/admin', adminRoutes);
 
 app.use((req, res) => {

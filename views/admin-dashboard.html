@@ -764,12 +764,32 @@
                 .then(res => res.json())
                 .then(data => {
                     if (!data || !data.items) return;
-                    const itemsHtml = data.items.map(it => `
-                        <div class="detail-row">
-                            <span class="detail-label">${it.producto_nombre}</span>
-                            <span class="detail-value">${it.cantidad} x €${parseFloat(it.precio_unitario).toFixed(2)} = €${parseFloat(it.subtotal).toFixed(2)}</span>
-                        </div>
-                    `).join('');
+                    const itemsHtml = data.items.map(it => {
+                        let modelInfo = '';
+                        if (it.modelo_nombre) {
+                            modelInfo = `<div style="font-size:12px; opacity:0.8; margin-top:2px;">Modelo: ${it.modelo_nombre}${it.modelo_sku ? ` (SKU: ${it.modelo_sku})` : ''}</div>`;
+                        }
+                        let notesInfo = '';
+                        if (it.personalizacion_notas) {
+                            notesInfo = `<div style="font-size:12px; opacity:0.8; margin-top:2px;">💬 ${it.personalizacion_notas}</div>`;
+                        }
+                        let imagesInfo = '';
+                        if (it.imagenes && it.imagenes.length > 0) {
+                            const imgLinks = it.imagenes.map(img => `<a href="${img.ruta}" target="_blank" style="color:#64c8ff; text-decoration:none; margin-right:6px;">📎 Ver</a>`).join('');
+                            imagesInfo = `<div style="font-size:12px; margin-top:4px;">Imágenes: ${imgLinks}</div>`;
+                        }
+                        return `
+                            <div class="detail-row" style="flex-direction: column; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <div style="display:flex; justify-content:space-between; width:100%;">
+                                    <span class="detail-label" style="font-weight:600;">${it.producto_nombre}</span>
+                                    <span class="detail-value">${it.cantidad} x €${parseFloat(it.precio_unitario).toFixed(2)} = €${parseFloat(it.subtotal).toFixed(2)}</span>
+                                </div>
+                                ${modelInfo}
+                                ${notesInfo}
+                                ${imagesInfo}
+                            </div>
+                        `;
+                    }).join('');
 
                     info.innerHTML = `
                         <div class="detail-row">
