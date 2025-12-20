@@ -22,8 +22,8 @@
   <main>
     <h2>Sobre LITUM3D</h2>
     
-    <section style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(224, 173, 97, 0.2); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
-      <h3 style="color: var(--gold);">¿Quiénes somos?</h3>
+    <section class="glass-section">
+      <h3>¿Quiénes somos?</h3>
       <p>
         LITUM3D es una empresa especializada en litofanías de arte premium. Nos dedicamos a crear 
         piezas excepcionales que combinan tu imaginación con tecnología de impresión 3D avanzada.
@@ -36,8 +36,8 @@
       </p>
     </section>
 
-    <section style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(224, 173, 97, 0.2); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
-      <h3 style="color: var(--gold);">Nuestros Servicios</h3>
+    <section class="glass-section">
+      <h3>Nuestros Servicios</h3>
       <ul style="line-height: 2;">
         <li>✨ <strong>Litofanías Personalizadas:</strong> Tus fotos o diseños en 3D iluminado</li>
         <li>🎨 <strong>Diseño Custom:</strong> Asesoría profesional para tu proyecto</li>
@@ -47,27 +47,27 @@
       </ul>
     </section>
 
-    <section style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(224, 173, 97, 0.2); padding: 2rem; border-radius: 12px; margin-bottom: 2rem;">
-      <h3 style="color: var(--gold);">Materiales Disponibles</h3>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
-        <div style="border-left: 4px solid var(--gold); padding: 1rem; background: rgba(224, 173, 97, 0.1); border-radius: 6px;">
+    <section class="glass-section">
+      <h3>Materiales Disponibles</h3>
+      <div class="material-grid">
+        <div class="material-card">
           <strong>Resina Premium</strong>
-          <p style="font-size: 0.9rem; color: rgba(245, 245, 247, 0.7); margin: 0.5rem 0 0 0;">Alta precisión, translúcida, perfecta para luz</p>
+          <p>Alta precisión, translúcida, perfecta para luz</p>
         </div>
-        <div style="border-left: 4px solid var(--gold); padding: 1rem; background: rgba(224, 173, 97, 0.1); border-radius: 6px;">
+        <div class="material-card">
           <strong>Nylon Flexible</strong>
-          <p style="font-size: 0.9rem; color: rgba(245, 245, 247, 0.7); margin: 0.5rem 0 0 0;">Resistente al impacto, ideal para uso diario</p>
+          <p>Resistente al impacto, ideal para uso diario</p>
         </div>
-        <div style="border-left: 4px solid var(--gold); padding: 1rem; background: rgba(224, 173, 97, 0.1); border-radius: 6px;">
+        <div class="material-card">
           <strong>PLA Premium</strong>
-          <p style="font-size: 0.9rem; color: rgba(245, 245, 247, 0.7); margin: 0.5rem 0 0 0;">Eco-friendly, colores vibrantes, duradero</p>
+          <p>Eco-friendly, colores vibrantes, duradero</p>
         </div>
       </div>
     </section>
 
-    <section style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(224, 173, 97, 0.2); padding: 2rem; border-radius: 12px;">
+    <section class="glass-section-no-bottom">
       <h3 style="color: var(--gold);">Por qué elegirnos</h3>
-      <ul style="line-height: 2; list-style: none; padding: 0;">
+      <ul class="why-choose-list">
         <li>✓ Atención al cliente personalizada 24/7</li>
         <li>✓ Garantía de satisfacción del 100%</li>
         <li>✓ Entrega asegurada y empaque premium</li>
@@ -101,8 +101,8 @@
         <h4>Contacto</h4>
         <ul>
           <li>📧 contact@litum3d.com</li>
-          <li>📞 +34 123 456 789</li>
-          <li>📍 Barcelona, España</li>
+          <li>📞 +41 77 218 62 29</li>
+          <li>📍 Berna, Suiza</li>
           <li>⏰ Lun-Vie 9:00-18:00</li>
         </ul>
       </div>
@@ -131,43 +131,8 @@
     </svg>
   </a>
 
-  <style>
-    .whatsapp-button {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      z-index: 999;
-      text-decoration: none;
-    }
 
-    .whatsapp-button:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
-    }
 
-    .whatsapp-button:active {
-      transform: scale(0.95);
-    }
-
-    @media (max-width: 768px) {
-      .whatsapp-button {
-        bottom: 20px;
-        right: 20px;
-        width: 50px;
-        height: 50px;
-      }
-    }
-  </style>
 </body>
 </html>
 

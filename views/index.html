@@ -53,17 +53,17 @@
     <!-- Carrusel -->
     <section class="carousel-section">
       <div class="carousel-container" id="carousel">
-        <div class="carousel-slide active" style="background-image: url('/img/productos/carrusel1.jpeg');">
+        <div class="carousel-slide active carousel-slide-1">
           <div class="carousel-content">
 
           </div>
         </div>
-        <div class="carousel-slide" style="background-image: url('/img/productos/carrusel2.jpeg');">
+        <div class="carousel-slide carousel-slide-2">
           <div class="carousel-content">
 
           </div>
         </div>
-        <div class="carousel-slide" style="background-image: url('/img/productos/carrusel3.png');">
+        <div class="carousel-slide carousel-slide-3">
           <div class="carousel-content">
 
           </div>
@@ -118,7 +118,7 @@
     <div class="customization-dialog">
       <button class="custom-close" onclick="closeCustomization()">✕</button>
       <h3 id="custom-modal-title">Personalizar</h3>
-      <p style="opacity:0.8; margin-bottom: 10px;">Selecciona modelo y sube hasta 3 fotos (JPG/PNG).</p>
+      <p class="opacity-light">Selecciona modelo y sube hasta 3 fotos (JPG/PNG).</p>
 
       <div class="custom-section">
         <h4>Modelo</h4>
@@ -153,7 +153,7 @@
             <span>Incluir adaptador de enchufe USB (+4 EUR/CHF)</span>
           </label>
         </div>
-        <small style="opacity:0.8; display:block; margin-top:6px;">Los extras se añaden por artículo.</small>
+        <small class="text-small-gray">Los extras se añaden por artículo.</small>
       </div>
 
       <div class="custom-summary">
@@ -323,18 +323,18 @@
         <ul>
           <li>📧 contact@litum3d.com</li>
           <li>📞 +41 77 218 62 29</li>
-          <li>📍 Lüscherz, Bern</li>
+          <li>📍 Berna, Suiza</li>
           <li>⏰ Lun-Vie 9:00-18:00</li>
         </ul>
       </div>
       <div class="footer-section">
         <h4>🔔 Newsletter</h4>
-        <p style="font-size: 0.9rem; margin-bottom: 0.8rem;">Suscríbete para obtener ofertas exclusivas y novedades.</p>
+        <p class="text-small-light">Suscríbete para obtener ofertas exclusivas y novedades.</p>
         <form class="newsletter-form" onsubmit="subscribeNewsletter(event)">
           <input type="email" placeholder="Tu email..." required aria-label="Email para newsletter">
           <button type="submit">Suscribir</button>
         </form>
-        <p style="font-size: 0.8rem; margin-top: 0.5rem; color: rgba(255,255,255,0.6);">Sin spam, solo noticias excelentes.</p>
+        <p class="text-extra-small">Sin spam, solo noticias excelentes.</p>
       </div>
       <div class="footer-section">
         <h4>Síguenos</h4>
@@ -349,10 +349,10 @@
     <div class="footer-bottom">
       <p>&copy; <span class="year">2025</span> LITUM3D. Todos los derechos reservados.</p>
       <p>🎨 Litofanías Premium | Impresión 3D de Excelencia</p>
-      <p style="font-size: 0.9em; margin-top: 10px;">
-        <a href="/privacy-policy" style="color: #3498db; text-decoration: none;">Política de Privacidad</a> | 
-        <a href="/cookies-policy" style="color: #3498db; text-decoration: none;">Política de Cookies</a> | 
-        <a href="/terms-conditions" style="color: #3498db; text-decoration: none;">Términos y Condiciones</a>
+      <p class="footer-policy-links">
+        <a href="/privacy-policy">Política de Privacidad</a> | 
+        <a href="/cookies-policy">Política de Cookies</a> | 
+        <a href="/terms-conditions">Términos y Condiciones</a>
       </p>
     </div>
   </footer>
@@ -367,44 +367,6 @@
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.272-.099-.47-.148-.669.15-.205.297-.765.966-.938 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371 0-.57 0-.198 0-.52.075-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a6.963 6.963 0 00-6.984 6.977c0 1.71.642 3.338 1.811 4.61l-1.93 7.044 7.194-1.885a6.956 6.956 0 004.079 1.3h.004c3.864 0 6.99-3.117 6.99-6.977 0-1.862-.72-3.612-2.034-4.926-1.314-1.314-3.065-2.037-4.927-2.037z"/>
     </svg>
   </a>
-
-  <style>
-    .whatsapp-button {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      z-index: 999;
-      text-decoration: none;
-    }
-
-    .whatsapp-button:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
-    }
-
-    .whatsapp-button:active {
-      transform: scale(0.95);
-    }
-
-    @media (max-width: 768px) {
-      .whatsapp-button {
-        bottom: 20px;
-        right: 20px;
-        width: 50px;
-        height: 50px;
-      }
-    }
-  </style>
 
   <!-- Google Analytics placeholder - Replace with your GA4 tracking ID -->
   <!-- 

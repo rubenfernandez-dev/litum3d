@@ -1487,3 +1487,232 @@ footer {
     width: 100%;
   }
 }
+
+/* ============================================
+   POLICY PAGES STYLES
+   ============================================ */
+
+.policy-page-body {
+  background-color: #f5f5f5;
+}
+
+.policy-container {
+  max-width: 900px;
+  margin: 60px auto;
+  padding: 40px;
+  line-height: 1.8;
+  color: #333;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.policy-container h1 {
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  color: #1a1a1a;
+}
+
+.policy-container h2 {
+  font-size: 1.8em;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.policy-container h3 {
+  font-size: 1.3em;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  color: #34495e;
+}
+
+.policy-container p {
+  margin-bottom: 15px;
+  text-align: justify;
+}
+
+.policy-container ul {
+  margin: 15px 0 15px 30px;
+}
+
+.policy-container li {
+  margin-bottom: 10px;
+}
+
+.cookie-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+.cookie-table th, .cookie-table td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+}
+
+.cookie-table th {
+  background-color: #3498db;
+  color: white;
+}
+
+.cookie-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.last-updated {
+  background-color: #ecf0f1;
+  padding: 15px;
+  border-left: 4px solid #3498db;
+  margin-bottom: 30px;
+  border-radius: 4px;
+}
+
+.policy-nav {
+  background-color: #2c3e50;
+  padding: 15px;
+  text-align: center;
+}
+
+.policy-nav a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.policy-footer {
+  background-color: #2c3e50;
+  color: white;
+  padding: 30px;
+  text-align: center;
+  margin-top: 60px;
+}
+
+/* ============================================
+   INLINE STYLES CONVERTED TO CLASSES
+   ============================================ */
+
+.opacity-light {
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+.text-small-light {
+  font-size: 0.9rem;
+  margin-bottom: 0.8rem;
+}
+
+.text-extra-small {
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  color: rgba(255,255,255,0.6);
+}
+
+.text-small-gray {
+  font-size: 0.8rem;
+  margin-top: 6px;
+  opacity: 0.8;
+  display: block;
+}
+
+.text-small-dim {
+  font-size: 0.9em;
+  margin-top: 10px;
+}
+
+.footer-policy-links {
+  font-size: 0.9em;
+  margin-top: 10px;
+}
+
+.footer-policy-links a {
+  color: #3498db;
+  text-decoration: none;
+  margin: 0 5px;
+}
+
+/* ============================================
+   ABOUT PAGE STYLES
+   ============================================ */
+
+.glass-section {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(224, 173, 97, 0.2);
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.glass-section h3 {
+  color: var(--gold);
+}
+
+.glass-section ul {
+  line-height: 2;
+}
+
+.glass-section-no-bottom {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(224, 173, 97, 0.2);
+  padding: 2rem;
+  border-radius: 12px;
+}
+
+.material-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.material-card {
+  border-left: 4px solid var(--gold);
+  padding: 1rem;
+  background: rgba(224, 173, 97, 0.1);
+  border-radius: 6px;
+}
+
+.material-card strong {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.material-card p {
+  font-size: 0.9rem;
+  color: rgba(245, 245, 247, 0.7);
+  margin: 0.5rem 0 0 0;
+}
+
+.why-choose-list {
+  line-height: 2;
+  list-style: none;
+  padding: 0;
+}
+
+.gallery-subtitle {
+  text-align: center;
+  font-size: 1.1rem;
+  color: rgba(245, 245, 247, 0.8);
+  margin-bottom: 2rem;
+}
+
+/* ============================================
+   CAROUSEL BACKGROUND IMAGES
+   ============================================ */
+
+.carousel-slide-1 {
+  background-image: url('/img/productos/carrusel1.jpeg');
+}
+
+.carousel-slide-2 {
+  background-image: url('/img/productos/carrusel2.jpeg');
+}
+
+.carousel-slide-3 {
+  background-image: url('/img/productos/carrusel3.png');
+}
