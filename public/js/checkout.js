@@ -51,8 +51,9 @@ function renderOrderSummary() {
   });
 
   const subtotalBaseCurr = currency.code === 'CHF' ? (subtotalBaseEur * eurChfRate) : subtotalBaseEur;
-  const totalNoTax = subtotalBaseCurr + subtotalExtrasCurr;
-  const withTax = totalNoTax * 1.21;
+  const totalGross = subtotalBaseCurr + subtotalExtrasCurr; // precios mostrados incluyen IVA
+  const base = totalGross / 1.21;
+  const iva = totalGross - base;
 
   summary.innerHTML = `
     ${cart.map(item => `
@@ -70,8 +71,8 @@ function renderOrderSummary() {
       </div>
     `).join('')}
     <div class="cart-summary-row">
-      <span>Subtotal:</span>
-      <span>${currency.symbol} ${totalNoTax.toFixed(2)}</span>
+      <span>Base (sin IVA):</span>
+      <span>${currency.symbol} ${base.toFixed(2)}</span>
     </div>
     <div class="cart-summary-row">
       <span>Envío:</span>
@@ -79,11 +80,11 @@ function renderOrderSummary() {
     </div>
     <div class="cart-summary-row">
       <span>IVA (21%):</span>
-      <span>${currency.symbol} ${(totalNoTax * 0.21).toFixed(2)}</span>
+      <span>${currency.symbol} ${iva.toFixed(2)}</span>
     </div>
     <div class="cart-summary-row total">
       <span>TOTAL:</span>
-      <span>${currency.symbol} ${withTax.toFixed(2)}</span>
+      <span>${currency.symbol} ${totalGross.toFixed(2)}</span>
     </div>
   `;
 }
@@ -92,7 +93,7 @@ function updateTotalAmount() {
   const countrySel = document.getElementById('customer_country');
   const country = countrySel ? countrySel.value : 'ES';
   const currency = CURRENCY_MAP[country] || CURRENCY_MAP['ES'];
-  let total = getCartTotal() * 1.21; // base EUR
+  let total = getCartTotal(); // precios ya incluyen IVA
   if (currency.code === 'CHF') {
     total = total * eurChfRate; // convert using live rate
   }
@@ -222,7 +223,7 @@ async function handleCheckout(e) {
     // Reset button label with current currency
     const countryReset = document.getElementById('customer_country')?.value || 'ES';
     const currReset = CURRENCY_MAP[countryReset] || CURRENCY_MAP['ES'];
-    let totalReset = getCartTotal() * 1.21;
+    let totalReset = getCartTotal();
     if (currReset.code === 'CHF') totalReset = totalReset * eurChfRate;
     submitBtn.textContent = `Pagar ${currReset.symbol} ${totalReset.toFixed(2)}`;
   }
