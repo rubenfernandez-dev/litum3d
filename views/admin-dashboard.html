@@ -336,6 +336,26 @@
             transition: all 0.3s ease;
         }
 
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(100, 200, 255, 0.5);
+            box-shadow: 0 0 10px rgba(100, 200, 255, 0.3);
+        }
+
         .form-group select:focus {
             outline: none;
             background: rgba(255, 255, 255, 0.1);
@@ -471,7 +491,11 @@
 <body>
     <div class="dashboard-header">
         <h1 class="dashboard-title">📊 Panel de Administración</h1>
-        <button class="logout-btn" onclick="logout()">🚪 Cerrar Sesión</button>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <a href="/admin/products" class="logout-btn" style="text-decoration:none; display:inline-block; background: rgba(150, 100, 255, 0.2); color: #9664ff; border-color: rgba(150, 100, 255, 0.3);">📦 Productos</a>
+            <a href="/admin/account" class="logout-btn" style="text-decoration:none; display:inline-block;">⚙️ Mi Cuenta</a>
+            <button class="logout-btn" onclick="logout()">🚪 Cerrar Sesión</button>
+        </div>
     </div>
 
     <div class="stats-grid">
@@ -496,15 +520,37 @@
     <div class="orders-container">
         <div class="orders-header">
             <h2 class="orders-title">📦 Pedidos Recientes</h2>
-            <select class="filter-select" id="statusFilter" onchange="filterOrders()">
-                <option value="">Todos los estados</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Confirmado">Confirmado</option>
-                <option value="Preparando">Preparando</option>
-                <option value="Enviado">Enviado</option>
-                <option value="Entregado">Entregado</option>
-                <option value="Cancelado">Cancelado</option>
-            </select>
+        </div>
+        
+        <!-- Filtros avanzados -->
+        <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+            <div style="flex: 1; min-width: 150px;">
+                <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Estado</label>
+                <select class="filter-select" id="statusFilter" onchange="filterOrders()">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Confirmado">Confirmado</option>
+                    <option value="Preparando">Preparando</option>
+                    <option value="Enviado">Enviado</option>
+                    <option value="Entregado">Entregado</option>
+                    <option value="Cancelado">Cancelado</option>
+                </select>
+            </div>
+            <div style="flex: 1; min-width: 150px;">
+                <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Email Cliente</label>
+                <input type="text" id="emailFilter" placeholder="Buscar por email" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;" oninput="filterOrders()">
+            </div>
+            <div style="flex: 1; min-width: 130px;">
+                <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Desde</label>
+                <input type="date" id="dateFromFilter" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;" onchange="filterOrders()">
+            </div>
+            <div style="flex: 1; min-width: 130px;">
+                <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Hasta</label>
+                <input type="date" id="dateToFilter" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;" onchange="filterOrders()">
+            </div>
+            <div>
+                <button onclick="clearFilters()" style="padding: 8px 15px; background: rgba(255,68,68,0.2); color: #ff6b6b; border: 1px solid rgba(255,68,68,0.3); border-radius: 6px; cursor: pointer; font-size: 12px;">🗑️ Limpiar</button>
+            </div>
         </div>
 
         <div id="ordersContent">
@@ -531,6 +577,18 @@
                         <option value="Entregado">Entregado</option>
                         <option value="Cancelado">Cancelado</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="statusComment">Comentario (opcional):</label>
+                    <textarea id="statusComment" rows="3" placeholder="Ej: El cliente solicitó cambio de dirección"></textarea>
+                </div>
+                <div class="order-details" style="margin-top: 20px;">
+                    <div class="detail-row" style="border-bottom: 1px solid rgba(150, 100, 255, 0.3); padding-bottom: 8px; margin-bottom: 12px;">
+                        <span class="detail-label" style="font-weight: bold;">📋 Historial de Cambios</span>
+                    </div>
+                    <div id="orderHistory" style="max-height: 200px; overflow-y: auto;">
+                        <div style="opacity: 0.6; text-align: center; padding: 12px;">Cargando historial...</div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -622,15 +680,63 @@
         }
 
         function filterOrders() {
-            const filter = document.getElementById('statusFilter').value;
-            const filtered = filter ? orders.filter(o => o.estado_nombre === filter) : orders;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const emailFilter = document.getElementById('emailFilter').value.toLowerCase().trim();
+            const dateFrom = document.getElementById('dateFromFilter').value;
+            const dateTo = document.getElementById('dateToFilter').value;
+
+            let filtered = orders;
+
+            // Filtrar por estado
+            if (statusFilter) {
+                filtered = filtered.filter(o => o.estado_nombre === statusFilter);
+            }
+
+            // Filtrar por email
+            if (emailFilter) {
+                filtered = filtered.filter(o => 
+                    (o.email || '').toLowerCase().includes(emailFilter) || 
+                    (o.customer_name || '').toLowerCase().includes(emailFilter)
+                );
+            }
+
+            // Filtrar por rango de fechas
+            if (dateFrom) {
+                const fromDate = new Date(dateFrom);
+                fromDate.setHours(0, 0, 0, 0);
+                filtered = filtered.filter(o => {
+                    const orderDate = new Date(o.created_at);
+                    orderDate.setHours(0, 0, 0, 0);
+                    return orderDate >= fromDate;
+                });
+            }
+
+            if (dateTo) {
+                const toDate = new Date(dateTo);
+                toDate.setHours(23, 59, 59, 999);
+                filtered = filtered.filter(o => {
+                    const orderDate = new Date(o.created_at);
+                    return orderDate <= toDate;
+                });
+            }
+
             renderOrders(filtered);
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('emailFilter').value = '';
+            document.getElementById('dateFromFilter').value = '';
+            document.getElementById('dateToFilter').value = '';
+            filterOrders();
         }
 
         function openModal(orderId, currentStatus, customerName, total) {
             currentEditingOrderId = orderId;
             document.getElementById('newStatus').value = currentStatus;
-            document.getElementById('orderInfo').innerHTML = `
+            document.getElementById('statusComment').value = '';
+            const info = document.getElementById('orderInfo');
+            info.innerHTML = `
                 <div class="detail-row">
                     <span class="detail-label">Pedido #</span>
                     <span class="detail-value">${orderId}</span>
@@ -647,7 +753,84 @@
                     <span class="detail-label">Estado Actual</span>
                     <span class="detail-value">${currentStatus}</span>
                 </div>
+                <div class="detail-row">
+                    <span class="detail-label">Items</span>
+                    <span class="detail-value">Cargando...</span>
+                </div>
             `;
+
+            // Cargar líneas del pedido
+            fetch(`/admin/pedidos/${orderId}/detalle`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || !data.items) return;
+                    const itemsHtml = data.items.map(it => `
+                        <div class="detail-row">
+                            <span class="detail-label">${it.producto_nombre}</span>
+                            <span class="detail-value">${it.cantidad} x €${parseFloat(it.precio_unitario).toFixed(2)} = €${parseFloat(it.subtotal).toFixed(2)}</span>
+                        </div>
+                    `).join('');
+
+                    info.innerHTML = `
+                        <div class="detail-row">
+                            <span class="detail-label">Pedido #</span>
+                            <span class="detail-value">${data.order.id}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Cliente</span>
+                            <span class="detail-value">${data.order.customer_name}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Total</span>
+                            <span class="detail-value">€${parseFloat(data.order.total).toFixed(2)}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Estado Actual</span>
+                            <span class="detail-value">${data.order.estado_nombre}</span>
+                        </div>
+                        <div class="order-details" style="margin-top:12px;">
+                            ${itemsHtml || '<div class="detail-row"><span class="detail-label">Sin items</span><span class="detail-value">-</span></div>'}
+                        </div>
+                    `;
+                })
+                .catch(err => {
+                    console.error('Error cargando items:', err);
+                });
+
+            // Cargar historial de cambios de estado
+            fetch(`/admin/pedidos/${orderId}/historial`)
+                .then(res => res.json())
+                .then(data => {
+                    const historyDiv = document.getElementById('orderHistory');
+                    if (!data || !data.history || data.history.length === 0) {
+                        historyDiv.innerHTML = '<div style="opacity: 0.6; text-align: center; padding: 12px;">Sin cambios registrados</div>';
+                        return;
+                    }
+
+                    const historyHtml = data.history.map(h => {
+                        const date = new Date(h.created_at);
+                        const dateStr = date.toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit', year: 'numeric'});
+                        const timeStr = date.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
+                        
+                        return `
+                            <div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                                    <span style="color: #64c8ff; font-weight: 500;">→ ${h.estado_nombre}</span>
+                                    <span style="font-size: 11px; opacity: 0.7;">${dateStr} ${timeStr}</span>
+                                </div>
+                                <div style="font-size: 11px; opacity: 0.6;">Por: ${h.admin_nombre}</div>
+                                ${h.comentario ? `<div style="font-size: 11px; margin-top: 4px; font-style: italic; opacity: 0.8;">💬 ${h.comentario}</div>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+
+                    historyDiv.innerHTML = historyHtml;
+                })
+                .catch(err => {
+                    console.error('Error cargando historial:', err);
+                    document.getElementById('orderHistory').innerHTML = '<div style="opacity: 0.6; color: #ff6b6b; text-align: center; padding: 12px;">Error al cargar historial</div>';
+                });
+
             document.getElementById('statusModal').classList.add('show');
         }
 
@@ -658,13 +841,17 @@
 
         async function saveStatus() {
             const newStatus = document.getElementById('newStatus').value;
+            const comentario = document.getElementById('statusComment').value.trim();
             if (!currentEditingOrderId) return;
 
             try {
                 const response = await fetch(`/admin/pedidos/${currentEditingOrderId}/estado`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ estado: newStatus })
+                    body: JSON.stringify({ 
+                        estado: newStatus,
+                        comentario: comentario || null
+                    })
                 });
 
                 if (!response.ok) {

@@ -3,12 +3,21 @@ const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
 const { pool } = require('../config/db');
+const bcrypt = require('bcryptjs');
 
 // Middleware para verificar autenticación
 const requireAuth = (req, res, next) => {
+    console.log('🔐 Auth check:', {
+        hasSession: !!req.session,
+        sessionId: req.sessionID,
+        adminId: req.session?.adminId,
+        cookies: req.headers.cookie
+    });
     if (!req.session || !req.session.adminId) {
+        console.log('❌ Auth failed: No session or adminId');
         return res.status(401).json({ error: 'No autorizado' });
     }
+    console.log('✓ Auth passed for admin', req.session.adminId);
     next();
 };
 
@@ -49,13 +58,19 @@ router.post('/login', async (req, res) => {
 
         const admin = rows[0];
         console.log('👤 Admin encontrado:', admin.nombre);
-        console.log('🔐 Verificando contraseña...');
-        console.log('   Contraseña guardada:', admin.contraseña);
-        console.log('   Contraseña ingresada:', password);
-        console.log('   Coinciden:', admin.contraseña === password);
-
-        // Verificar contraseña (simple string match for demo)
-        if (admin.contraseña !== password) {
+        console.log('🔐 Verificando contraseña (bcrypt)...');
+        let isValid = false;
+        try {
+            // Intentar comparar como hash
+            isValid = await bcrypt.compare(password, admin.contraseña);
+        } catch (e) {
+            isValid = false;
+        }
+        // Fallback: si no es hash, comparar texto plano (para migración)
+        if (!isValid) {
+            isValid = admin.contraseña === password;
+        }
+        if (!isValid) {
             console.log('❌ Contraseña incorrecta');
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
@@ -66,12 +81,85 @@ router.post('/login', async (req, res) => {
         req.session.adminEmail = admin.email;
         req.session.adminName = admin.nombre;
 
-        console.log('✅ Login exitoso para:', admin.email);
-        res.json({ success: true, message: 'Login exitoso' });
+        // Forzar guardado de sesión
+        req.session.save((err) => {
+            if (err) {
+                console.error('❌ Error guardando sesión:', err);
+                return res.status(500).json({ error: 'Error al guardar sesión' });
+            }
+            console.log('✅ Login exitoso para:', admin.email, 'Session ID:', req.sessionID);
+            res.json({ success: true, message: 'Login exitoso' });
+        });
     } catch (error) {
         console.error('❌ Error en login:', error.message);
         console.error('Stack:', error.stack);
         res.status(500).json({ error: 'Error al procesar login' });
+    }
+});
+
+// GET /admin/account - Página para cambiar email/contraseña
+router.get('/account', requireAuth, async (req, res) => {
+    try {
+        const html = await fs.readFile(path.join(__dirname, '/../views/admin-account.html'), 'utf-8');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+    } catch (error) {
+        console.error('Error cargando account:', error);
+        res.status(500).send('Error cargando página de cuenta');
+    }
+});
+
+// POST /admin/account - Actualizar credenciales del admin
+router.post('/account', requireAuth, async (req, res) => {
+    try {
+        const { currentPassword, newEmail, newPassword } = req.body;
+
+        if (!currentPassword || (!newEmail && !newPassword)) {
+            return res.status(400).json({ error: 'Faltan datos: contraseña actual y nuevo email o nueva contraseña' });
+        }
+
+        const [rows] = await pool.query('SELECT id, email, contraseña FROM usuarios WHERE id = ? AND es_admin = 1 LIMIT 1', [req.session.adminId]);
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Admin no encontrado' });
+        }
+        const admin = rows[0];
+
+        // Verificar contraseña actual
+        let valid = false;
+        try {
+            valid = await bcrypt.compare(currentPassword, admin.contraseña);
+        } catch (e) { valid = false; }
+        if (!valid) {
+            valid = admin.contraseña === currentPassword; // fallback
+        }
+        if (!valid) {
+            return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+        }
+
+        const updates = [];
+        const params = [];
+        if (newEmail) {
+            updates.push('email = ?');
+            params.push(newEmail);
+        }
+        if (newPassword) {
+            const hash = await bcrypt.hash(newPassword, 10);
+            updates.push('contraseña = ?');
+            params.push(hash);
+        }
+        if (updates.length === 0) {
+            return res.status(400).json({ error: 'Nada que actualizar' });
+        }
+        params.push(req.session.adminId);
+        const sql = `UPDATE usuarios SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`;
+        await pool.query(sql, params);
+
+        if (newEmail) req.session.adminEmail = newEmail;
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('❌ Error al actualizar cuenta:', error.message);
+        res.status(500).json({ error: 'Error al actualizar cuenta: ' + error.message });
     }
 });
 
@@ -121,13 +209,13 @@ router.get('/api/dashboard', requireAuth, async (req, res) => {
 router.put('/pedidos/:id/estado', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
-        const { estado } = req.body;
+        const { estado, comentario } = req.body;
 
         if (!estado) {
             return res.status(400).json({ error: 'Estado requerido' });
         }
 
-        // Obtener ID del estado
+        // Obtener ID del nuevo estado
         const statusQuery = 'SELECT id FROM estado_pedido WHERE nombre = ? LIMIT 1';
         const [statusRows] = await pool.query(statusQuery, [estado]);
 
@@ -135,11 +223,11 @@ router.put('/pedidos/:id/estado', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Estado inválido' });
         }
 
-        const estadoId = statusRows[0].id;
+        const nuevoEstadoId = statusRows[0].id;
 
-        // Obtener información del pedido
+        // Obtener información del pedido incluyendo estado actual
         const orderQuery = `
-            SELECT p.id, p.usuario_id, u.email, u.nombre, p.total
+            SELECT p.id, p.usuario_id, p.estado_id, u.email, u.nombre, p.total
             FROM pedidos p
             LEFT JOIN usuarios u ON p.usuario_id = u.id
             WHERE p.id = ?
@@ -152,20 +240,94 @@ router.put('/pedidos/:id/estado', requireAuth, async (req, res) => {
         }
 
         const order = orderRows[0];
+        const estadoAnteriorId = order.estado_id;
 
-        // Actualizar estado
-        const updateQuery = 'UPDATE pedidos SET estado_id = ?, updated_at = NOW() WHERE id = ?';
-        await pool.query(updateQuery, [estadoId, id]);
+        // Solo actualizar si el estado es diferente
+        if (estadoAnteriorId !== nuevoEstadoId) {
+            // Registrar en historial
+            await pool.query(
+                'INSERT INTO historial_estado_pedido (pedido_id, estado_id, admin_id, comentario) VALUES (?, ?, ?, ?)',
+                [id, nuevoEstadoId, req.session.adminId, comentario || null]
+            );
 
-        // Enviar email notificando cambio de estado si hay email del cliente
-        if (order.email) {
-            sendStatusChangeEmail(order.id, order.email, order.nombre, estado);
+            // Actualizar estado del pedido
+            const updateQuery = 'UPDATE pedidos SET estado_id = ?, updated_at = NOW() WHERE id = ?';
+            await pool.query(updateQuery, [nuevoEstadoId, id]);
+
+            // Enviar email notificando cambio de estado si hay email del cliente
+            if (order.email) {
+                sendStatusChangeEmail(order.id, order.email, order.nombre, estado);
+            }
         }
 
         res.json({ success: true, message: 'Estado actualizado', orderId: id, newStatus: estado });
     } catch (error) {
         console.error('❌ Error al actualizar estado:', error);
         res.status(500).json({ error: 'Error al actualizar estado' });
+    }
+});
+
+// GET /admin/pedidos/:id/detalle - Obtener líneas del pedido
+router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Cabecera del pedido
+        const [orders] = await pool.query(`
+            SELECT p.id, p.total, p.created_at, ep.nombre AS estado_nombre,
+                   COALESCE(u.nombre, 'Cliente Anónimo') AS customer_name, u.email
+            FROM pedidos p
+            JOIN estado_pedido ep ON p.estado_id = ep.id
+            LEFT JOIN usuarios u ON p.usuario_id = u.id
+            WHERE p.id = ?
+            LIMIT 1
+        `, [id]);
+
+        if (orders.length === 0) {
+            return res.status(404).json({ error: 'Pedido no encontrado' });
+        }
+
+        // Líneas del pedido
+        const [items] = await pool.query(`
+            SELECT dp.id, dp.cantidad, dp.precio_unitario, (dp.cantidad * dp.precio_unitario) AS subtotal,
+                   prod.id AS producto_id, prod.nombre AS producto_nombre, prod.imagen
+            FROM detalle_pedidos dp
+            JOIN productos prod ON dp.producto_id = prod.id
+            WHERE dp.pedido_id = ?
+            ORDER BY dp.id ASC
+        `, [id]);
+
+        res.json({ order: orders[0], items });
+    } catch (error) {
+        console.error('❌ Error al obtener detalle del pedido:', error.message);
+        res.status(500).json({ error: 'Error al obtener detalle' });
+    }
+});
+
+// GET /admin/pedidos/:id/historial - Obtener historial de cambios de estado
+router.get('/pedidos/:id/historial', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [history] = await pool.query(`
+            SELECT 
+                h.id,
+                h.pedido_id,
+                ep.nombre AS estado_nombre,
+                COALESCE(u.nombre, 'Sistema') AS admin_nombre,
+                h.comentario,
+                h.created_at
+            FROM historial_estado_pedido h
+            JOIN estado_pedido ep ON h.estado_id = ep.id
+            LEFT JOIN usuarios u ON h.admin_id = u.id
+            WHERE h.pedido_id = ?
+            ORDER BY h.created_at ASC
+        `, [id]);
+
+        res.json({ history });
+    } catch (error) {
+        console.error('❌ Error al obtener historial:', error.message);
+        res.status(500).json({ error: 'Error al obtener historial' });
     }
 });
 
@@ -253,5 +415,114 @@ async function sendStatusChangeEmail(orderId, customerEmail, customerName, newSt
         console.error(`❌ Error al enviar email de actualización:`, error);
     }
 }
+
+// POST /admin/migrate/historial - Crear tabla historial_estado_pedido (solo para desarrollo)
+router.post('/migrate/historial', requireAuth, async (req, res) => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS historial_estado_pedido (
+              id INT PRIMARY KEY AUTO_INCREMENT,
+              pedido_id INT NOT NULL,
+              estado_id INT NOT NULL,
+              admin_id INT,
+              comentario TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE,
+              FOREIGN KEY (estado_id) REFERENCES estado_pedido(id),
+              FOREIGN KEY (admin_id) REFERENCES usuarios(id) ON DELETE SET NULL,
+              INDEX idx_pedido_id (pedido_id),
+              INDEX idx_created_at (created_at)
+            ) ENGINE=InnoDB
+        `);
+        
+        res.json({ success: true, message: 'Tabla historial_estado_pedido creada correctamente' });
+    } catch (error) {
+        console.error('Error creando tabla historial:', error);
+        res.status(500).json({ error: 'Error al crear tabla' });
+    }
+});
+
+// GET /admin/products - Página de gestión de productos
+router.get('/products', requireAuth, async (req, res) => {
+    try {
+        const html = await fs.readFile(path.join(__dirname, '/../views/admin-products.html'), 'utf-8');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.send(html);
+    } catch (error) {
+        console.error('Error cargando página de productos:', error);
+        res.status(500).send('Error cargando página');
+    }
+});
+
+// GET /admin/productos - Listar todos los productos
+router.get('/productos', requireAuth, async (req, res) => {
+    try {
+        const [productos] = await pool.query(`
+            SELECT id, nombre, descripcion, precio, stock, imagen, created_at, updated_at
+            FROM productos
+            ORDER BY created_at DESC
+        `);
+        
+        res.json({ success: true, productos });
+    } catch (error) {
+        console.error('Error al obtener productos:', error);
+        res.status(500).json({ error: 'Error al obtener productos' });
+    }
+});
+
+// POST /admin/productos - Crear nuevo producto
+router.post('/productos', requireAuth, async (req, res) => {
+    try {
+        const { nombre, descripcion, precio, stock, imagen } = req.body;
+
+        if (!nombre || precio === undefined || stock === undefined) {
+            return res.status(400).json({ error: 'Nombre, precio y stock son obligatorios' });
+        }
+
+        const [result] = await pool.query(
+            'INSERT INTO productos (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)',
+            [nombre, descripcion || null, precio, stock, imagen || null]
+        );
+
+        res.json({ success: true, message: 'Producto creado', productoId: result.insertId });
+    } catch (error) {
+        console.error('Error al crear producto:', error);
+        res.status(500).json({ error: 'Error al crear producto' });
+    }
+});
+
+// PUT /admin/productos/:id - Actualizar producto
+router.put('/productos/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre, descripcion, precio, stock, imagen } = req.body;
+
+        if (!nombre || precio === undefined || stock === undefined) {
+            return res.status(400).json({ error: 'Nombre, precio y stock son obligatorios' });
+        }
+
+        await pool.query(
+            'UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, stock = ?, imagen = ?, updated_at = NOW() WHERE id = ?',
+            [nombre, descripcion || null, precio, stock, imagen || null, id]
+        );
+
+        res.json({ success: true, message: 'Producto actualizado' });
+    } catch (error) {
+        console.error('Error al actualizar producto:', error);
+        res.status(500).json({ error: 'Error al actualizar producto' });
+    }
+});
+
+// DELETE /admin/productos/:id - Eliminar producto
+router.delete('/productos/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM productos WHERE id = ?', [id]);
+        res.json({ success: true, message: 'Producto eliminado' });
+    } catch (error) {
+        console.error('Error al eliminar producto:', error);
+        res.status(500).json({ error: 'Error al eliminar producto' });
+    }
+});
 
 module.exports = router;

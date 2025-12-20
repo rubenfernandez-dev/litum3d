@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuenta Admin - LITUM 3D</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); color: #fff; min-height: 100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .card { width: 100%; max-width: 520px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.35); }
+    h1 { margin: 0 0 12px; font-size: 22px; }
+    p { color: rgba(255,255,255,0.75); margin: 0 0 16px; font-size: 14px; }
+    .form-group { margin-bottom: 14px; }
+    label { display:block; margin-bottom: 6px; font-size: 13px; color: rgba(255,255,255,0.9); }
+    input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; }
+    input::placeholder { color: rgba(255,255,255,0.55); }
+    .actions { display:flex; gap:10px; margin-top: 10px; }
+    .btn { padding: 10px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+    .btn-save { background: linear-gradient(135deg, #64c8ff 0%, #9664ff 100%); color: #fff; }
+    .btn-cancel { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+    .msg { margin-top: 12px; font-size: 13px; }
+    .error { color: #ff6b6b; }
+    .ok { color: #66ff99; }
+    .topbar { position: fixed; top: 16px; left: 16px; right: 16px; display:flex; justify-content: space-between; align-items:center; }
+    .link { color: #64c8ff; text-decoration: none; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="link" href="/admin/dashboard">← Volver al panel</a>
+    <a class="link" href="/">Inicio</a>
+  </div>
+  <div class="card">
+    <h1>Mi Cuenta</h1>
+    <p>Cambia tu email y/o contraseña del administrador. Introduce tu contraseña actual para confirmar.</p>
+
+    <div class="form-group">
+      <label for="currentPassword">Contraseña actual</label>
+      <input id="currentPassword" type="password" placeholder="••••••••" required>
+    </div>
+    <div class="form-group">
+      <label for="newEmail">Nuevo email (opcional)</label>
+      <input id="newEmail" type="email" placeholder="nuevo@email.com">
+    </div>
+    <div class="form-group">
+      <label for="newPassword">Nueva contraseña (opcional)</label>
+      <input id="newPassword" type="password" placeholder="••••••••">
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-save" onclick="saveChanges()">Guardar cambios</button>
+      <button class="btn btn-cancel" onclick="cancel()">Cancelar</button>
+    </div>
+    <div id="message" class="msg"></div>
+  </div>
+
+  <script>
+    async function saveChanges() {
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newEmail = document.getElementById('newEmail').value.trim();
+      const newPassword = document.getElementById('newPassword').value;
+      const msg = document.getElementById('message');
+
+      msg.textContent = '';
+      msg.className = 'msg';
+
+      if (!currentPassword) {
+        msg.textContent = 'Debes introducir la contraseña actual';
+        msg.classList.add('error');
+        return;
+      }
+      if (!newEmail && !newPassword) {
+        msg.textContent = 'Introduce nuevo email o nueva contraseña';
+        msg.classList.add('error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/admin/account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newEmail, newPassword })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          msg.textContent = 'Cambios guardados correctamente';
+          msg.classList.add('ok');
+        } else {
+          msg.textContent = data.error || 'No se pudieron guardar los cambios';
+          msg.classList.add('error');
+        }
+      } catch (e) {
+        msg.textContent = 'Error de conexión con el servidor';
+        msg.classList.add('error');
+      }
+    }
+    function cancel() {
+      window.location.href = '/admin/dashboard';
+    }
+  </script>
+</body>
+</html>

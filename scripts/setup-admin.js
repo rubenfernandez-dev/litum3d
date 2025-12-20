@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { pool } = require('../config/db');
+const bcrypt = require('bcryptjs');
 
 async function setupAdmin() {
   try {
@@ -38,8 +39,8 @@ async function setupAdmin() {
         INSERT INTO usuarios (nombre, email, contraseña, activo, es_admin)
         VALUES (?, ?, ?, TRUE, TRUE)
       `;
-      // Nota: En producción, usar bcrypt o scrypt para hashear contraseña
-      const [result] = await pool.query(insertQuery, ['Administrator', adminEmail, 'admin123']);
+      const passwordHash = await bcrypt.hash('admin123', 10);
+      const [result] = await pool.query(insertQuery, ['Administrator', adminEmail, passwordHash]);
       
       console.log('   ✓ Usuario admin creado\n');
       console.log('📊 Datos de acceso:');
