@@ -111,7 +111,8 @@
             object-fit: cover;
             border-radius: 6px;
             margin-bottom: 10px;
-            background: rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, rgba(100, 200, 255, 0.2), rgba(150, 100, 255, 0.2));
+            display: block;
         }
 
         .product-name {
@@ -385,7 +386,7 @@
 
             grid.innerHTML = products.map(p => `
                 <div class="product-card">
-                    <img src="${p.imagen || '/img/placeholder.jpg'}" alt="${p.nombre}" class="product-image" onerror="this.src='/img/placeholder.jpg'">
+                    ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}" class="product-image" onerror="this.style.display='none'">` : `<div class="product-image" style="display:flex;align-items:center;justify-content:center;color:#999;">📦</div>`}
                     <div class="product-name">${p.nombre}</div>
                     <div class="product-price">€${parseFloat(p.precio).toFixed(2)}</div>
                     <div class="product-stock">Stock: ${p.stock} unidades</div>

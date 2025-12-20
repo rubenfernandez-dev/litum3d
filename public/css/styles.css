@@ -391,6 +391,10 @@ h2::after {
   z-index: 2;
 }
 
+.product-card.gallery-card .product-content {
+  display: none;
+}
+
 .product-name {
   font-size: 1.3rem;
   margin: 0 0 0.5rem 0;

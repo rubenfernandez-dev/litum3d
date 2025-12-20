@@ -12,8 +12,8 @@ async function loadFeaturedProducts() {
       return;
     }
 
-    // Show only first 3
-    products = products.slice(0, 3);
+    // Show only first 4
+    products = products.slice(0, 4);
     
     container.innerHTML = products.map(p => `
       <div class="product-card">
