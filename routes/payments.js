@@ -62,28 +62,27 @@ router.post('/pay', async (req, res) => {
       return res.json({ ok: false, error: 'Datos incompletos' });
     }
 
-    // Calculate totals from base and extras
+    // Calculate totals from cart items
+    // Los precios están siempre en EUR. El total = suma de item.price sin conversión.
+    // currency solo indica en qué moneda mostrar (EUR o CHF) pero no afecta el cálculo.
     const selectedCurrency = (currency || 'eur').toLowerCase();
-    const eurToChf = selectedCurrency === 'chf' ? await getEurToChfRate() : 1.0;
 
-    let subtotalBaseEur = 0; // base (product + modelo) in EUR
-    let subtotalExtrasCurr = 0; // extras sum in selected currency
+    // Debug: log carrito recibido
+    console.log('🧾 Carrito recibido:', cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price })));
 
+    let totalCurr = 0;
     for (const item of cart) {
       const qty = parseInt(item.quantity || 1);
-      const baseUnitEur = parseFloat(item.basePrice || 0) + parseFloat(item.priceDelta || 0);
-      subtotalBaseEur += baseUnitEur * qty;
-
-      const ex = item.extras || {};
-      const extrasUnit = (ex.upscale ? 5 : 0) + (ex.qr ? 5 : 0) + (ex.adapter ? 4 : 0);
-      subtotalExtrasCurr += extrasUnit * qty; // already in EUR or CHF by currency choice
+      const unit = parseFloat(item.price || 0);
+      totalCurr += unit * qty;
     }
+    // Debug: log totales
+    console.log(`💶 Moneda seleccionada: ${selectedCurrency.toUpperCase()} | Total calculado: ${totalCurr.toFixed(2)}`);
 
-    // Convert base to CHF if needed
-    const subtotalBaseCurr = selectedCurrency === 'chf' ? (subtotalBaseEur * eurToChf) : subtotalBaseEur;
-    const subtotalCurr = subtotalBaseCurr + subtotalExtrasCurr;
-    const taxCurr = subtotalCurr * 0.21;
-    const totalCurr = subtotalCurr + taxCurr;
+    // Desglose informativo para emails/factura (sin afectar al cobro)
+    const subtotalCurr = totalCurr / 1.21;
+    const taxCurr = totalCurr - subtotalCurr;
+    console.log(`📊 Desglose (informativo): Base=${subtotalCurr.toFixed(2)} IVA=${taxCurr.toFixed(2)} TOTAL=${totalCurr.toFixed(2)}`);
 
     // Determine currency
     const amount = Math.round(totalCurr * 100);
@@ -194,52 +193,69 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
 
     // Email to customer
     const customerEmailHTML = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">¡Pedido Confirmado! 🎉</h2>
-        <p>Hola <strong>${escapeHtml(customerData.name)}</strong>,</p>
-        <p>Tu pedido #${orderId} ha sido recibido y pagado exitosamente.</p>
+      <div style="background:#f5f7fb; padding:24px; font-family:'Segoe UI',Arial,sans-serif; color:#101828;">
+        <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #e9eef5; border-radius:12px; box-shadow:0 12px 32px rgba(16,24,40,0.08); overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#1a1a2e,#2d2f4a); color:#fff; padding:18px 24px;">
+            <div style="font-size:20px; font-weight:700;">Pedido confirmado</div>
+            <div style="opacity:0.9; font-size:13px;">#${orderId} · Pago recibido</div>
+          </div>
 
-        <h3 style="margin-top: 20px; color: #e0ad61;">Detalles del Pedido</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background-color: #f0f0f0;">
-              <th style="padding: 10px; text-align: left;">Producto</th>
-              <th style="padding: 10px; text-align: center;">Cantidad</th>
-              <th style="padding: 10px; text-align: right;">Precio</th>
-              <th style="padding: 10px; text-align: right;">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${cartHTML}
-          </tbody>
-        </table>
+          <div style="padding:22px 24px; line-height:1.6;">
+            <p style="margin:0 0 8px 0; font-size:15px;">Hola <strong>${escapeHtml(customerData.name)}</strong>,</p>
+            <p style="margin:0; color:#475467;">Gracias por tu compra en LITUM3D. Estamos preparando tu pedido.</p>
 
-        <div style="text-align: right; margin-top: 20px;">
-          <p><strong>Subtotal:</strong> ${symbol}${subtotal.toFixed(2)}</p>
-          <p><strong>IVA (21%):</strong> ${symbol}${tax.toFixed(2)}</p>
-          <p style="font-size: 18px; color: #e0ad61;"><strong>TOTAL: ${symbol}${total.toFixed(2)}</strong></p>
+            <div style="margin:18px 0; padding:14px 16px; background:#f8fafc; border:1px solid #e9eef5; border-radius:10px;">
+              <div style="font-weight:700; font-size:14px; color:#0f172a;">Resumen de pago</div>
+              <div style="margin-top:8px; display:flex; justify-content:space-between; color:#475467; font-size:14px;">
+                <span>Base (sin IVA)</span><span>${symbol}${subtotal.toFixed(2)}</span>
+              </div>
+              <div style="margin-top:4px; display:flex; justify-content:space-between; color:#475467; font-size:14px;">
+                <span>IVA (21%)</span><span>${symbol}${tax.toFixed(2)}</span>
+              </div>
+              <div style="margin-top:10px; display:flex; justify-content:space-between; font-weight:800; font-size:16px; color:#1a1a2e;">
+                <span>TOTAL</span><span>${symbol}${total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div style="margin-top:16px;">
+              <div style="font-weight:700; font-size:14px; color:#0f172a; margin-bottom:10px;">Detalles del pedido</div>
+              <table style="width:100%; border-collapse:collapse; border:1px solid #e9eef5;">
+                <thead>
+                  <tr style="background:#f8fafc; border-bottom:1px solid #e9eef5;">
+                    <th style="padding:10px; text-align:left; font-size:13px; color:#344054;">Producto</th>
+                    <th style="padding:10px; text-align:center; font-size:13px; color:#344054;">Cant.</th>
+                    <th style="padding:10px; text-align:right; font-size:13px; color:#344054;">Precio</th>
+                    <th style="padding:10px; text-align:right; font-size:13px; color:#344054;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${cartHTML}
+                </tbody>
+              </table>
+            </div>
+
+            <div style="margin-top:18px; padding:12px 14px; background:#fff8ed; border:1px solid #f4e3c3; border-radius:10px;">
+              <div style="font-weight:700; color:#8b5a1e; font-size:14px;">Datos de envío</div>
+              <div style="margin-top:6px; color:#6b7280; font-size:14px; line-height:1.5;">
+                ${escapeHtml(customerData.name)}<br>
+                ${escapeHtml(customerData.address)}<br>
+                ${escapeHtml(customerData.zip)} ${escapeHtml(customerData.city)}<br>
+                Teléfono: ${escapeHtml(customerData.phone)}
+              </div>
+            </div>
+
+            <p style="margin-top:18px; color:#475467; font-size:13px;">Si tienes dudas, responde a este correo o contáctanos y te ayudaremos.</p>
+
+            <div style="margin-top:14px;">
+              <a href="https://litum3d.com" style="display:inline-block; padding:12px 18px; background:#1a1a2e; color:#fff; border-radius:8px; text-decoration:none; font-weight:700; font-size:14px;">Ir a LITUM3D</a>
+            </div>
+          </div>
         </div>
-
-        <h3 style="margin-top: 20px; color: #e0ad61;">Datos de Envío</h3>
-        <p>
-          ${escapeHtml(customerData.name)}<br>
-          ${escapeHtml(customerData.address)}<br>
-          ${escapeHtml(customerData.zip)} ${escapeHtml(customerData.city)}<br>
-          Teléfono: ${escapeHtml(customerData.phone)}
-        </p>
-
-        <p style="margin-top: 20px; color: #666;">
-          <small>Recibirás actualizaciones sobre tu pedido en este email. Si tienes dudas, contáctanos.</small>
-        </p>
-
-        <p style="margin-top: 30px; color: #1a1a2e;">
-          <strong>LITUM3D</strong><br>
-          <small>Premium 3D Litofanías</small>
-        </p>
       </div>
     `;
 
     // Email to admin
+    const debugLines = cart.map(i => `${escapeHtml(i.name)} x${i.quantity} = ${(i.price * i.quantity).toFixed(2)}`).join(' | ');
     const adminEmailHTML = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a1a2e;">¡Nuevo Pedido Pagado! #${orderId}</h2>
@@ -269,10 +285,14 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
         </table>
 
         <div style="text-align: right; margin-top: 20px;">
-          <p><strong>Subtotal:</strong> ${symbol}${subtotal.toFixed(2)}</p>
+          <p><strong>Base (sin IVA):</strong> ${symbol}${subtotal.toFixed(2)}</p>
           <p><strong>IVA (21%):</strong> ${symbol}${tax.toFixed(2)}</p>
           <p style="font-size: 18px; color: #e0ad61;"><strong>TOTAL: ${symbol}${total.toFixed(2)}</strong></p>
         </div>
+
+        <p style="margin-top: 12px; color: #888; background:#f6f6f6; padding:8px; border-radius:6px;">
+          <small><strong>DEBUG:</strong> Moneda=${selectedCurrency.toUpperCase()} | Líneas: ${debugLines} | Suma líneas=${total.toFixed(2)}</small>
+        </p>
 
         <p style="margin-top: 20px; color: #666; background-color: #f9f9f9; padding: 10px;">
           <small><strong>Acción necesaria:</strong> Prepara el envío y actualiza el estado del pedido.</small>

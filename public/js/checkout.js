@@ -37,21 +37,12 @@ function renderOrderSummary() {
   const country = countrySel ? countrySel.value : 'ES';
   const currency = CURRENCY_MAP[country] || CURRENCY_MAP['ES'];
 
-  // Compute totals consistently with backend
-  let subtotalBaseEur = 0;
-  let subtotalExtrasCurr = 0;
-
+  // Totales: usar directamente item.price del carrito (ya incluye extras)
+  let totalGross = 0;
   cart.forEach(item => {
     const qty = parseInt(item.quantity || 1);
-    const baseUnitEur = parseFloat(item.basePrice || 0) + parseFloat(item.priceDelta || 0);
-    subtotalBaseEur += baseUnitEur * qty;
-    const ex = item.extras || {};
-    const extrasUnit = (ex.upscale ? 5 : 0) + (ex.qr ? 5 : 0) + (ex.adapter ? 4 : 0);
-    subtotalExtrasCurr += extrasUnit * qty;
+    totalGross += parseFloat(item.price || 0) * qty;
   });
-
-  const subtotalBaseCurr = currency.code === 'CHF' ? (subtotalBaseEur * eurChfRate) : subtotalBaseEur;
-  const totalGross = subtotalBaseCurr + subtotalExtrasCurr; // precios mostrados incluyen IVA
   const base = totalGross / 1.21;
   const iva = totalGross - base;
 
@@ -67,7 +58,7 @@ function renderOrderSummary() {
             item.extras.adapter ? `Adaptador USB +4 ${item.extras.currency}` : null
           ].filter(Boolean).join(' · ')}</small>` : ''}
         </span>
-        <span>${currency.symbol} ${( ( (parseFloat(item.basePrice||0) + parseFloat(item.priceDelta||0)) * (currency.code==='CHF'? eurChfRate:1) ) * item.quantity + ( (item.extras?.upscale?5:0)+(item.extras?.qr?5:0)+(item.extras?.adapter?4:0) ) * item.quantity ).toFixed(2)}</span>
+        <span>${currency.symbol} ${(parseFloat(item.price || 0) * item.quantity).toFixed(2)}</span>
       </div>
     `).join('')}
     <div class="cart-summary-row">
@@ -94,9 +85,6 @@ function updateTotalAmount() {
   const country = countrySel ? countrySel.value : 'ES';
   const currency = CURRENCY_MAP[country] || CURRENCY_MAP['ES'];
   let total = getCartTotal(); // precios ya incluyen IVA
-  if (currency.code === 'CHF') {
-    total = total * eurChfRate; // convert using live rate
-  }
   document.getElementById('total-amount').textContent = total.toFixed(2);
   const symbolEl = document.getElementById('currency-symbol');
   if (symbolEl) symbolEl.textContent = currency.symbol + ' ';
@@ -223,8 +211,7 @@ async function handleCheckout(e) {
     // Reset button label with current currency
     const countryReset = document.getElementById('customer_country')?.value || 'ES';
     const currReset = CURRENCY_MAP[countryReset] || CURRENCY_MAP['ES'];
-    let totalReset = getCartTotal();
-    if (currReset.code === 'CHF') totalReset = totalReset * eurChfRate;
+    let totalReset = getCartTotal(); // sin conversión
     submitBtn.textContent = `Pagar ${currReset.symbol} ${totalReset.toFixed(2)}`;
   }
 }

@@ -110,26 +110,18 @@ function renderCartItems() {
 
 function calculateItemTotalDisplay(item, currency) {
   const qty = parseInt(item.quantity || 1);
-  const baseUnitEur = parseFloat(item.basePrice || 0) + parseFloat(item.priceDelta || 0);
-  const baseCurr = currency.code === 'CHF' ? (baseUnitEur * eurChfRate) : baseUnitEur;
-  const ex = item.extras || {};
-  const extrasUnit = (ex.upscale ? 5 : 0) + (ex.qr ? 5 : 0) + (ex.adapter ? 4 : 0);
-  return (baseCurr + extrasUnit) * qty;
+    // item.price ya tiene base + extras, no convertir
+    return parseFloat(item.price || 0) * qty;
 }
 
 function calculateCartTotalDisplay(cart, currency) {
-  let subtotalBaseEur = 0;
-  let subtotalExtrasCurr = 0;
+  // Todos los precios en carrito ya están calculados, solo sumar
+  let total = 0;
   cart.forEach(item => {
     const qty = parseInt(item.quantity || 1);
-    const baseUnitEur = parseFloat(item.basePrice || 0) + parseFloat(item.priceDelta || 0);
-    subtotalBaseEur += baseUnitEur * qty;
-    const ex = item.extras || {};
-    const extrasUnit = (ex.upscale ? 5 : 0) + (ex.qr ? 5 : 0) + (ex.adapter ? 4 : 0);
-    subtotalExtrasCurr += extrasUnit * qty;
+    total += parseFloat(item.price || 0) * qty;
   });
-  const subtotalBaseCurr = currency.code === 'CHF' ? (subtotalBaseEur * eurChfRate) : subtotalBaseEur;
-  return subtotalBaseCurr + subtotalExtrasCurr;
+  return total;
 }
 
 function updateQty(productId, newQty) {
