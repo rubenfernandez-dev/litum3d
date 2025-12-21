@@ -775,8 +775,16 @@
                         }
                         let imagesInfo = '';
                         if (it.imagenes && it.imagenes.length > 0) {
-                            const imgLinks = it.imagenes.map(img => `<a href="${img.ruta}" target="_blank" style="color:#64c8ff; text-decoration:none; margin-right:6px;">📎 Ver</a>`).join('');
-                            imagesInfo = `<div style="font-size:12px; margin-top:4px;">Imágenes: ${imgLinks}</div>`;
+                            const thumbs = it.imagenes.map(img => `
+                                <a href="${img.ruta}" target="_blank" title="Abrir imagen" style="display:inline-block; width:64px; height:64px; overflow:hidden; border-radius:8px; margin-right:8px; border:1px solid rgba(255,255,255,0.15);">
+                                    <img src="${img.ruta}" alt="imagen" style="width:100%; height:100%; object-fit:cover; display:block;" />
+                                </a>
+                            `).join('');
+                            imagesInfo = `
+                                <div style="font-size:12px; margin-top:6px;">
+                                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">${thumbs}</div>
+                                </div>
+                            `;
                         }
                         return `
                             <div class="detail-row" style="flex-direction: column; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
