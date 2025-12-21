@@ -1,5 +1,5 @@
 // Stripe Checkout
-const stripe = Stripe('pk_test_51SJ8AN5cIO4mUIxs5UYdUSVOT1lN3CSu2YNDEtI1kayJH9tYyioND7nLcmZWxA1MpdZjuEebZM8PB3BgoDKeU3Sj00YdMnl7UN');
+const stripe = Stripe('pk_live_51SJ8ABQJLhAe8SB3QmErgOpkRJxgcWcZVvRyCNZaE4wHLPdaUyEvoCBn7zYaZeKGNDNGNqcvbVIWA9ooStNcV3h200CfiF2Gdh');
 let cardElement;
 const CURRENCY_MAP = { ES: { code: 'EUR', symbol: '€' }, CH: { code: 'CHF', symbol: 'CHF' } };
 let eurChfRate = 1.00; // live rate fetched from backend when needed
