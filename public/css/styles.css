@@ -394,6 +394,38 @@ nav .logo {
   50% { text-shadow: 0 0 40px rgba(224, 173, 97, 0.8); }
 }
 
+/* Hamburger Button */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  gap: 5px;
+  z-index: 1001;
+}
+
+.hamburger span {
+  width: 25px;
+  height: 3px;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(8px, 8px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(8px, -8px);
+}
+
 nav .menu {
   display: flex;
   gap: 2.5rem;
@@ -1102,9 +1134,40 @@ footer {
     font-size: 1.3rem;
   }
   
+  .hamburger {
+    display: flex;
+  }
+  
   nav .menu {
+    position: fixed;
+    left: -100%;
+    top: 60px;
+    flex-direction: column;
+    background: rgba(15, 52, 96, 0.95);
+    backdrop-filter: blur(20px);
+    width: 100%;
+    text-align: center;
+    transition: left 0.3s ease;
     gap: 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 999;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     font-size: 0.9rem;
+  }
+  
+  nav .menu.active {
+    left: 0;
+  }
+  
+  nav .menu a {
+    display: block;
+    padding: 0.8rem 0;
+  }
+  
+  nav .menu .cart-icon-wrapper {
+    display: inline-block;
+    padding: 0.8rem 0;
   }
   
   .carousel-arrow {
@@ -1150,11 +1213,6 @@ footer {
 @media (max-width: 480px) {
   body {
     font-size: 14px;
-  }
-  
-  nav .menu {
-    flex-direction: column;
-    gap: 0.8rem;
   }
   
   .carousel-section {
@@ -1716,3 +1774,177 @@ footer {
 .carousel-slide-3 {
   background-image: url('/img/productos/carrusel3.png');
 }
+
+/* ============================================
+   PRODUCT VARIANTS - Selectores de Variantes
+   ============================================ */
+
+.variant-types-container {
+  display: grid;
+  gap: 1.2rem;
+  margin: 1.5rem 0;
+}
+
+.variant-type-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.variant-type-group label {
+  font-weight: 600;
+  color: var(--gold);
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.variant-type-group select {
+  padding: 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(224, 173, 97, 0.3);
+  border-radius: 8px;
+  color: var(--light);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23e0ad61' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  padding-right: 2.5rem;
+}
+
+.variant-type-group select:hover {
+  border-color: var(--gold);
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.variant-type-group select:focus {
+  outline: none;
+  border-color: var(--gold);
+  background-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(224, 173, 97, 0.2);
+}
+
+.variant-type-group select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.variant-type-group select option {
+  background: var(--primary);
+  color: var(--light);
+}
+
+.variant-type-group select option:disabled {
+  opacity: 0.6;
+  color: rgba(245, 245, 247, 0.5);
+}
+
+/* Resumen de variantes seleccionadas */
+.variant-summary {
+  background: rgba(224, 173, 97, 0.08);
+  border: 1px solid rgba(224, 173, 97, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1.2rem;
+}
+
+.variant-summary-title {
+  font-weight: 600;
+  color: var(--gold);
+  margin-bottom: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.variant-summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: rgba(245, 245, 247, 0.8);
+}
+
+.variant-summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+}
+
+.variant-summary-item-label {
+  color: rgba(245, 245, 247, 0.7);
+}
+
+.variant-summary-item-value {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* Precio actualizado con variantes */
+.price-with-variants {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(224, 173, 97, 0.2);
+}
+
+.price-label {
+  color: rgba(245, 245, 247, 0.7);
+  font-size: 0.9rem;
+}
+
+.final-price {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--gold);
+  text-shadow: 0 0 10px rgba(224, 173, 97, 0.5);
+}
+
+.price-delta-info {
+  font-size: 0.8rem;
+  color: rgba(224, 173, 97, 0.8);
+  margin-left: auto;
+}
+
+/* Estado de validación */
+.variant-validation-message {
+  padding: 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-top: 0.8rem;
+}
+
+.variant-validation-message.error {
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  color: #ff8a80;
+}
+
+.variant-validation-message.success {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  color: #81c784;
+}
+
+/* Responsive para variantes */
+@media (max-width: 768px) {
+  .variant-types-container {
+    gap: 1rem;
+  }
+
+  .variant-type-group label {
+    font-size: 0.9rem;
+  }
+
+  .variant-type-group select {
+    padding: 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .final-price {
+    font-size: 1.5rem;
+  }
+}
+

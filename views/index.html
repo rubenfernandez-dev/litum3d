@@ -31,12 +31,18 @@
   <title>LITUM3D - Litofanías Premium</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <script src="/js/cookie-banner.js"></script>
+  <script src="/js/navbar.js"></script>
 </head>
 <body>
   <header>
     <nav>
       <a href="/" class="logo">✨ LITUM3D</a>
-      <div class="menu">
+      <button class="hamburger" id="hamburger-btn" aria-label="Abrir menú">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="menu" id="nav-menu">
         <a href="/">Inicio</a>
         <a href="/gallery">Galería</a>
         <a href="/about">Sobre</a>
@@ -118,7 +124,18 @@
     <div class="customization-dialog">
       <button class="custom-close" onclick="closeCustomization()">✕</button>
       <h3 id="custom-modal-title">Personalizar</h3>
-      <p class="opacity-light">Selecciona modelo y sube hasta 3 fotos (JPG/PNG).</p>
+      <p class="opacity-light">Selecciona tus opciones y personaliza tu producto.</p>
+
+      <!-- SECCIÓN DE VARIANTES -->
+      <div class="custom-section" data-variants-section>
+        <div class="variant-types-container"></div>
+      </div>
+
+      <!-- PRECIO CON VARIANTES -->
+      <div class="price-with-variants" style="margin-bottom: 1.5rem;">
+        <span class="price-label">Precio final:</span>
+        <span class="final-price" data-variant-price>$0.00</span>
+      </div>
 
       <div class="custom-section">
         <h4>Modelo</h4>
@@ -163,7 +180,7 @@
 
       <div class="custom-actions">
         <button class="custom-btn ghost" onclick="closeCustomization()">Cancelar</button>
-        <button class="custom-btn primary" onclick="confirmCustomization()">Añadir al carrito</button>
+        <button class="custom-btn primary" onclick="confirmCustomization()" data-add-to-cart-btn>Añadir al carrito</button>
       </div>
     </div>
   </div>
@@ -360,6 +377,7 @@
   <script src="/js/cart.js"></script>
   <script src="/js/carousel.js"></script>
   <script src="/js/home.js"></script>
+  <script src="/js/product-variants.js"></script>
 
   <!-- Botón flotante WhatsApp -->
   <a href="https://wa.me/41772186229" class="whatsapp-button" title="Contactar por WhatsApp" target="_blank" rel="noopener noreferrer">

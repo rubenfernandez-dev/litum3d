@@ -5,12 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Galería - LITUM3D Litofanías</title>
   <link rel="stylesheet" href="/css/styles.css" />
+  <script src="/js/navbar.js"></script>
 </head>
 <body>
   <header>
     <nav>
       <a href="/" class="logo">✨ LITUM3D</a>
-      <div class="menu">
+      <button class="hamburger" id="hamburger-btn" aria-label="Abrir menú">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="menu" id="nav-menu">
         <a href="/">Inicio</a>
         <a href="/gallery">Galería</a>
         <a href="/about">Sobre</a>
