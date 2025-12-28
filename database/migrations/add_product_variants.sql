@@ -68,9 +68,35 @@ CREATE TABLE IF NOT EXISTS product_variant_combination_details (
 
 -- Tabla actualizada: detalle_pedidos con variantes seleccionadas
 -- (Se agrega columna para almacenar variantes seleccionadas como JSON)
-ALTER TABLE detalle_pedidos ADD COLUMN IF NOT EXISTS variantes_seleccionadas JSON COMMENT 'Variantes seleccionadas: {"tipo_id": option_id, ...}';
-ALTER TABLE detalle_pedidos ADD COLUMN IF NOT EXISTS combination_id INT COMMENT 'Referencia a combinación de variantes' AFTER variantes_seleccionadas;
-ALTER TABLE detalle_pedidos ADD FOREIGN KEY IF NOT EXISTS (combination_id) REFERENCES product_variant_combinations(id) ON DELETE SET NULL;
+-- Compatible con MySQL < 8.0.16 (sin IF NOT EXISTS en ALTER TABLE)
+SET @dbname = DATABASE();
+SET @tablename = "detalle_pedidos";
+SET @columnname = "variantes_seleccionadas";
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE 
+    (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname) AND (TABLE_SCHEMA = @dbname)
+  ) > 0,
+  "SELECT 1",
+  CONCAT("ALTER TABLE ", @tablename, " ADD COLUMN ", @columnname, " JSON COMMENT 'Variantes seleccionadas: {\"tipo_id\": option_id, ...}'")
+));
+PREPARE alterStatement FROM @preparedStatement;
+EXECUTE alterStatement;
+DEALLOCATE PREPARE alterStatement;
+
+SET @columnname = "combination_id";
+SET @preparedStatement = (SELECT IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE 
+    (TABLE_NAME = @tablename) AND (COLUMN_NAME = @columnname) AND (TABLE_SCHEMA = @dbname)
+  ) > 0,
+  "SELECT 1",
+  CONCAT("ALTER TABLE ", @tablename, " ADD COLUMN ", @columnname, " INT COMMENT 'Referencia a combinación de variantes'")
+));
+PREPARE alterStatement FROM @preparedStatement;
+EXECUTE alterStatement;
+DEALLOCATE PREPARE alterStatement;
+
+-- Agregar FK (puede fallar si ya existe, es normal)
+ALTER TABLE detalle_pedidos ADD FOREIGN KEY (combination_id) REFERENCES product_variant_combinations(id) ON DELETE SET NULL;
 
 -- EJEMPLO DE DATOS - DESCOMENTA PARA PROBAR
 -- ===================================================================
