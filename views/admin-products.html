@@ -392,6 +392,18 @@
     </div>
 
     <script>
+        // Abrir modal de nuevo producto
+        function openNewProductModal() {
+            document.getElementById('modalTitle').textContent = '➕ Nuevo Producto';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productModal').classList.add('show');
+        }
+
+        // Cerrar modal de producto
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('show');
+        }
         // Modal para añadir variante
         let currentVariantType = null;
         function openVariantModal(type) {
