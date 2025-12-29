@@ -32,13 +32,26 @@ router.get('/api/pedidos/:id', async (req, res) => {
     `, [req.params.id]);
     if (!pedido.length) return res.status(404).json({ error: 'Pedido no encontrado' });
     
-    const [detalles] = await pool.query(`
+    const [detallesRaw] = await pool.query(`
       SELECT dp.*, pr.nombre as producto_nombre 
       FROM detalle_pedidos dp 
       JOIN productos pr ON dp.producto_id = pr.id 
       WHERE dp.pedido_id = ?
     `, [req.params.id]);
-    
+
+    // Decodificar variantes_seleccionadas si existe
+    const detalles = detallesRaw.map(det => {
+      let variantes = null;
+      if (det.variantes_seleccionadas) {
+        try {
+          variantes = JSON.parse(det.variantes_seleccionadas);
+        } catch (e) {
+          variantes = null;
+        }
+      }
+      return { ...det, variantes };
+    });
+
     res.json({ ...pedido[0], detalles });
   } catch (err) {
     console.error(err);

@@ -22,267 +22,59 @@
         .header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
 
-            <script>
-            let products = [];
-            let currentProductIdForVariants = null;
-            let currentProductNameForVariants = '';
-            let variantTypes = [];
-            let currentVariantTypeId = null;
-            let variantOptions = [];
-            let currentVariantOptionId = null;
+        .title {
+            color: #fff;
+            font-size: 32px;
+            background: linear-gradient(135deg, #64c8ff 0%, #9664ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-            // Sobrescribe renderProducts para añadir botón de variantes
-            function renderProducts() {
-                const grid = document.getElementById('productsGrid');
-                if (products.length === 0) {
-                    grid.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📦</div>
-                            <div class="empty-state-text">No hay productos aún</div>
-                        </div>
-                    `;
-                    return;
-                }
-                grid.innerHTML = products.map(p => `
-                    <div class="product-card">
-                        ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}" class="product-image" onerror="this.style.display='none'">` : `<div class="product-image" style="display:flex;align-items:center;justify-content:center;color:#999;">📦</div>`}
-                        <div class="product-name">${p.nombre}</div>
-                        <div class="product-price">€${parseFloat(p.precio).toFixed(2)}</div>
-                        <div class="product-stock">Stock: ${p.stock} unidades</div>
-                        <div class="product-actions">
-                            <button class="btn-secondary" onclick="openVariantsModal(${p.id}, '${p.nombre}')">🧩 Variantes</button>
-                            <button class="btn-models" onclick="openModels(${p.id})">🧩 Modelos</button>
-                            <button class="btn-edit" onclick="editProduct(${p.id})">✏️ Editar</button>
-                            <button class="btn-delete" onclick="deleteProduct(${p.id}, '${p.nombre}')">🗑️ Eliminar</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
 
-            // Abrir modal de variantes
-            async function openVariantsModal(productId, productName) {
-                currentProductIdForVariants = productId;
-                currentProductNameForVariants = productName;
-                document.getElementById('variantsModalTitle').textContent = `🧩 Variantes: ${productName}`;
-                await loadVariantTypes(productId);
-                document.getElementById('variantsModal').classList.add('show');
-            }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
 
-            function closeVariantsModal() {
-                document.getElementById('variantsModal').classList.remove('show');
-                variantTypes = [];
-                variantOptions = [];
-                currentVariantTypeId = null;
-                currentVariantOptionId = null;
-                document.getElementById('variantTypesList').innerHTML = '';
-                document.getElementById('variantOptionsList').innerHTML = '';
-            }
+        .btn-primary {
+            background: rgba(100, 200, 255, 0.2);
+            color: #64c8ff;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
 
-            // Cargar tipos de variante
-            async function loadVariantTypes(productId) {
-                try {
-                    const res = await fetch(`/api/productos/${productId}/variant-types`);
-                    const data = await res.json();
-                    variantTypes = data || [];
-                    renderVariantTypes();
-                } catch (e) {
-                    variantTypes = [];
-                    document.getElementById('variantTypesList').innerHTML = `<div class='empty-state'><div class='empty-state-icon'>⚠️</div><div class='empty-state-text'>Error al cargar tipos de variante</div></div>`;
-                }
-            }
+        .btn-primary:hover {
+            background: rgba(100, 200, 255, 0.3);
+            box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
+        }
 
-            // Renderizar tipos de variante
-            function renderVariantTypes() {
-                const list = document.getElementById('variantTypesList');
-                if (!variantTypes.length) {
-                    list.innerHTML = `<div class='empty-state'><div class='empty-state-icon'>🧩</div><div class='empty-state-text'>No hay tipos de variante aún</div></div>`;
-                    return;
-                }
-                list.innerHTML = variantTypes.map(t => `
-                    <div class='model-card' style='margin-bottom:10px;'>
-                        <h4>${t.nombre} ${t.is_required ? '<span style="color:#8cf3d8;font-size:13px;">(obligatorio)</span>' : ''}</h4>
-                        <div class='model-meta'>${t.descripcion || ''}</div>
-                        <div class='model-actions'>
-                            <button class='btn-edit' onclick='editVariantType(${t.id})'>Editar</button>
-                            <button class='btn-delete' onclick='deleteVariantType(${t.id})'>Eliminar</button>
-                            <button class='btn-secondary' onclick='loadVariantOptions(${t.id})'>Opciones</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
+        .btn-secondary {
+            background: rgba(150, 100, 255, 0.2);
+            color: #9664ff;
+            border: 1px solid rgba(150, 100, 255, 0.3);
+        }
 
-            // Guardar tipo de variante
-            async function saveVariantType() {
-                if (!currentProductIdForVariants) return;
-                const id = document.getElementById('variantTypeId').value;
-                const nombre = document.getElementById('variantTypeName').value.trim();
-                const is_required = document.getElementById('variantTypeRequired').checked;
-                if (!nombre) return alert('Nombre requerido');
-                const payload = { nombre, is_required };
-                let url = `/api/productos/${currentProductIdForVariants}/variant-types`;
-                let method = 'POST';
-                if (id) {
-                    url = `/api/variant-types/${id}`;
-                    method = 'PUT';
-                }
-                const res = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    await loadVariantTypes(currentProductIdForVariants);
-                    document.getElementById('variantTypeForm').reset();
-                } else {
-                    alert('Error al guardar tipo de variante');
-                }
-            }
+        .btn-secondary:hover {
+            background: rgba(150, 100, 255, 0.3);
+            box-shadow: 0 0 20px rgba(150, 100, 255, 0.4);
+        }
 
-            // Editar tipo de variante
-            function editVariantType(id) {
-                const t = variantTypes.find(v => v.id === id);
-                if (!t) return;
-                document.getElementById('variantTypeId').value = t.id;
-                document.getElementById('variantTypeName').value = t.nombre;
-                document.getElementById('variantTypeRequired').checked = !!t.is_required;
-                loadVariantOptions(t.id);
-            }
-
-            // Eliminar tipo de variante
-            async function deleteVariantType(id) {
-                if (!confirm('¿Eliminar este tipo de variante?')) return;
-                await fetch(`/api/variant-types/${id}`, { method: 'DELETE' });
-                await loadVariantTypes(currentProductIdForVariants);
-                document.getElementById('variantTypeForm').reset();
-                document.getElementById('variantOptionsList').innerHTML = '';
-            }
-
-            // Cargar opciones de variante
-            async function loadVariantOptions(typeId) {
-                currentVariantTypeId = typeId;
-                try {
-                    const res = await fetch(`/api/variant-types/${typeId}/options`);
-                    const data = await res.json();
-                    variantOptions = data || [];
-                    renderVariantOptions();
-                } catch (e) {
-                    variantOptions = [];
-                    document.getElementById('variantOptionsList').innerHTML = `<div class='empty-state'><div class='empty-state-icon'>⚠️</div><div class='empty-state-text'>Error al cargar opciones</div></div>`;
-                }
-            }
-
-            // Renderizar opciones de variante
-            function renderVariantOptions() {
-                const list = document.getElementById('variantOptionsList');
-                if (!variantOptions.length) {
-                    list.innerHTML = `<div class='empty-state'><div class='empty-state-icon'>🔘</div><div class='empty-state-text'>No hay opciones aún</div></div>`;
-                    return;
-                }
-                list.innerHTML = variantOptions.map(o => `
-                    <div class='model-card' style='margin-bottom:10px;'>
-                        <h4>${o.nombre}</h4>
-                        <div class='model-meta'>Precio extra: €${parseFloat(o.price_delta || 0).toFixed(2)}</div>
-                        <div class='model-meta'>Stock: ${o.stock}</div>
-                        <div class='model-meta'>${o.imagen ? `<img src='${o.imagen}' alt='img' style='max-width:40px;border-radius:4px;'>` : 'Sin imagen'}</div>
-                        <div class='model-actions'>
-                            <button class='btn-edit' onclick='editVariantOption(${o.id})'>Editar</button>
-                            <button class='btn-delete' onclick='deleteVariantOption(${o.id})'>Eliminar</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            // Guardar opción de variante
-            async function saveVariantOption() {
-                if (!currentVariantTypeId) return alert('Selecciona un tipo de variante');
-                const id = document.getElementById('variantOptionId').value;
-                const nombre = document.getElementById('variantOptionName').value.trim();
-                const price_delta = parseFloat(document.getElementById('variantOptionPrice').value || '0');
-                const stock = parseInt(document.getElementById('variantOptionStock').value || '0');
-                const imagen = document.getElementById('variantOptionImage').value.trim();
-                const activo = document.getElementById('variantOptionActive').checked;
-                if (!nombre) return alert('Nombre requerido');
-                const payload = { nombre, price_delta, stock, imagen, activo };
-                let url = `/api/variant-types/${currentVariantTypeId}/options`;
-                let method = 'POST';
-                if (id) {
-                    url = `/api/variant-options/${id}`;
-                    method = 'PUT';
-                }
-                const res = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    await loadVariantOptions(currentVariantTypeId);
-                    document.getElementById('variantOptionForm').reset();
-                    document.getElementById('variantOptionImagePreview').style.display = 'none';
-                } else {
-                    alert('Error al guardar opción');
-                }
-            }
-
-            // Editar opción de variante
-            function editVariantOption(id) {
-                const o = variantOptions.find(v => v.id === id);
-                if (!o) return;
-                document.getElementById('variantOptionId').value = o.id;
-                document.getElementById('variantOptionName').value = o.nombre;
-                document.getElementById('variantOptionPrice').value = o.price_delta || 0;
-                document.getElementById('variantOptionStock').value = o.stock;
-                document.getElementById('variantOptionImage').value = o.imagen || '';
-                document.getElementById('variantOptionActive').checked = o.activo !== false;
-                if (o.imagen) {
-                    document.getElementById('variantOptionImagePreview').src = o.imagen;
-                    document.getElementById('variantOptionImagePreview').style.display = 'block';
-                } else {
-                    document.getElementById('variantOptionImagePreview').style.display = 'none';
-                }
-            }
-
-            // Eliminar opción de variante
-            async function deleteVariantOption(id) {
-                if (!confirm('¿Eliminar esta opción?')) return;
-                await fetch(`/api/variant-options/${id}`, { method: 'DELETE' });
-                await loadVariantOptions(currentVariantTypeId);
-                document.getElementById('variantOptionForm').reset();
-                document.getElementById('variantOptionImagePreview').style.display = 'none';
-            }
-
-            // Previsualizar imagen de opción
-            function previewVariantOptionImage() {
-                const url = document.getElementById('variantOptionImage').value.trim();
-                const img = document.getElementById('variantOptionImagePreview');
-                if (url) {
-                    img.src = url;
-                    img.style.display = 'block';
-                } else {
-                    img.style.display = 'none';
-                }
-            }
-
-            // Cargar productos al iniciar
-            window.onload = loadProducts;
-            async function loadProducts() {
-                try {
-                    const response = await fetch('/admin/productos');
-                    if (!response.ok) throw new Error('Error al cargar productos');
-                    const data = await response.json();
-                    products = data.productos || [];
-                    renderProducts();
-                } catch (error) {
-                    console.error('Error:', error);
-                    document.getElementById('productsGrid').innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">⚠️</div>
-                            <div class="empty-state-text">Error al cargar productos</div>
-                        </div>
-                    `;
-                }
-            }
-            </script>
         .products-container {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
@@ -346,7 +138,6 @@
         .product-actions {
             display: flex;
             gap: 8px;
-            flex-wrap: wrap;
         }
 
         .btn-edit {
@@ -379,22 +170,6 @@
 
         .btn-delete:hover {
             background: rgba(255, 68, 68, 0.3);
-        }
-
-        .btn-models {
-            flex: 1;
-            padding: 8px;
-            background: rgba(100, 255, 200, 0.16);
-            color: #8cf3d8;
-            border: 1px solid rgba(100, 255, 200, 0.35);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-models:hover {
-            background: rgba(100, 255, 200, 0.28);
         }
 
         .modal {
@@ -437,10 +212,6 @@
 
         .modal-body {
             padding: 20px;
-        }
-
-        .modal-body + .modal-body {
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .form-group {
@@ -522,49 +293,6 @@
         .empty-state-text {
             font-size: 18px;
         }
-
-        .models-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 12px;
-            margin-top: 10px;
-        }
-
-        .model-card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 12px;
-        }
-
-        .model-card h4 {
-            margin-bottom: 6px;
-            color: #8cf3d8;
-        }
-
-        .model-meta {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 6px;
-        }
-
-        .model-actions {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 999px;
-            font-size: 11px;
-            margin-right: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .badge-default { color: #fbd38d; border-color: rgba(251, 211, 141, 0.4); }
-        .badge-inactive { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.4); }
     </style>
 </head>
 <body>
@@ -612,6 +340,21 @@
                         <label for="productImage">URL de la Imagen</label>
                         <input type="url" id="productImage" placeholder="https://...">
                     </div>
+                    <!-- Bloques de variantes obligatorios -->
+                    <div class="form-group">
+                        <label for="variantBase">Base *</label>
+                        <select id="variantBase" required>
+                            <option value="">Selecciona una base</option>
+                            <!-- Opciones dinámicas -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="variantShape">Forma *</label>
+                        <select id="variantShape" required>
+                            <option value="">Selecciona una forma</option>
+                            <!-- Opciones dinámicas -->
+                        </select>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -621,83 +364,8 @@
         </div>
     </div>
 
-
-    <!-- Modal para gestionar variantes (tipos y opciones) -->
-    <div class="modal" id="variantsModal">
-        <div class="modal-content">
-            <div class="modal-header" id="variantsModalTitle">🧩 Variantes</div>
-            <div class="modal-body">
-                <div id="variantTypesList" class="variant-types-list">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🧩</div>
-                        <div class="empty-state-text">Selecciona un producto</div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-body">
-                <h3 style="margin-bottom: 12px; color: #8cf3d8;">Añadir / editar tipo de variante</h3>
-                <form id="variantTypeForm">
-                    <input type="hidden" id="variantTypeId">
-                    <div class="form-group">
-                        <label for="variantTypeName">Nombre del tipo *</label>
-                        <input type="text" id="variantTypeName" required placeholder="Ej: Base, Forma, Color">
-                    </div>
-                    <div class="form-group">
-                        <label for="variantTypeRequired">
-                            <input type="checkbox" id="variantTypeRequired" checked>
-                            Obligatorio seleccionar una opción
-                        </label>
-                    </div>
-                </form>
-                <button class="btn-save" onclick="saveVariantType()">Guardar tipo de variante</button>
-            </div>
-            <div class="modal-body">
-                <h3 style="margin-bottom: 12px; color: #8cf3d8;">Opciones de este tipo</h3>
-                <div id="variantOptionsList" class="variant-options-list">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🔘</div>
-                        <div class="empty-state-text">Selecciona un tipo de variante</div>
-                    </div>
-                </div>
-                <form id="variantOptionForm" style="margin-top:16px;">
-                    <input type="hidden" id="variantOptionId">
-                    <div class="form-group">
-                        <label for="variantOptionName">Nombre de la opción *</label>
-                        <input type="text" id="variantOptionName" required placeholder="Ej: Madera, Plástico, Cilíndrica">
-                    </div>
-                    <div class="form-group">
-                        <label for="variantOptionPrice">Ajuste de precio (€)</label>
-                        <input type="number" id="variantOptionPrice" step="0.01" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="variantOptionStock">Stock *</label>
-                        <input type="number" id="variantOptionStock" min="0" value="0" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="variantOptionImage">URL de imagen</label>
-                        <input type="url" id="variantOptionImage" placeholder="https://..." onchange="previewVariantOptionImage()">
-                        <img id="variantOptionImagePreview" src="" alt="Previsualización" style="display:none;max-width:80px;margin-top:8px;border-radius:6px;">
-                    </div>
-                    <div class="form-group">
-                        <label for="variantOptionActive">
-                            <input type="checkbox" id="variantOptionActive" checked>
-                            Activo
-                        </label>
-                    </div>
-                </form>
-                <button class="btn-save" onclick="saveVariantOption()">Guardar opción</button>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeVariantsModal()">Cerrar</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         let products = [];
-        let currentModels = [];
-        let currentProductIdForModels = null;
-        let currentProductNameForModels = '';
 
         async function loadProducts() {
             try {
@@ -738,7 +406,6 @@
                     <div class="product-price">€${parseFloat(p.precio).toFixed(2)}</div>
                     <div class="product-stock">Stock: ${p.stock} unidades</div>
                     <div class="product-actions">
-                        <button class="btn-models" onclick="openModels(${p.id})">🧩 Modelos</button>
                         <button class="btn-edit" onclick="editProduct(${p.id})">✏️ Editar</button>
                         <button class="btn-delete" onclick="deleteProduct(${p.id}, '${p.nombre}')">🗑️ Eliminar</button>
                     </div>
@@ -746,163 +413,14 @@
             `).join('');
         }
 
-        async function openModels(productId) {
-            const product = products.find(p => p.id === productId);
-            currentProductIdForModels = productId;
-            currentProductNameForModels = product ? product.nombre : 'Modelos';
-            document.getElementById('modelsModalTitle').textContent = `🧩 Modelos: ${currentProductNameForModels}`;
-            await loadModels(productId);
-            document.getElementById('modelsModal').classList.add('show');
-        }
-
-        async function loadModels(productId) {
-            try {
-                const response = await fetch(`/admin/productos/${productId}/modelos`);
-                if (!response.ok) throw new Error('Error al cargar modelos');
-
-                const data = await response.json();
-                currentModels = data.modelos || [];
-                renderModels();
-                resetModelForm();
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('modelsList').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚠️</div>
-                        <div class="empty-state-text">Error al cargar modelos</div>
-                    </div>
-                `;
-            }
-        }
-
-        function renderModels() {
-            const list = document.getElementById('modelsList');
-            if (!currentModels.length) {
-                list.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🧩</div>
-                        <div class="empty-state-text">No hay modelos aún</div>
-                    </div>
-                `;
-                return;
-            }
-
-            list.innerHTML = currentModels.map(m => `
-                <div class="model-card">
-                    <h4>${m.nombre}</h4>
-                    <div class="model-meta">SKU: ${m.sku || '—'}</div>
-                    <div class="model-meta">Precio extra: €${parseFloat(m.price_delta || 0).toFixed(2)}</div>
-                    <div class="model-meta">Stock: ${m.stock} unidades</div>
-                    <div class="model-meta">Imagen: ${m.imagen ? 'Sí' : '—'}</div>
-                    <div style="margin-top:6px;">
-                        ${m.is_default ? '<span class="badge badge-default">Por defecto</span>' : ''}
-                        ${m.activo ? '' : '<span class="badge badge-inactive">Inactivo</span>'}
-                    </div>
-                    <div class="model-actions">
-                        <button class="btn-edit" onclick="editModel(${m.id})">Editar</button>
-                        <button class="btn-delete" onclick="deleteModel(${m.id}, '${m.nombre}')">Eliminar</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function editModel(modelId) {
-            const model = currentModels.find(m => m.id === modelId);
-            if (!model) return;
-            document.getElementById('modelId').value = model.id;
-            document.getElementById('modelName').value = model.nombre;
-            document.getElementById('modelSku').value = model.sku || '';
-            document.getElementById('modelPriceDelta').value = model.price_delta || 0;
-            document.getElementById('modelStock').value = model.stock;
-            document.getElementById('modelImage').value = model.imagen || '';
-            document.getElementById('modelIsDefault').checked = !!model.is_default;
-            document.getElementById('modelActive').checked = model.activo !== false;
-        }
-
-        function resetModelForm() {
-            document.getElementById('modelForm').reset();
-            document.getElementById('modelId').value = '';
-            document.getElementById('modelPriceDelta').value = 0;
-            document.getElementById('modelStock').value = 0;
-            document.getElementById('modelActive').checked = true;
-            document.getElementById('modelIsDefault').checked = false;
-        }
-
-        async function saveModel() {
-            if (!currentProductIdForModels) {
-                alert('Selecciona un producto primero');
-                return;
-            }
-
-            const modelId = document.getElementById('modelId').value;
-            const nombre = document.getElementById('modelName').value.trim();
-            const sku = document.getElementById('modelSku').value.trim();
-            const price_delta = parseFloat(document.getElementById('modelPriceDelta').value || '0');
-            const stock = parseInt(document.getElementById('modelStock').value || '0');
-            const imagen = document.getElementById('modelImage').value.trim();
-            const is_default = document.getElementById('modelIsDefault').checked;
-            const activo = document.getElementById('modelActive').checked;
-
-            if (!nombre) {
-                alert('Nombre requerido');
-                return;
-            }
-
-            const payload = { nombre, sku, price_delta, stock, imagen, is_default, activo };
-            const url = modelId
-                ? `/admin/productos/${currentProductIdForModels}/modelos/${modelId}`
-                : `/admin/productos/${currentProductIdForModels}/modelos`;
-            const method = modelId ? 'PUT' : 'POST';
-
-            try {
-                const response = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error('Error al guardar modelo');
-                const data = await response.json();
-                if (data.success) {
-                    await loadModels(currentProductIdForModels);
-                    resetModelForm();
-                } else {
-                    alert(data.error || 'No se pudo guardar');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al guardar modelo');
-            }
-        }
-
-        async function deleteModel(modelId, name) {
-            if (!confirm(`¿Eliminar el modelo "${name}"?`)) return;
-            try {
-                const response = await fetch(`/admin/productos/${currentProductIdForModels}/modelos/${modelId}`, {
-                    method: 'DELETE'
-                });
-                if (!response.ok) throw new Error('Error al eliminar modelo');
-                const data = await response.json();
-                if (data.success) {
-                    await loadModels(currentProductIdForModels);
-                } else {
-                    alert(data.error || 'No se pudo eliminar');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al eliminar modelo');
-            }
-        }
-
-        function closeModelsModal() {
-            document.getElementById('modelsModal').classList.remove('show');
-            resetModelForm();
-        }
-
         function openNewProductModal() {
             document.getElementById('modalTitle').textContent = '➕ Nuevo Producto';
             document.getElementById('productForm').reset();
             document.getElementById('productId').value = '';
+            // Limpiar selectores de variantes
+            document.getElementById('variantBase').innerHTML = '<option value="">Selecciona una base</option>';
+            document.getElementById('variantShape').innerHTML = '<option value="">Selecciona una forma</option>';
+            // Cargar variantes para producto nuevo (sin ID, no se cargan variantes)
             document.getElementById('productModal').classList.add('show');
         }
 
@@ -917,7 +435,46 @@
             document.getElementById('productPrice').value = product.precio;
             document.getElementById('productStock').value = product.stock;
             document.getElementById('productImage').value = product.imagen || '';
+            // Limpiar selectores de variantes
+            document.getElementById('variantBase').innerHTML = '<option value="">Selecciona una base</option>';
+            document.getElementById('variantShape').innerHTML = '<option value="">Selecciona una forma</option>';
+            // Cargar variantes dinámicamente
+            loadProductVariants(product.id);
             document.getElementById('productModal').classList.add('show');
+        }
+                // Cargar variantes (Base y Forma) para un producto
+                async function loadProductVariants(productId) {
+                    try {
+                        const res = await fetch(`/api/productos/${productId}/variant-types`);
+                        if (!res.ok) return;
+                        const variantTypes = await res.json();
+                        // Buscar tipo Base y Forma
+                        const baseType = variantTypes.find(t => t.nombre.toLowerCase() === 'base');
+                        const shapeType = variantTypes.find(t => t.nombre.toLowerCase() === 'forma');
+                        // Cargar opciones en selectores
+                        const baseSelect = document.getElementById('variantBase');
+                        const shapeSelect = document.getElementById('variantShape');
+                        baseSelect.innerHTML = '<option value="">Selecciona una base</option>';
+                        shapeSelect.innerHTML = '<option value="">Selecciona una forma</option>';
+                        if (baseType && baseType.options) {
+                            baseType.options.forEach(opt => {
+                                const o = document.createElement('option');
+                                o.value = opt.id;
+                                o.textContent = opt.nombre + (opt.price_delta ? ` (+€${parseFloat(opt.price_delta).toFixed(2)})` : '');
+                                baseSelect.appendChild(o);
+                            });
+                        }
+                        if (shapeType && shapeType.options) {
+                            shapeType.options.forEach(opt => {
+                                const o = document.createElement('option');
+                                o.value = opt.id;
+                                o.textContent = opt.nombre + (opt.price_delta ? ` (+€${parseFloat(opt.price_delta).toFixed(2)})` : '');
+                                shapeSelect.appendChild(o);
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('No se pudieron cargar variantes:', e);
+                    }
         }
 
         function closeProductModal() {
@@ -926,19 +483,32 @@
         }
 
         async function saveProduct() {
+
             const id = document.getElementById('productId').value;
             const nombre = document.getElementById('productName').value.trim();
             const descripcion = document.getElementById('productDescription').value.trim();
             const precio = parseFloat(document.getElementById('productPrice').value);
             const stock = parseInt(document.getElementById('productStock').value);
             const imagen = document.getElementById('productImage').value.trim();
+            const baseId = document.getElementById('variantBase').value;
+            const shapeId = document.getElementById('variantShape').value;
 
             if (!nombre || isNaN(precio) || isNaN(stock)) {
                 alert('Por favor completa todos los campos obligatorios');
                 return;
             }
+            if (!baseId) {
+                alert('Por favor selecciona una base');
+                document.getElementById('variantBase').focus();
+                return;
+            }
+            if (!shapeId) {
+                alert('Por favor selecciona una forma');
+                document.getElementById('variantShape').focus();
+                return;
+            }
 
-            const productData = { nombre, descripcion, precio, stock, imagen };
+            const productData = { nombre, descripcion, precio, stock, imagen, baseId, shapeId };
 
             try {
                 const url = id ? `/admin/productos/${id}` : '/admin/productos';
@@ -991,12 +561,6 @@
         document.getElementById('productModal').addEventListener('click', (e) => {
             if (e.target.id === 'productModal') {
                 closeProductModal();
-            }
-        });
-
-        document.getElementById('modelsModal').addEventListener('click', (e) => {
-            if (e.target.id === 'modelsModal') {
-                closeModelsModal();
             }
         });
 

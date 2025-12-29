@@ -126,9 +126,14 @@ router.post('/pay', async (req, res) => {
 
       // Insert items into detalle_pedidos
       for (const item of cart) {
+        // Guardar variantes seleccionadas si existen (baseId, shapeId)
+        let variantesSeleccionadas = null;
+        if (item.baseId || item.shapeId) {
+          variantesSeleccionadas = JSON.stringify({ baseId: item.baseId || null, shapeId: item.shapeId || null });
+        }
         const [detailResult] = await conn.query(
-          'INSERT INTO detalle_pedidos (pedido_id, producto_id, modelo_id, cantidad, precio_unitario, personalizacion_notas) VALUES (?, ?, ?, ?, ?, ?)',
-          [orderId, item.id, item.modelId || null, item.quantity, item.price, item.notes || null]
+          'INSERT INTO detalle_pedidos (pedido_id, producto_id, modelo_id, cantidad, precio_unitario, personalizacion_notas, variantes_seleccionadas) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [orderId, item.id, item.modelId || null, item.quantity, item.price, item.notes || null, variantesSeleccionadas]
         );
 
         const detalleId = detailResult.insertId;
