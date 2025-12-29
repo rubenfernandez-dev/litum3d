@@ -1,3 +1,26 @@
+
+const express = require('express');
+const router = express.Router();
+const fs = require('fs').promises;
+const path = require('path');
+const { pool } = require('../config/db');
+const bcrypt = require('bcryptjs');
+// Middleware para verificar autenticación
+const requireAuth = (req, res, next) => {
+    console.log('🔐 Auth check:', {
+        hasSession: !!req.session,
+        sessionId: req.sessionID,
+        adminId: req.session?.adminId,
+        cookies: req.headers.cookie
+    });
+    if (!req.session || !req.session.adminId) {
+        console.log('❌ Auth failed: No session or adminId');
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+    console.log('✓ Auth passed for admin', req.session.adminId);
+    next();
+};
+
 // POST /admin/variantes - Crear nueva opción de variante (base o forma)
 router.post('/variantes', requireAuth, async (req, res) => {
     try {
@@ -31,28 +54,8 @@ router.post('/variantes', requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Error al crear variante' });
     }
 });
-const express = require('express');
-const router = express.Router();
-const fs = require('fs').promises;
-const path = require('path');
-const { pool } = require('../config/db');
-const bcrypt = require('bcryptjs');
 
-// Middleware para verificar autenticación
-const requireAuth = (req, res, next) => {
-    console.log('🔐 Auth check:', {
-        hasSession: !!req.session,
-        sessionId: req.sessionID,
-        adminId: req.session?.adminId,
-        cookies: req.headers.cookie
-    });
-    if (!req.session || !req.session.adminId) {
-        console.log('❌ Auth failed: No session or adminId');
-        return res.status(401).json({ error: 'No autorizado' });
-    }
-    console.log('✓ Auth passed for admin', req.session.adminId);
-    next();
-};
+
 
 // GET /admin/login - Mostrar página de login
 router.get('/login', async (req, res) => {
