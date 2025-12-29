@@ -1,3 +1,36 @@
+// POST /admin/variantes - Crear nueva opción de variante (base o forma)
+router.post('/variantes', requireAuth, async (req, res) => {
+    try {
+        const { tipo, nombre, price_delta = 0, product_id } = req.body;
+        if (!tipo || !nombre) {
+            return res.status(400).json({ error: 'Tipo y nombre son obligatorios' });
+        }
+        // Buscar producto (por seguridad)
+        let prodId = product_id;
+        if (!prodId) {
+            // Si no se envía product_id, usar el primero (o puedes cambiar esta lógica)
+            const [prods] = await pool.query('SELECT id FROM productos ORDER BY id ASC LIMIT 1');
+            if (!prods.length) return res.status(400).json({ error: 'No hay productos disponibles' });
+            prodId = prods[0].id;
+        }
+        // Buscar o crear el tipo de variante (Base/Forma) para el producto
+        let [types] = await pool.query('SELECT id FROM product_variant_types WHERE product_id = ? AND LOWER(nombre) = LOWER(?) LIMIT 1', [prodId, tipo]);
+        let typeId;
+        if (types.length === 0) {
+            // Crear tipo de variante si no existe
+            const [result] = await pool.query('INSERT INTO product_variant_types (product_id, nombre, is_required, display_order) VALUES (?, ?, TRUE, ?)', [prodId, tipo.charAt(0).toUpperCase() + tipo.slice(1).toLowerCase(), tipo.toLowerCase() === 'base' ? 1 : 2]);
+            typeId = result.insertId;
+        } else {
+            typeId = types[0].id;
+        }
+        // Crear la opción de variante
+        const [result2] = await pool.query('INSERT INTO product_variant_options (variant_type_id, nombre, price_delta) VALUES (?, ?, ?)', [typeId, nombre, price_delta]);
+        res.json({ success: true, optionId: result2.insertId });
+    } catch (error) {
+        console.error('Error al crear variante:', error);
+        res.status(500).json({ error: 'Error al crear variante' });
+    }
+});
 const express = require('express');
 const router = express.Router();
 const fs = require('fs').promises;

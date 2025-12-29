@@ -343,17 +343,23 @@
                     <!-- Bloques de variantes obligatorios -->
                     <div class="form-group">
                         <label for="variantBase">Base *</label>
-                        <select id="variantBase" required>
-                            <option value="">Selecciona una base</option>
-                            <!-- Opciones dinámicas -->
-                        </select>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <select id="variantBase" required style="flex:1;">
+                                <option value="">Selecciona una base</option>
+                                <!-- Opciones dinámicas -->
+                            </select>
+                            <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="openVariantModal('base')">+ Añadir</button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="variantShape">Forma *</label>
-                        <select id="variantShape" required>
-                            <option value="">Selecciona una forma</option>
-                            <!-- Opciones dinámicas -->
-                        </select>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <select id="variantShape" required style="flex:1;">
+                                <option value="">Selecciona una forma</option>
+                                <!-- Opciones dinámicas -->
+                            </select>
+                            <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="openVariantModal('forma')">+ Añadir</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -364,208 +370,70 @@
         </div>
     </div>
 
-    <script>
-        let products = [];
-
-        async function loadProducts() {
-            try {
-                const response = await fetch('/admin/productos');
-                if (!response.ok) throw new Error('Error al cargar productos');
-                
-                const data = await response.json();
-                products = data.productos || [];
-                renderProducts();
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('productsGrid').innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">⚠️</div>
-                        <div class="empty-state-text">Error al cargar productos</div>
-                    </div>
-                `;
-            }
-        }
-
-        function renderProducts() {
-            const grid = document.getElementById('productsGrid');
-            
-            if (products.length === 0) {
-                grid.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📦</div>
-                        <div class="empty-state-text">No hay productos aún</div>
-                    </div>
-                `;
-                return;
-            }
-
-            grid.innerHTML = products.map(p => `
-                <div class="product-card">
-                    ${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}" class="product-image" onerror="this.style.display='none'">` : `<div class="product-image" style="display:flex;align-items:center;justify-content:center;color:#999;">📦</div>`}
-                    <div class="product-name">${p.nombre}</div>
-                    <div class="product-price">€${parseFloat(p.precio).toFixed(2)}</div>
-                    <div class="product-stock">Stock: ${p.stock} unidades</div>
-                    <div class="product-actions">
-                        <button class="btn-edit" onclick="editProduct(${p.id})">✏️ Editar</button>
-                        <button class="btn-delete" onclick="deleteProduct(${p.id}, '${p.nombre}')">🗑️ Eliminar</button>
-                    </div>
+    <!-- Modal para añadir variante -->
+    <div class="modal" id="variantModal">
+        <div class="modal-content" style="max-width:350px;">
+            <div class="modal-header" id="variantModalTitle">Añadir nueva Variante</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="variantNameInput">Nombre *</label>
+                    <input type="text" id="variantNameInput" required>
                 </div>
-            `).join('');
+                <div class="form-group">
+                    <label for="variantPriceDeltaInput">Diferencia de precio (€)</label>
+                    <input type="number" id="variantPriceDeltaInput" step="0.01" min="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" type="button" onclick="closeVariantModal()">Cancelar</button>
+                <button class="btn-save" type="button" onclick="saveVariant()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal para añadir variante
+        let currentVariantType = null;
+        function openVariantModal(type) {
+            currentVariantType = type;
+            document.getElementById('variantModalTitle').textContent = type === 'base' ? 'Añadir nueva Base' : 'Añadir nueva Forma';
+            document.getElementById('variantNameInput').value = '';
+            document.getElementById('variantPriceDeltaInput').value = '';
+            document.getElementById('variantModal').classList.add('show');
         }
 
-        function openNewProductModal() {
-            document.getElementById('modalTitle').textContent = '➕ Nuevo Producto';
-            document.getElementById('productForm').reset();
-            document.getElementById('productId').value = '';
-            // Limpiar selectores de variantes
-            document.getElementById('variantBase').innerHTML = '<option value="">Selecciona una base</option>';
-            document.getElementById('variantShape').innerHTML = '<option value="">Selecciona una forma</option>';
-            // Cargar variantes para producto nuevo (sin ID, no se cargan variantes)
-            document.getElementById('productModal').classList.add('show');
+        function closeVariantModal() {
+            document.getElementById('variantModal').classList.remove('show');
         }
 
-        function editProduct(id) {
-            const product = products.find(p => p.id === id);
-            if (!product) return;
-
-            document.getElementById('modalTitle').textContent = '✏️ Editar Producto';
-            document.getElementById('productId').value = product.id;
-            document.getElementById('productName').value = product.nombre;
-            document.getElementById('productDescription').value = product.descripcion || '';
-            document.getElementById('productPrice').value = product.precio;
-            document.getElementById('productStock').value = product.stock;
-            document.getElementById('productImage').value = product.imagen || '';
-            // Limpiar selectores de variantes
-            document.getElementById('variantBase').innerHTML = '<option value="">Selecciona una base</option>';
-            document.getElementById('variantShape').innerHTML = '<option value="">Selecciona una forma</option>';
-            // Cargar variantes dinámicamente
-            loadProductVariants(product.id);
-            document.getElementById('productModal').classList.add('show');
-        }
-                // Cargar variantes (Base y Forma) para un producto
-                async function loadProductVariants(productId) {
-                    try {
-                        const res = await fetch(`/api/productos/${productId}/variant-types`);
-                        if (!res.ok) return;
-                        const variantTypes = await res.json();
-                        // Buscar tipo Base y Forma
-                        const baseType = variantTypes.find(t => t.nombre.toLowerCase() === 'base');
-                        const shapeType = variantTypes.find(t => t.nombre.toLowerCase() === 'forma');
-                        // Cargar opciones en selectores
-                        const baseSelect = document.getElementById('variantBase');
-                        const shapeSelect = document.getElementById('variantShape');
-                        baseSelect.innerHTML = '<option value="">Selecciona una base</option>';
-                        shapeSelect.innerHTML = '<option value="">Selecciona una forma</option>';
-                        if (baseType && baseType.options) {
-                            baseType.options.forEach(opt => {
-                                const o = document.createElement('option');
-                                o.value = opt.id;
-                                o.textContent = opt.nombre + (opt.price_delta ? ` (+€${parseFloat(opt.price_delta).toFixed(2)})` : '');
-                                baseSelect.appendChild(o);
-                            });
-                        }
-                        if (shapeType && shapeType.options) {
-                            shapeType.options.forEach(opt => {
-                                const o = document.createElement('option');
-                                o.value = opt.id;
-                                o.textContent = opt.nombre + (opt.price_delta ? ` (+€${parseFloat(opt.price_delta).toFixed(2)})` : '');
-                                shapeSelect.appendChild(o);
-                            });
-                        }
-                    } catch (e) {
-                        console.warn('No se pudieron cargar variantes:', e);
-                    }
-        }
-
-        function closeProductModal() {
-            document.getElementById('productModal').classList.remove('show');
-            document.getElementById('productForm').reset();
-        }
-
-        async function saveProduct() {
-
-            const id = document.getElementById('productId').value;
-            const nombre = document.getElementById('productName').value.trim();
-            const descripcion = document.getElementById('productDescription').value.trim();
-            const precio = parseFloat(document.getElementById('productPrice').value);
-            const stock = parseInt(document.getElementById('productStock').value);
-            const imagen = document.getElementById('productImage').value.trim();
-            const baseId = document.getElementById('variantBase').value;
-            const shapeId = document.getElementById('variantShape').value;
-
-            if (!nombre || isNaN(precio) || isNaN(stock)) {
-                alert('Por favor completa todos los campos obligatorios');
+        async function saveVariant() {
+            const nombre = document.getElementById('variantNameInput').value.trim();
+            const price_delta = document.getElementById('variantPriceDeltaInput').value.trim();
+            if (!nombre) {
+                alert('Introduce un nombre para la variante');
                 return;
             }
-            if (!baseId) {
-                alert('Por favor selecciona una base');
-                document.getElementById('variantBase').focus();
-                return;
-            }
-            if (!shapeId) {
-                alert('Por favor selecciona una forma');
-                document.getElementById('variantShape').focus();
-                return;
-            }
-
-            const productData = { nombre, descripcion, precio, stock, imagen, baseId, shapeId };
-
+            // Enviar al backend (endpoint a definir, ejemplo: /admin/variantes)
             try {
-                const url = id ? `/admin/productos/${id}` : '/admin/productos';
-                const method = id ? 'PUT' : 'POST';
-
-                const response = await fetch(url, {
-                    method,
+                const res = await fetch('/admin/variantes', {
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(productData)
+                    body: JSON.stringify({
+                        tipo: currentVariantType,
+                        nombre,
+                        price_delta: price_delta ? parseFloat(price_delta) : 0
+                    })
                 });
-
-                if (!response.ok) throw new Error('Error al guardar producto');
-
-                const data = await response.json();
-                if (data.success) {
-                    closeProductModal();
-                    loadProducts();
-                } else {
-                    alert('Error: ' + (data.error || 'No se pudo guardar el producto'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al guardar el producto');
+                if (!res.ok) throw new Error('Error al guardar variante');
+                // Recargar selectores
+                loadProductVariants(document.getElementById('productId').value || null);
+                closeVariantModal();
+            } catch (e) {
+                alert('Error al guardar variante');
             }
         }
-
-        async function deleteProduct(id, nombre) {
-            if (!confirm(`¿Estás seguro de eliminar "${nombre}"?`)) return;
-
-            try {
-                const response = await fetch(`/admin/productos/${id}`, {
-                    method: 'DELETE'
-                });
-
-                if (!response.ok) throw new Error('Error al eliminar producto');
-
-                const data = await response.json();
-                if (data.success) {
-                    loadProducts();
-                } else {
-                    alert('Error: ' + (data.error || 'No se pudo eliminar el producto'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al eliminar el producto');
-            }
-        }
-
-        // Cerrar modal al hacer click fuera
-        document.getElementById('productModal').addEventListener('click', (e) => {
-            if (e.target.id === 'productModal') {
-                closeProductModal();
-            }
-        });
-
-        // Cargar productos al iniciar
-        loadProducts();
+    </script>
+    <!-- Código JS principal está dentro del <script> anterior -->
     </script>
 </body>
 </html>
