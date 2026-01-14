@@ -173,12 +173,13 @@ function renderVariantsForm(variantTypes) {
       for (const option of variantType.options) {
         // Siempre mostrar stock de 100 disponibles
         const stockText = '(100 disponibles)';
-        const priceDisplay = option.price_delta > 0 ? ` +€${option.price_delta.toFixed(2)}` : '';
+        const priceDelta = parseFloat(option.price_delta) || 0;
+        const priceDisplay = priceDelta > 0 ? ` +€${priceDelta.toFixed(2)}` : '';
 
         html += `
           <option 
             value="${option.id}" 
-            data-price-delta="${option.price_delta}"
+            data-price-delta="${priceDelta}"
             data-stock="100">
             ${option.nombre}${priceDisplay} ${stockText}
           </option>
