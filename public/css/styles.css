@@ -454,6 +454,35 @@
 @media (max-width: 600px) {
   .testimonials-grid { grid-template-columns: 1fr; }
 }
+
+/* About Page - Quiénes somos section */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+.about-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.about-logo img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(224, 173, 97, 0.3);
+}
+
+@media (max-width: 768px) {
+  .about-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
   --primary: #1a1a2e;
   --secondary: #16213e;
   --accent: #0f3460;
