@@ -171,15 +171,15 @@ function renderVariantsForm(variantTypes) {
 
       // Opciones para este tipo de variante
       for (const option of variantType.options) {
-        const stockText = option.stock > 0 ? `(${option.stock} disponibles)` : '(Agotado)';
+        // Siempre mostrar stock de 100 disponibles
+        const stockText = '(100 disponibles)';
         const priceDisplay = option.price_delta > 0 ? ` +€${option.price_delta.toFixed(2)}` : '';
 
         html += `
           <option 
             value="${option.id}" 
             data-price-delta="${option.price_delta}"
-            data-stock="${option.stock}"
-            ${option.stock <= 0 ? 'disabled' : ''}>
+            data-stock="100">
             ${option.nombre}${priceDisplay} ${stockText}
           </option>
         `;
