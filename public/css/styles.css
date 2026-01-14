@@ -151,6 +151,149 @@
 
 .custom-btn.ghost { background: transparent; }
 
+/* Product Description Section (Etsy Style) */
+.product-description-section {
+  padding: 60px 20px;
+  background: linear-gradient(135deg, rgba(15, 12, 41, 0.95) 0%, rgba(48, 43, 99, 0.95) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.product-desc-container {
+  max-width: 900px;
+  margin: 0 auto;
+  color: var(--text-light);
+}
+
+.product-desc-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #e0ad61 0%, #fff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.3;
+}
+
+.product-desc-intro {
+  font-size: 18px;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  opacity: 0.9;
+}
+
+.product-desc-feature {
+  margin-bottom: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.product-desc-feature h3 {
+  font-size: 22px;
+  margin-bottom: 16px;
+  color: #e0ad61;
+}
+
+.product-desc-feature ul,
+.product-desc-feature ol {
+  list-style-position: inside;
+  line-height: 1.8;
+  padding-left: 8px;
+}
+
+.product-desc-feature ul li {
+  margin-bottom: 10px;
+  padding-left: 8px;
+}
+
+.product-desc-feature ol li {
+  margin-bottom: 12px;
+  padding-left: 8px;
+}
+
+.product-desc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.product-desc-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.product-desc-box h3 {
+  font-size: 20px;
+  margin-bottom: 14px;
+  color: #64c8ff;
+}
+
+.product-desc-box ul {
+  list-style-position: inside;
+  line-height: 1.8;
+}
+
+.product-desc-box ul li {
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.product-desc-gift {
+  background: linear-gradient(135deg, rgba(224, 173, 97, 0.1) 0%, rgba(150, 100, 255, 0.1) 100%);
+  border: 1px solid rgba(224, 173, 97, 0.3);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.product-desc-gift h3 {
+  font-size: 22px;
+  margin-bottom: 16px;
+  color: #e0ad61;
+}
+
+.gift-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gift-tag {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(224, 173, 97, 0.3);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--text-light);
+  transition: all 0.3s ease;
+}
+
+.gift-tag:hover {
+  background: rgba(224, 173, 97, 0.2);
+  border-color: rgba(224, 173, 97, 0.5);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .product-desc-title {
+    font-size: 24px;
+  }
+  
+  .product-desc-intro {
+    font-size: 16px;
+  }
+  
+  .product-desc-feature h3,
+  .product-desc-gift h3 {
+    font-size: 18px;
+  }
+}
+
 /* Benefits Section */
 .benefits-section {
   padding: 40px 20px;

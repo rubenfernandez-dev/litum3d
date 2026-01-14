@@ -2,33 +2,21 @@
 async function loadGallery() {
   const container = document.getElementById('gallery-products');
   try {
-    const [resProducts, resStatic] = await Promise.all([
-      fetch('/api/productos'),
-      fetch('/api/galeria-estatica')
-    ]);
-
-    if (!resProducts.ok) throw new Error('Error al obtener productos');
-
-    const dbProducts = await resProducts.json();
+    // Solo cargar imágenes estáticas, no productos
+    const resStatic = await fetch('/api/galeria-estatica');
     const staticImages = resStatic.ok ? await resStatic.json() : [];
 
-    const usedImages = new Set((dbProducts || []).map(p => p.imagen || ''));
-    const merged = [
-      ...dbProducts,
-      ...staticImages.filter(item => item.imagen && !usedImages.has(item.imagen))
-    ];
-
-    if (!merged || merged.length === 0) {
-      container.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No hay productos disponibles.</p>';
+    if (!staticImages || staticImages.length === 0) {
+      container.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No hay imágenes disponibles en la galería.</p>';
       return;
     }
     
-    container.innerHTML = merged.map((p, idx) => `
+    container.innerHTML = staticImages.map((p, idx) => `
       <div class="product-card gallery-card" style="animation-delay: ${idx * 0.1}s;">
         <div class="product-image">
           ${p.imagen 
-            ? `<img src="/img/productos/${p.imagen}" alt="${escapeHtml(p.nombre)}" onerror="this.onerror=null; this.parentElement.innerHTML='${getEmojiForProduct(p.nombre)}';">` 
-            : getEmojiForProduct(p.nombre)
+            ? `<img src="/img/productos/${p.imagen}" alt="${escapeHtml(p.nombre || 'Galería')}" onerror="this.onerror=null; this.parentElement.innerHTML='✨';">` 
+            : '✨'
           }
         </div>
       </div>
