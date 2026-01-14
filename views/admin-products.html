@@ -404,6 +404,42 @@
         function closeProductModal() {
             document.getElementById('productModal').classList.remove('show');
         }
+
+        // Cargar listado de productos y pintar cards
+        async function loadProducts() {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Cargando productos...</div></div>`;
+            try {
+                const res = await fetch('/api/productos');
+                if (!res.ok) throw new Error('No se pudieron obtener productos');
+                const products = await res.json();
+
+                if (!products.length) {
+                    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">No hay productos</div></div>`;
+                    return;
+                }
+
+                grid.innerHTML = '';
+                products.forEach((p) => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.innerHTML = `
+                        <img class="product-image" src="${p.imagen || '/img/productos/carrusel1.jpeg'}" alt="${p.nombre}">
+                        <div class="product-name">${p.nombre}</div>
+                        <div class="product-price">€ ${Number(p.precio).toFixed(2)}</div>
+                        <div class="product-stock">Stock: ${p.stock}</div>
+                        <div class="product-actions">
+                            <button class="btn-edit" onclick="editProduct(${p.id})">Editar</button>
+                            <button class="btn-delete" onclick="deleteProduct(${p.id})">Eliminar</button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (err) {
+                console.error('Error cargando productos:', err);
+                grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Error al cargar productos</div></div>`;
+            }
+        }
         // Modal para añadir variante
         let currentVariantType = null;
         function openVariantModal(type) {
@@ -418,34 +454,211 @@
             document.getElementById('variantModal').classList.remove('show');
         }
 
+        // Carga las opciones de Base y Forma para un producto (o el primero disponible)
+        async function loadProductVariants(productId) {
+            try {
+                let targetProductId = productId;
+
+                // Si no tenemos productId (nuevo producto), usa el primer producto existente
+                if (!targetProductId) {
+                    const resProducts = await fetch('/api/productos');
+                    if (!resProducts.ok) throw new Error('No se pudieron obtener productos');
+                    const products = await resProducts.json();
+                    if (!products.length) {
+                        console.warn('No hay productos para cargar variantes');
+                        return;
+                    }
+                    targetProductId = products[0].id;
+                }
+
+                console.log('🔄 Cargando variantes para producto:', targetProductId);
+                const res = await fetch(`/api/productos/${targetProductId}/variant-types`);
+                if (!res.ok) throw new Error('No se pudieron obtener variantes');
+                const types = await res.json();
+                console.log('📦 Tipos de variantes recibidos:', types);
+
+                const baseSelect = document.getElementById('variantBase');
+                const shapeSelect = document.getElementById('variantShape');
+
+                // Reinicia selects
+                baseSelect.innerHTML = '<option value="">Selecciona una base</option>';
+                shapeSelect.innerHTML = '<option value="">Selecciona una forma</option>';
+
+                let baseCount = 0;
+                let shapeCount = 0;
+
+                types.forEach((type) => {
+                    const isBase = type.nombre.toLowerCase() === 'base';
+                    const isShape = type.nombre.toLowerCase() === 'forma';
+                    if (!isBase && !isShape) return;
+
+                    console.log(`📝 Procesando tipo: ${type.nombre}, opciones:`, type.options.length);
+
+                    type.options.forEach((opt) => {
+                        const optionEl = document.createElement('option');
+                        optionEl.value = opt.id;
+                        optionEl.textContent = opt.nombre;
+                        
+                        if (isBase) {
+                            baseSelect.appendChild(optionEl);
+                            baseCount++;
+                        }
+                        
+                        if (isShape) {
+                            const shapeOption = document.createElement('option');
+                            shapeOption.value = opt.id;
+                            shapeOption.textContent = opt.nombre;
+                            shapeSelect.appendChild(shapeOption);
+                            shapeCount++;
+                        }
+                    });
+                });
+
+                console.log(`✅ Variantes cargadas - Bases: ${baseCount}, Formas: ${shapeCount}`);
+            } catch (err) {
+                console.error('❌ Error cargando variantes:', err);
+            }
+        }
+
+        async function saveProduct() {
+            try {
+                const id = document.getElementById('productId').value;
+                const nombre = document.getElementById('productName').value.trim();
+                const descripcion = document.getElementById('productDescription').value.trim();
+                const precio = parseFloat(document.getElementById('productPrice').value);
+                const stock = parseInt(document.getElementById('productStock').value, 10) || 0;
+                const imagen = document.getElementById('productImage').value.trim() || null;
+                const baseId = document.getElementById('variantBase').value;
+                const shapeId = document.getElementById('variantShape').value;
+
+                if (!nombre || isNaN(precio)) {
+                    alert('Nombre y precio son obligatorios');
+                    return;
+                }
+
+                const body = {
+                    nombre,
+                    descripcion: descripcion || null,
+                    precio,
+                    stock,
+                    imagen
+                };
+
+                const url = id ? `/api/productos/${id}` : '/api/productos';
+                const method = id ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || 'No se pudo guardar el producto');
+                }
+
+                // TODO: asociar base/forma al producto cuando exista endpoint específico
+
+                await loadProducts();
+                closeProductModal();
+            } catch (err) {
+                console.error('Error al guardar producto:', err);
+                alert('Error al guardar producto: ' + err.message);
+            }
+        }
+
+        async function editProduct(id) {
+            try {
+                const res = await fetch(`/api/productos/${id}`);
+                if (!res.ok) throw new Error('No se pudo cargar el producto');
+                const p = await res.json();
+
+                document.getElementById('productId').value = p.id;
+                document.getElementById('productName').value = p.nombre || '';
+                document.getElementById('productDescription').value = p.descripcion || '';
+                document.getElementById('productPrice').value = p.precio || '';
+                document.getElementById('productStock').value = p.stock || 0;
+                document.getElementById('productImage').value = p.imagen || '';
+
+                document.getElementById('modalTitle').textContent = '✏️ Editar Producto';
+                document.getElementById('productModal').classList.add('show');
+
+                // Cargar variantes asociadas al producto
+                loadProductVariants(p.id);
+            } catch (err) {
+                console.error('Error al editar producto:', err);
+                alert('No se pudo cargar el producto: ' + err.message);
+            }
+        }
+
+        async function deleteProduct(id) {
+            const ok = confirm('¿Seguro que deseas eliminar este producto?');
+            if (!ok) return;
+            try {
+                const res = await fetch(`/api/productos/${id}`, { method: 'DELETE' });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || 'No se pudo eliminar');
+                }
+                await loadProducts();
+            } catch (err) {
+                console.error('Error al eliminar producto:', err);
+                alert('Error al eliminar: ' + err.message);
+            }
+        }
+
         async function saveVariant() {
             const nombre = document.getElementById('variantNameInput').value.trim();
             const price_delta = document.getElementById('variantPriceDeltaInput').value.trim();
+            const product_id = document.getElementById('productId').value;
+            
             if (!nombre) {
                 alert('Introduce un nombre para la variante');
                 return;
             }
+            
+            if (!product_id) {
+                alert('Por favor, primero selecciona o crea un producto antes de añadir variantes');
+                return;
+            }
+            
             // Enviar al backend (endpoint a definir, ejemplo: /admin/variantes)
             try {
+                console.log('📤 Enviando variante:', { tipo: currentVariantType, nombre, price_delta, product_id });
                 const res = await fetch('/admin/variantes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         tipo: currentVariantType,
                         nombre,
-                        price_delta: price_delta ? parseFloat(price_delta) : 0
+                        price_delta: price_delta ? parseFloat(price_delta) : 0,
+                        product_id: parseInt(product_id)
                     })
                 });
-                if (!res.ok) throw new Error('Error al guardar variante');
-                // Recargar selectores
-                loadProductVariants(document.getElementById('productId').value || null);
+                console.log('📨 Respuesta:', res.status, res.statusText);
+                const data = await res.json();
+                console.log('📨 Datos respuesta:', data);
+                if (!res.ok) {
+                    console.error('❌ Error al guardar variante:', data);
+                    throw new Error(data.details || data.error || 'Error al guardar variante');
+                }
+                console.log('✅ Variante guardada exitosamente');
+                // Recargar selectores con el ID del producto actual
+                await loadProductVariants(product_id);
                 closeVariantModal();
             } catch (e) {
-                alert('Error al guardar variante');
+                console.error('❌ Error completo:', e);
+                alert('Error al guardar variante: ' + e.message);
             }
         }
+
+        // Inicializar al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts();
+            loadProductVariants(null);
+        });
     </script>
     <!-- Código JS principal está dentro del <script> anterior -->
-    </script>
 </body>
 </html>

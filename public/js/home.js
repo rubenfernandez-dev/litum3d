@@ -26,11 +26,24 @@ async function loadFeaturedProducts() {
     // Show only first 4
     products = products.slice(0, 4);
     
-    container.innerHTML = products.map(p => `
+    container.innerHTML = products.map(p => {
+      // Resolver la URL de la imagen
+      let imageUrl = '';
+      if (p.imagen) {
+        // Si la imagen es una URL completa (empieza con http o /)
+        if (p.imagen.startsWith('http') || p.imagen.startsWith('/')) {
+          imageUrl = p.imagen;
+        } else {
+          // Si es solo el nombre del archivo, añadir la ruta
+          imageUrl = `/img/productos/${p.imagen}`;
+        }
+      }
+      
+      return `
       <div class="product-card">
         <div class="product-image">
-          ${p.imagen 
-            ? `<img src="/img/productos/${p.imagen}" alt="${escapeHtml(p.nombre)}" onerror="this.onerror=null; this.parentElement.innerHTML='${getEmojiForProduct(p.nombre)}';">` 
+          ${imageUrl 
+            ? `<img src="${imageUrl}" alt="${escapeHtml(p.nombre)}" onerror="this.onerror=null; this.parentElement.innerHTML='${getEmojiForProduct(p.nombre)}';">` 
             : getEmojiForProduct(p.nombre)
           }
         </div>
@@ -46,7 +59,8 @@ async function loadFeaturedProducts() {
           </button>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   } catch (err) {
     console.error(err);
     container.innerHTML = '<p style="grid-column: 1/-1; color: #ff6b6b; text-align: center;">Error al cargar productos.</p>';
@@ -85,6 +99,7 @@ async function openCustomization(productId) {
     selectedModelName: null,
     selectedModelPriceDelta: 0,
     files: [],
+    selectedVariants: {}, // Añadir estado para variantes
     extras: {
       upscale: false,
       qr: false,
@@ -101,9 +116,125 @@ async function openCustomization(productId) {
   document.getElementById('custom-files').value = '';
   document.getElementById('custom-file-list').innerHTML = '';
 
+  // Cargar variantes y modelos
+  await loadVariantsForProduct(productId);
   await loadModelsForProduct(productId);
   updateCustomTotal();
   document.getElementById('customization-modal').classList.add('show');
+}
+
+async function loadVariantsForProduct(productId) {
+  try {
+    console.log('📦 Cargando variantes para producto:', productId);
+    const res = await fetch(`/api/productos/${productId}/variant-types`);
+    if (!res.ok) {
+      console.warn('No variant types found for this product');
+      return;
+    }
+    const types = await res.json();
+    console.log('✅ Variantes cargadas:', types);
+    renderVariantsForm(types);
+  } catch (err) {
+    console.error('Error loading variant types:', err);
+  }
+}
+
+function renderVariantsForm(variantTypes) {
+  const variantsContainer = document.querySelector('[data-variants-section] .variant-types-container');
+  if (!variantsContainer) {
+    console.error('Variants container not found');
+    return;
+  }
+
+  // Si no hay variantes, no mostrar nada
+  if (!variantTypes || variantTypes.length === 0) {
+    variantsContainer.innerHTML = '';
+    return;
+  }
+
+  let html = '<h4 style="margin-bottom: 12px;">Selecciona las opciones de tu producto</h4>';
+
+  // Crear selector para cada tipo de variante
+  for (const variantType of variantTypes) {
+    const required = variantType.is_required ? '(obligatorio)' : '(opcional)';
+    html += `
+      <div class="variant-type-group" style="margin-bottom: 12px;">
+        <label style="display: block; margin-bottom: 6px; font-weight: 500;">${variantType.nombre} ${required}</label>
+        <select 
+          class="variant-select" 
+          data-type-id="${variantType.id}" 
+          data-required="${variantType.is_required}"
+          style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: var(--text-light);"
+          ${variantType.is_required ? 'required' : ''}>
+          <option value="">-- Selecciona ${variantType.nombre.toLowerCase()} --</option>
+    `;
+
+      // Opciones para este tipo de variante
+      for (const option of variantType.options) {
+        const stockText = option.stock > 0 ? `(${option.stock} disponibles)` : '(Agotado)';
+        const priceDisplay = option.price_delta > 0 ? ` +€${option.price_delta.toFixed(2)}` : '';
+
+        html += `
+          <option 
+            value="${option.id}" 
+            data-price-delta="${option.price_delta}"
+            data-stock="${option.stock}"
+            ${option.stock <= 0 ? 'disabled' : ''}>
+            ${option.nombre}${priceDisplay} ${stockText}
+          </option>
+        `;
+      }
+
+      html += `</select></div>`;
+    }
+
+  variantsContainer.innerHTML = html;
+  attachVariantListeners();
+}
+
+function attachVariantListeners() {
+  document.querySelectorAll('.variant-select').forEach(select => {
+    select.addEventListener('change', (e) => {
+      const typeId = e.target.dataset.typeId;
+      const optionId = e.target.value;
+
+      if (optionId) {
+        customizationState.selectedVariants[typeId] = optionId;
+      } else {
+        delete customizationState.selectedVariants[typeId];
+      }
+
+      updateVariantPrice();
+    });
+  });
+}
+
+async function updateVariantPrice() {
+  if (!customizationState.product || Object.keys(customizationState.selectedVariants).length === 0) {
+    // Si no hay variantes seleccionadas, usar precio base
+    customizationState.variantPriceDelta = 0;
+    updateCustomTotal();
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/productos/${customizationState.product.id}/calculate-variant-price`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selected_variants: customizationState.selectedVariants })
+    });
+
+    if (!response.ok) {
+      console.error('Error calculating variant price');
+      return;
+    }
+
+    const data = await response.json();
+    customizationState.variantPriceDelta = data.totalPriceDelta || 0;
+    updateCustomTotal();
+  } catch (err) {
+    console.error('Error updating variant price:', err);
+  }
 }
 
 async function loadModelsForProduct(productId) {
@@ -186,7 +317,9 @@ function updateCustomTotal() {
   if (!customizationState.product) return;
   const base = parseFloat(customizationState.product.precio) || 0;
   const extras = parseFloat(customizationState.extras?.extrasTotal || 0);
-  const total = base + parseFloat(customizationState.selectedModelPriceDelta || 0) + extras;
+  const variantDelta = parseFloat(customizationState.variantPriceDelta || 0);
+  const modelDelta = parseFloat(customizationState.selectedModelPriceDelta || 0);
+  const total = base + variantDelta + modelDelta + extras;
   const el = document.getElementById('custom-total');
   if (el) {
     el.textContent = total.toFixed(2);

@@ -33,7 +33,7 @@ class ProductVariantsModal {
    */
   async loadVariantTypes(productId) {
     try {
-      const response = await fetch(`/api/produtos/${productId}/variant-types`);
+      const response = await fetch(`/api/productos/${productId}/variant-types`);
       if (!response.ok) {
         console.warn('No variant types found for this product');
         this.variantTypes = [];
@@ -144,7 +144,7 @@ class ProductVariantsModal {
    */
   async updatePrice() {
     try {
-      const response = await fetch(`/api/produtos/${this.currentProductId}/calculate-variant-price`, {
+      const response = await fetch(`/api/productos/${this.currentProductId}/calculate-variant-price`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selected_variants: this.selectedVariants })

@@ -25,9 +25,12 @@
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   width: min(600px, 95vw);
+  max-height: 90vh;
   padding: 20px;
   position: relative;
   box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .custom-close {
@@ -379,14 +382,17 @@ nav {
 }
 
 nav .logo {
-  font-size: 1.6rem;
-  font-weight: 900;
-  background: linear-gradient(135deg, #e0ad61 0%, #fff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  height: 60px;
+  overflow: hidden;
   text-decoration: none;
-  letter-spacing: 1px;
-  animation: glow 3s ease-in-out infinite;
+}
+
+nav .logo img {
+  height: 180px;
+  width: auto;
+  object-fit: contain;
 }
 
 @keyframes glow {

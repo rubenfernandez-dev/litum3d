@@ -25,7 +25,10 @@ const requireAuth = (req, res, next) => {
 router.post('/variantes', requireAuth, async (req, res) => {
     try {
         const { tipo, nombre, price_delta = 0, product_id } = req.body;
+        console.log('📝 Guardando variante:', { tipo, nombre, price_delta, product_id });
+        
         if (!tipo || !nombre) {
+            console.error('❌ Faltan campos: tipo o nombre');
             return res.status(400).json({ error: 'Tipo y nombre son obligatorios' });
         }
         // Buscar producto (por seguridad)
@@ -33,25 +36,39 @@ router.post('/variantes', requireAuth, async (req, res) => {
         if (!prodId) {
             // Si no se envía product_id, usar el primero (o puedes cambiar esta lógica)
             const [prods] = await pool.query('SELECT id FROM productos ORDER BY id ASC LIMIT 1');
-            if (!prods.length) return res.status(400).json({ error: 'No hay productos disponibles' });
+            if (!prods.length) {
+                console.error('❌ No hay productos disponibles');
+                return res.status(400).json({ error: 'No hay productos disponibles' });
+            }
             prodId = prods[0].id;
+            console.log('✓ Se usó producto por defecto:', prodId);
         }
+        console.log('✓ Producto ID:', prodId);
+        
         // Buscar o crear el tipo de variante (Base/Forma) para el producto
         let [types] = await pool.query('SELECT id FROM product_variant_types WHERE product_id = ? AND LOWER(nombre) = LOWER(?) LIMIT 1', [prodId, tipo]);
         let typeId;
         if (types.length === 0) {
             // Crear tipo de variante si no existe
+            console.log('✓ Creando nuevo tipo de variante:', tipo);
             const [result] = await pool.query('INSERT INTO product_variant_types (product_id, nombre, is_required, display_order) VALUES (?, ?, TRUE, ?)', [prodId, tipo.charAt(0).toUpperCase() + tipo.slice(1).toLowerCase(), tipo.toLowerCase() === 'base' ? 1 : 2]);
             typeId = result.insertId;
+            console.log('✓ Tipo de variante creado con ID:', typeId);
         } else {
             typeId = types[0].id;
+            console.log('✓ Tipo de variante existe con ID:', typeId);
         }
-        // Crear la opción de variante
-        const [result2] = await pool.query('INSERT INTO product_variant_options (variant_type_id, nombre, price_delta) VALUES (?, ?, ?)', [typeId, nombre, price_delta]);
+        
+        // Crear la opción de variante con stock por defecto de 100
+        const stock = 100; // Stock por defecto para nuevas variantes
+        console.log('✓ Creando opción de variante:', { typeId, nombre, price_delta, stock });
+        const [result2] = await pool.query('INSERT INTO product_variant_options (variant_type_id, nombre, price_delta, stock) VALUES (?, ?, ?, ?)', [typeId, nombre, price_delta, stock]);
+        console.log('✅ Variante guardada exitosamente con ID:', result2.insertId);
         res.json({ success: true, optionId: result2.insertId });
     } catch (error) {
-        console.error('Error al crear variante:', error);
-        res.status(500).json({ error: 'Error al crear variante' });
+        console.error('❌ Error al crear variante:', error.message);
+        console.error('Stack:', error.stack);
+        res.status(500).json({ error: 'Error al crear variante', details: error.message });
     }
 });
 
