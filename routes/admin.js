@@ -24,13 +24,17 @@ const requireAuth = (req, res, next) => {
 // POST /admin/variantes - Crear nueva opción de variante (base o forma)
 router.post('/variantes', requireAuth, async (req, res) => {
     try {
-        const { tipo, nombre, price_delta = 0, product_id } = req.body;
-        console.log('📝 Guardando variante:', { tipo, nombre, price_delta, product_id });
+        const { tipo, nombre, price_delta = 0, stock = 100, product_id } = req.body;
+        console.log('📝 Guardando variante:', { tipo, nombre, price_delta, stock, product_id });
         
         if (!tipo || !nombre) {
             console.error('❌ Faltan campos: tipo o nombre');
             return res.status(400).json({ error: 'Tipo y nombre son obligatorios' });
         }
+        
+        // Validar que el stock sea válido
+        const validStock = Math.max(1, parseInt(stock) || 100);
+        
         // Buscar producto (por seguridad)
         let prodId = product_id;
         if (!prodId) {
@@ -59,10 +63,9 @@ router.post('/variantes', requireAuth, async (req, res) => {
             console.log('✓ Tipo de variante existe con ID:', typeId);
         }
         
-        // Crear la opción de variante con stock por defecto de 100
-        const stock = 100; // Stock por defecto para nuevas variantes
-        console.log('✓ Creando opción de variante:', { typeId, nombre, price_delta, stock });
-        const [result2] = await pool.query('INSERT INTO product_variant_options (variant_type_id, nombre, price_delta, stock) VALUES (?, ?, ?, ?)', [typeId, nombre, price_delta, stock]);
+        // Crear la opción de variante con stock especificado
+        console.log('✓ Creando opción de variante:', { typeId, nombre, price_delta, stock: validStock });
+        const [result2] = await pool.query('INSERT INTO product_variant_options (variant_type_id, nombre, price_delta, stock) VALUES (?, ?, ?, ?)', [typeId, nombre, price_delta, validStock]);
         console.log('✅ Variante guardada exitosamente con ID:', result2.insertId);
         res.json({ success: true, optionId: result2.insertId });
     } catch (error) {

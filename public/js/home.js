@@ -333,10 +333,15 @@ function closeCustomization() {
     selectedModelId: null,
     selectedModelName: null,
     selectedModelPriceDelta: 0,
+    variantPriceDelta: 0,
+    selectedVariants: {},
     files: [],
     extras: { upscale: false, qr: false, qrMessage: '', adapter: false, extrasTotal: 0, currency: 'CHF' }
   };
-  document.getElementById('customization-modal').style.display = 'none';
+  const modal = document.getElementById('customization-modal');
+  if (modal) {
+    modal.classList.remove('show');
+  }
 }
 
 function onExtraChange() {

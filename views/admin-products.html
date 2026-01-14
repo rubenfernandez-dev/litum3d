@@ -383,6 +383,10 @@
                     <label for="variantPriceDeltaInput">Diferencia de precio (€)</label>
                     <input type="number" id="variantPriceDeltaInput" step="0.01" min="0">
                 </div>
+                <div class="form-group">
+                    <label for="variantStockInput">Stock *</label>
+                    <input type="number" id="variantStockInput" min="1" value="100" required>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" type="button" onclick="closeVariantModal()">Cancelar</button>
@@ -447,6 +451,7 @@
             document.getElementById('variantModalTitle').textContent = type === 'base' ? 'Añadir nueva Base' : 'Añadir nueva Forma';
             document.getElementById('variantNameInput').value = '';
             document.getElementById('variantPriceDeltaInput').value = '';
+            document.getElementById('variantStockInput').value = '100';
             document.getElementById('variantModal').classList.add('show');
         }
 
@@ -611,6 +616,7 @@
         async function saveVariant() {
             const nombre = document.getElementById('variantNameInput').value.trim();
             const price_delta = document.getElementById('variantPriceDeltaInput').value.trim();
+            const stock = parseInt(document.getElementById('variantStockInput').value) || 100;
             const product_id = document.getElementById('productId').value;
             
             if (!nombre) {
@@ -623,9 +629,14 @@
                 return;
             }
             
+            if (stock <= 0) {
+                alert('El stock debe ser mayor a 0');
+                return;
+            }
+            
             // Enviar al backend (endpoint a definir, ejemplo: /admin/variantes)
             try {
-                console.log('📤 Enviando variante:', { tipo: currentVariantType, nombre, price_delta, product_id });
+                console.log('📤 Enviando variante:', { tipo: currentVariantType, nombre, price_delta, stock, product_id });
                 const res = await fetch('/admin/variantes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -633,6 +644,7 @@
                         tipo: currentVariantType,
                         nombre,
                         price_delta: price_delta ? parseFloat(price_delta) : 0,
+                        stock: stock,
                         product_id: parseInt(product_id)
                     })
                 });
