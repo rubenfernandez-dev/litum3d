@@ -1,30 +1,30 @@
 <!doctype html>
-<html lang="es">
+<html lang="fr">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description"
-        content="Tienda de litofanías personalizadas. Catálogo completo de modelos 3D premium, personalización fácil y entrega rápida desde Suiza." />
-    <meta name="keywords" content="tienda litofanías, comprar litofanía, litofanía personalizada, lámpara 3D, regalo" />
+        content="Boutique de lithophanies personnalisées. Catalogue complet de modèles 3D premium, personnalisation facile et livraison rapide depuis la Suisse." />
+    <meta name="keywords" content="boutique lithophanies, acheter lithophanie, lithophanie personnalisée, lampe 3D, cadeau" />
     <meta name="author" content="LITUM3D" />
     <meta name="robots" content="index, follow" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://litum3d.com/tienda" />
-    <meta property="og:title" content="Tienda - LITUM3D Litofanías" />
+    <meta property="og:url" content="https://litum3d.com/shop-fr" />
+    <meta property="og:title" content="Boutique - LITUM3D Lithophanies" />
     <meta property="og:description"
-        content="Catálogo completo de litofanías personalizadas. Personaliza tu modelo en segundos." />
+        content="Catalogue complet de lithophanies personnalisées. Personnalisez votre modèle en quelques secondes." />
 
     <!-- Canonical -->
-    <link rel="canonical" href="https://litum3d.com/tienda" />
+    <link rel="canonical" href="https://litum3d.com/shop-fr" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/img/logos/favicon.png" />
     <link rel="apple-touch-icon" href="/img/logos/favicon.png" />
 
-    <title>Tienda - LITUM3D Litofanías Premium</title>
+    <title>Boutique - LITUM3D Lithophanies Premium</title>
     <link rel="stylesheet" href="/css/styles.css" />
     <script src="/js/cookie-banner.js"></script>
     <script src="/js/navbar.js"></script>
@@ -33,26 +33,26 @@
 <body>
     <header>
         <nav>
-            <a href="/" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
-            <button class="hamburger" id="hamburger-btn" aria-label="Abrir menú">
+            <a href="/fr" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
+            <button class="hamburger" id="hamburger-btn" aria-label="Ouvrir le menu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <div class="menu" id="nav-menu">
-                <a href="/">Inicio</a>
-                <a href="/gallery">Galería</a>
-                <a href="/tienda">Tienda</a>
-                <a href="/about">Sobre</a>
-                <a href="/contact">Contacto</a>
+                <a href="/fr">Accueil</a>
+                <a href="/gallery-fr">Galerie</a>
+                <a href="/shop">Boutique</a>
+                <a href="/about-fr">À propos</a>
+                <a href="/contact-fr">Contact</a>
                 <div class="language-selector">
-                    <span class="lang-flag">🇪🇸</span>
+                    <span class="lang-flag">🇫🇷</span>
                     <div class="lang-dropdown">
+                        <a href="/" title="Español">🇪🇸 ES</a>
                         <a href="/shop-de" title="Deutsch">🇩🇪 DE</a>
-                        <a href="/shop-fr" title="Français">🇫🇷 FR</a>
                     </div>
                 </div>
-                <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
+                <a href="/cart" class="cart-icon-wrapper" title="Voir le panier">
                     🛒
                     <span class="cart-badge" id="cart-badge">0</span>
                 </a>
@@ -64,8 +64,8 @@
         <!-- Sección Introducción Tienda -->
         <section class="shop-hero">
             <div class="container">
-                <h1 class="shop-hero-title">Tienda de Litofanías Personalizadas</h1>
-                <p class="shop-hero-subtitle">Elige tu modelo y personalízalo en segundos</p>
+                <h1 class="shop-hero-title">Boutique de lithophanies personnalisées</h1>
+                <p class="shop-hero-subtitle">Choisissez votre modèle et personnalisez-le en quelques secondes</p>
             </div>
         </section>
 
@@ -75,9 +75,9 @@
                 <div class="filters-container">
                     <!-- Filtro por Forma -->
                     <div class="filter-group">
-                        <label for="filter-shape" class="filter-label">📐 Forma:</label>
+                        <label for="filter-shape" class="filter-label">📐 Forme:</label>
                         <select id="filter-shape" class="filter-select" onchange="applyFilters()">
-                            <option value="">Todas las formas</option>
+                            <option value="">Toutes les formes</option>
                             <option value="esfera">Esfera</option>
                             <option value="cubo">Cubo</option>
                             <option value="cilindro">Cilindro</option>
@@ -90,7 +90,7 @@
                     <div class="filter-group">
                         <label for="filter-base" class="filter-label">🔧 Base:</label>
                         <select id="filter-base" class="filter-select" onchange="applyFilters()">
-                            <option value="">Todas las bases</option>
+                            <option value="">Toutes les bases</option>
                             <option value="madera">Madera natural</option>
                             <option value="metal">Metal mate</option>
                             <option value="plastico">Plástico premium</option>
@@ -99,7 +99,7 @@
                     </div>
 
                     <!-- Botón Limpiar Filtros -->
-                    <button class="filter-clear-btn" onclick="clearFilters()">🔄 Limpiar filtros</button>
+                    <button class="filter-clear-btn" onclick="clearFilters()">🔄 Effacer les filtres</button>
                 </div>
             </div>
         </section>
@@ -108,7 +108,7 @@
         <section class="shop-products-section">
             <div class="container">
                 <div class="products-grid" id="shop-products">
-                    <p>Cargando catálogo de productos...</p>
+                    <p>Chargement du catalogue...</p>
                 </div>
             </div>
         </section>
@@ -118,8 +118,8 @@
     <div class="customization-modal" id="customization-modal">
         <div class="customization-dialog">
             <button class="custom-close" onclick="closeCustomization()">✕</button>
-            <h3 id="custom-modal-title">Personalizar</h3>
-            <p class="opacity-light">Selecciona tus opciones y personaliza tu producto.</p>
+            <h3 id="custom-modal-title">Personnaliser</h3>
+            <p class="opacity-light">Sélectionnez vos options et personnalisez votre produit.</p>
 
             <!-- SECCIÓN DE VARIANTES -->
             <div class="custom-section" data-variants-section>
@@ -128,57 +128,56 @@
 
             <!-- PRECIO CON VARIANTES -->
             <div class="price-with-variants" style="margin-bottom: 1.5rem;">
-                <span class="price-label">Precio final:</span>
+                <span class="price-label">Prix final:</span>
                 <span class="final-price" data-variant-price>€0.00</span>
             </div>
 
             <div class="custom-section">
-                <h4>Modelo</h4>
-                <div id="custom-models" class="custom-models">Cargando modelos...</div>
+                <h4>Modèle</h4>
+                <div id="custom-models" class="custom-models">Chargement des modèles...</div>
             </div>
 
             <div class="custom-section">
-                <h4>Notas de personalización</h4>
-                <textarea id="custom-notes" placeholder="Indicaciones especiales"></textarea>
+                <h4>Notes de personnalisation</h4>
+                <textarea id="custom-notes" placeholder="Instructions spéciales"></textarea>
             </div>
 
             <div class="custom-section">
-                <h4>Fotos (máx 3)</h4>
+                <h4>Photos (max 3)</h4>
                 <input type="file" id="custom-files" accept="image/jpeg,image/png" multiple
                     onchange="handleFileSelection(this)">
                 <div id="custom-file-list" class="custom-file-list"></div>
             </div>
 
             <div class="custom-section">
-                <h4>Extras opcionales</h4>
+                <h4>Extras optionnels</h4>
                 <div class="custom-extras">
                     <label class="extra-option">
                         <input type="checkbox" id="extra-upscale" onchange="onExtraChange()">
-                        <span>Upscale de imágenes del cliente (+5 EUR/CHF)</span>
+                        <span>Amélioration des images client (+5 EUR/CHF)</span>
                     </label>
                     <label class="extra-option">
                         <input type="checkbox" id="extra-qr" onchange="onExtraChange()">
-                        <span>Mensaje en QR integrado (+5 EUR/CHF)</span>
+                        <span>Message QR intégré (+5 EUR/CHF)</span>
                     </label>
-                    <input type="text" id="extra-qr-message" placeholder="Mensaje/URL para el QR"
+                    <input type="text" id="extra-qr-message" placeholder="Message/URL pour QR"
                         oninput="onExtraChange()" disabled>
                     <label class="extra-option">
                         <input type="checkbox" id="extra-adapter" onchange="onExtraChange()">
-                        <span>Incluir adaptador de enchufe USB (+4 EUR/CHF)</span>
+                        <span>Inclure adaptateur USB (+4 EUR/CHF)</span>
                     </label>
                 </div>
-                <small class="text-small-gray">Los extras se añaden por artículo.</small>
+                <small class="text-small-gray">Les extras sont ajoutés par article.</small>
             </div>
 
             <div class="custom-summary">
-                <div>Precio base: €<span id="custom-base-price">0.00</span></div>
-                <div>Total con extras y modelo: €<span id="custom-total">0.00</span></div>
+                <div>Prix de base: €<span id="custom-base-price">0.00</span></div>
+                <div>Total avec extras et modèle: €<span id="custom-total">0.00</span></div>
             </div>
 
             <div class="custom-actions">
-                <button class="custom-btn ghost" onclick="closeCustomization()">Cancelar</button>
-                <button class="custom-btn primary" onclick="confirmCustomization()" data-add-to-cart-btn>Añadir al
-                    carrito</button>
+                <button class="custom-btn ghost" onclick="closeCustomization()">Annuler</button>
+                <button class="custom-btn primary" onclick="confirmCustomization()" data-add-to-cart-btn>Ajouter au panier</button>
             </div>
         </div>
     </div>
@@ -188,41 +187,41 @@
             <div class="footer-section">
                 <h4>✨ LITUM3D</h4>
                 <ul>
-                    <li>Litofanías premium con tecnología FDM</li>
-                    <li>Diseño personalizado y exclusivo</li>
-                    <li>Calidad garantizada 100%</li>
+                    <li>Lithophanies premium avec technologie FDM</li>
+                    <li>Design personnalisé et exclusif</li>
+                    <li>Qualité garantie à 100%</li>
                 </ul>
             </div>
             <div class="footer-section">
-                <h4>Enlaces Rápidos</h4>
+                <h4>Liens Rapides</h4>
                 <ul>
-                    <li><a href="/">Inicio</a></li>
-                    <li><a href="/tienda">Tienda</a></li>
-                    <li><a href="/gallery">Galería Completa</a></li>
-                    <li><a href="/about">Sobre Nosotros</a></li>
-                    <li><a href="/contact">Contacto</a></li>
+                    <li><a href="/fr">Accueil</a></li>
+                    <li><a href="/shop">Boutique</a></li>
+                    <li><a href="/gallery-fr">Galerie Complète</a></li>
+                    <li><a href="/about-fr">À propos de nous</a></li>
+                    <li><a href="/contact-fr">Contact</a></li>
                 </ul>
             </div>
             <div class="footer-section">
-                <h4>Contacto</h4>
+                <h4>Contact</h4>
                 <ul>
                     <li>📧 contact@litum3d.com</li>
                     <li>📞 +41 77 218 62 29</li>
-                    <li>📍 Berna, Suiza</li>
-                    <li>⏰ Lun-Vie 9:00-18:00</li>
+                    <li>📍 Berne, Suisse</li>
+                    <li>⏰ Lun-Ven 9:00-18:00</li>
                 </ul>
             </div>
             <div class="footer-section">
                 <h4>🔔 Newsletter</h4>
-                <p class="text-small-light">Suscríbete para obtener ofertas exclusivas y novedades.</p>
+                <p class="text-small-light">Abonnez-vous pour obtenir des offres exclusives et des nouveautés.</p>
                 <form class="newsletter-form" onsubmit="subscribeNewsletter(event)">
-                    <input type="email" placeholder="Tu email..." required aria-label="Email para newsletter">
-                    <button type="submit">Suscribir</button>
+                    <input type="email" placeholder="Votre email..." required aria-label="Email pour la newsletter">
+                    <button type="submit">S'abonner</button>
                 </form>
-                <p class="text-extra-small">Sin spam, solo noticias excelentes.</p>
+                <p class="text-extra-small">Pas de spam, seulement d'excellentes nouvelles.</p>
             </div>
             <div class="footer-section">
-                <h4>Síguenos</h4>
+                <h4>Suivez-nous</h4>
                 <div class="footer-socials">
                     <a href="#" title="Instagram">📷</a>
                     <a href="#" title="Facebook">f</a>
@@ -232,12 +231,12 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; <span class="year">2025</span> LITUM3D. Todos los derechos reservados.</p>
-            <p>🎨 Litofanías Premium | Impresión 3D de Excelencia</p>
+            <p>&copy; <span class="year">2025</span> LITUM3D. Tous droits réservés.</p>
+            <p>🎨 Lithophanies Premium | Excellence en Impression 3D</p>
             <p class="footer-policy-links">
-                <a href="/privacy-policy">Política de Privacidad</a> |
-                <a href="/cookies-policy">Política de Cookies</a> |
-                <a href="/terms-conditions">Términos y Condiciones</a>
+                <a href="/privacy-policy">Politique de Confidentialité</a> |
+                <a href="/cookies-policy">Politique de Cookies</a> |
+                <a href="/terms-conditions">Conditions Générales</a>
             </p>
         </div>
     </footer>
@@ -247,7 +246,7 @@
     <script src="/js/product-variants.js"></script>
 
     <!-- Botón flotante WhatsApp -->
-    <a href="https://wa.me/41772186229" class="whatsapp-button" title="Contactar por WhatsApp" target="_blank"
+    <a href="https://wa.me/41772186229" class="whatsapp-button" title="Contacter par WhatsApp" target="_blank"
         rel="noopener noreferrer">
       <svg viewBox="0 0 24 24" width="26" height="26" fill="white">
         <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>

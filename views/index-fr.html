@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description"
+    content="Lithophanies premium en 3D avec personnalisation. Technologie FDM, qualité garantie. 8 ans d'expérience en impression 3D." />
+  <meta name="keywords" content="lithophanie, impression 3D, personnalisé, art 3D, résine" />
+  <meta name="author" content="LITUM3D" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://litum3d.com/fr" />
+  <meta property="og:title" content="LITUM3D - Lithophanies Premium en 3D" />
+  <meta property="og:description"
+    content="Lithophanies premium avec design personnalisé. Qualité garantie, 8 ans d'expérience." />
+  <meta property="og:image" content="https://litum3d.com/img/productos/carrusel1.jpeg" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://litum3d.com/fr" />
+  <meta property="twitter:title" content="LITUM3D - Lithophanies Premium en 3D" />
+  <meta property="twitter:description" content="Lithophanies premium avec design personnalisé." />
+  <meta property="twitter:image" content="https://litum3d.com/img/productos/carrusel1.jpeg" />
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://litum3d.com/fr" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/img/logos/favicon.png" />
+  <link rel="apple-touch-icon" href="/img/logos/favicon.png" />
+
+  <title>LITUM3D - Lithophanies Premium</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script src="/js/cookie-banner.js"></script>
+  <script src="/js/navbar.js"></script>
+</head>
+
+<body>
+  <header>
+    <nav>
+      <a href="/fr" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
+      <button class="hamburger" id="hamburger-btn" aria-label="Ouvrir le menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="menu" id="nav-menu">
+        <a href="/index-fr">Accueil</a>
+        <a href="/gallery-fr">Galerie</a>
+        <a href="/shop">Shop</a>
+        <a href="/about-fr">À propos</a>
+        <a href="/contact-fr">Contact</a>
+        <div class="language-selector">
+          <span class="lang-flag">🇫🇷</span>
+          <div class="lang-dropdown">
+            <a href="/" title="Español">🇪🇸 ES</a>
+            <a href="/de" title="Deutsch">🇩🇪 DE</a>
+          </div>
+        </div>
+        <a href="/cart-fr" class="cart-icon-wrapper" title="Voir le panier">
+          🛒
+          <span class="cart-badge">0</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Carrusel -->
+    <section class="carousel-section">
+      <div class="carousel-container" id="carousel">
+        <div class="carousel-slide active carousel-slide-1">
+          <div class="carousel-content">
+
+          </div>
+        </div>
+        <div class="carousel-slide carousel-slide-2">
+          <div class="carousel-content">
+
+          </div>
+        </div>
+        <div class="carousel-slide carousel-slide-3">
+          <div class="carousel-content">
+
+          </div>
+        </div>
+      </div>
+
+      <button class="carousel-arrow prev" onclick="moveCarousel(-1)">❮</button>
+      <button class="carousel-arrow next" onclick="moveCarousel(1)">❯</button>
+
+      <div class="carousel-nav" id="carousel-dots"></div>
+    </section>
+
+    <!-- NUEVA SECCIÓN: Qué es una Litofanía (4 bloques alternando texto/foto) -->
+    <section class="litofania-intro-section">
+      <div class="container">
+        <h2 class="litofania-intro-title">Découvrez la magie des lithophanies personnalisées</h2>
+        <p class="litofania-intro-subtitle">Transformez vos moments spéciaux en œuvres d'art illuminées</p>
+
+        <!-- Bloque 1: Texto - Foto -->
+        <div class="litofania-block litofania-block-1">
+          <div class="litofania-text">
+            <h3>✨ Qu'est-ce qu'une lithophanie ?</h3>
+            <p>Une lithophanie est une œuvre d'art tridimensionnelle qui prend vie lorsqu'elle est éclairée. En plaçant une source de lumière derrière, l'image en relief se projette en nuances de gris, créant un effet magique et enveloppant. C'est comme avoir une toile vivante qui change avec l'intensité de la lumière.</p>
+            <p>Parfaite pour figer des moments émotionnels : une photo de famille, un portrait spécial, un paysage favori. Chaque lithophanie est unique car elle est personnalisée avec VOTRE photo.</p>
+          </div>
+          <div class="litofania-image">
+            <!-- Reemplaza la ruta por tu imagen -->
+            <img src="/img/productos/cachorros.png" alt="Lithophanie éclairée" class="litofania-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="litofania-placeholder litofania-emoji" style="display: none;">🌟</div>
+          </div>
+        </div>
+
+        <!-- Bloque 2: Foto - Texto -->
+        <div class="litofania-block litofania-block-2">
+          <div class="litofania-image">
+            <!-- Reemplaza la ruta por tu imagen -->
+            <img src="/img/productos/pasillo.png" alt="Cadeau personnalisé" class="litofania-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="litofania-placeholder litofania-emoji" style="display: none;">💡</div>
+          </div>
+          <div class="litofania-text">
+            <h3>🎁 Le cadeau personnalisé parfait</h3>
+            <p>Vous cherchez un cadeau unique et mémorable ? Une lithophanie personnalisée est la réponse. Avec votre photo spéciale, nous créons une lampe qui raconte l'histoire d'un moment important.</p>
+            <ul class="litofania-list">
+              <li><strong>Anniversaires :</strong> Immortalisez un sourire spécial</li>
+              <li><strong>Anniversaires de mariage :</strong> Revivez le moment de deux cœurs</li>
+              <li><strong>Fête des Mères/Pères :</strong> Hommage émotionnel en lumière</li>
+              <li><strong>Mariages :</strong> Souvenir éternel d'un jour parfait</li>
+              <li><strong>Bébés/Animaux :</strong> Célébrez les êtres chers</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Bloque 3: Texto - Foto -->
+        <div class="litofania-block litofania-block-3">
+          <div class="litofania-text">
+            <h3>🏆 Qualité artisanale premium depuis la Suisse</h3>
+            <p>Chaque lithophanie est fabriquée avec précision en Suisse en utilisant une technologie d'impression 3D de dernière génération. Ce n'est pas un simple produit : c'est une œuvre d'art soigneusement élaborée.</p>
+            <p>Avec plus de 8 ans d'expérience en impression 3D professionnelle, nous garantissons :</p>
+            <ul class="litofania-list">
+              <li>✓ Détail impeccable dans chaque bande de ton</li>
+              <li>✓ Matériaux durables et de première qualité</li>
+              <li>✓ Finition parfaite et sans défauts</li>
+              <li>✓ Bases stables et éclairage LED chaleureux</li>
+              <li>✓ Satisfaction garantie</li>
+            </ul>
+          </div>
+          <div class="litofania-image">
+            <!-- Reemplaza la ruta por tu imagen -->
+            <img src="/img/productos/pared2.jpg" alt="Qualité artisanale" class="litofania-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="litofania-placeholder litofania-emoji" style="display: none;">🎨</div>
+          </div>
+        </div>
+
+        <!-- Bloque 4: Foto - Texto + CTA -->
+        <div class="litofania-block litofania-block-4">
+          <div class="litofania-image">
+            <!-- Reemplaza la ruta por tu imagen -->
+            <img src="/img/productos/antes.despues.png" alt="Personnalisation rapide" class="litofania-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="litofania-placeholder litofania-emoji" style="display: none;">🚀</div>
+          </div>
+          <div class="litofania-text">
+            <h3>🌈 Personnalisation rapide et facile</h3>
+            <p>Le processus est simple et passionnant. Téléchargez votre photo favorite, choisissez la forme et la base que vous préférez, et nous nous occupons du reste. Dans 3 à 5 jours, vous aurez votre lithophanie prête à briller.</p>
+            <p><strong>Chaque achat comprend :</strong></p>
+            <ul class="litofania-list">
+              <li>Lithophanie 3D personnalisée en haute résolution</li>
+              <li>Base de lampe stable et élégante</li>
+              <li>Lumière LED blanc chaud (efficace et durable)</li>
+              <li>Emballage sûr et envoi rapide</li>
+            </ul>
+            <a href="/shop" class="litofania-cta-btn">✨ Créer ma lithophanie</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Descripción detallada del producto tipo Etsy -->
+  <section class="product-description-section">
+    <div class="container">
+      <h2 class="product-desc-title">Lampe de Table Personnalisée avec Photo – Lithophanie 3D Artisanale depuis la Suisse</h2>
+      <p class="product-desc-intro">
+        Cette lampe de table unique transforme votre photo personnelle en une impressionnante lithophanie 3D qui prend vie avec une lumière
+        chaude.
+        Chaque lampe est fabriquée en Suisse avec une précision maximale et est un cadeau émotionnel parfait pour des personnes spéciales
+        et des moments inoubliables.
+      </p>
+
+      <div class="product-desc-two-column">
+        <!-- Columna Izquierda -->
+        <div class="product-desc-column">
+          <div class="product-desc-feature">
+            <h3>✨ Pourquoi cette lampe est spéciale</h3>
+            <ul>
+              <li><strong>Votre photo en relief 3D</strong> – visible uniquement à travers la lumière, magique et détaillée</li>
+              <li><strong>Fabriquée artisanalement en Suisse</strong> – finition premium et lignes nettes</li>
+              <li><strong>Lumière chaude et accueillante</strong> – idéale pour la chambre, le salon ou comme veilleuse
+              </li>
+              <li><strong>Design minimaliste</strong> – s'adapte à toute maison moderne</li>
+            </ul>
+            <div class="product-desc-feature">
+              <h3>🎁 Idéal comme cadeau pour :</h3>
+              <ul>
+                <li>Anniversaires</li>
+                <li>Noël et Saint-Valentin</li>
+                <li>Mariages et Anniversaires de mariage</li>
+                <li>Fête des Mères et des Pères</li>
+                <li>Baptêmes et Célébrations</li>
+                <li>Un cadeau émotionnel pour toute occasion</li>
+              </ul>
+            </div>
+          </div>
+
+         
+        </div>
+
+        <!-- Columna Derecha -->
+        <div class="product-desc-column">
+          <div class="product-desc-feature">
+            <h3>📦 Contenu de l'envoi</h3>
+            <ul>
+              <li>Lithophanie 3D personnalisée</li>
+              <li>Base de lampe de table stable</li>
+              <li>Lumière LED blanc chaud (efficace et durable)</li>
+            </ul>
+          </div>
+
+           <div class="product-desc-feature">
+            <h3>📸 Comment fonctionne la personnalisation</h3>
+            <ol>
+              <li>Téléchargez votre photo favorite</li>
+              <li>Nous créons une lithophanie 3D précise à partir de celle-ci</li>
+              <li>Votre lampe est soigneusement fabriquée et expédiée en toute sécurité</li>
+            </ol>
+          </div>
+
+          <div class="product-desc-feature">
+            <h3>🚚 Expédition</h3>
+            <ul>
+              <li>Expédition rapide et sûre depuis la Suisse</li>
+              <li>Livraisons dans l'UE sans problèmes ni frais supplémentaires</li>
+            </ul>
+          </div>
+
+
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Destacados con botón de compra -->
+    <h2>En vedette</h2>
+    <div class="products-grid" id="featured-products">
+      <p>Chargement...</p>
+    </div>
+
+  <!-- Por qué elegirnos -->
+  <section class="benefits-section">
+    <div class="benefits-header">
+      <h2>Pourquoi choisir <span class="brand">LITUM3D</span> ?</h2>
+      <p>Avantages clés qui nous distinguent.</p>
+    </div>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-icon">🏆</div>
+        <h3>Qualité Premium</h3>
+        <p>Matériaux de première qualité et finitions parfaites dans chaque pièce.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🎨</div>
+        <h3>Originalité</h3>
+        <p>Designs exclusifs et personnalisation réelle adaptée à votre idée.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">🧰</div>
+        <h3>Professionnalisme et Expérience</h3>
+        <p>8 ans d'impression 3D professionnelle, processus clair et livraison soignée.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">✅</div>
+        <h3>Garantie</h3>
+        <p>Satisfaction garantie et révision avant l'envoi.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal de personalización -->
+  <div class="customization-modal" id="customization-modal">
+    <div class="customization-dialog">
+      <button class="custom-close" onclick="closeCustomization()">✕</button>
+      <h3 id="custom-modal-title">Personnaliser</h3>
+      <p class="opacity-light">Sélectionnez vos options et personnalisez votre produit.</p>
+
+      <!-- SECCIÓN DE VARIANTES -->
+      <div class="custom-section" data-variants-section>
+        <div class="variant-types-container"></div>
+      </div>
+
+      <!-- PRECIO CON VARIANTES -->
+      <div class="price-with-variants" style="margin-bottom: 1.5rem;">
+        <span class="price-label">Prix final :</span>
+        <span class="final-price" data-variant-price>$0.00</span>
+      </div>
+
+      <div class="custom-section">
+        <h4>Modèle</h4>
+        <div id="custom-models" class="custom-models">Chargement...</div>
+      </div>
+
+      <div class="custom-section">
+        <h4>Notes de personnalisation</h4>
+        <textarea id="custom-notes" placeholder="Instructions spéciales"></textarea>
+      </div>
+
+      <div class="custom-section">
+        <h4>Photos (max 3)</h4>
+        <input type="file" id="custom-files" accept="image/jpeg,image/png" multiple
+          onchange="handleFileSelection(this)">
+        <div id="custom-file-list" class="custom-file-list"></div>
+      </div>
+
+      <div class="custom-section">
+        <h4>Extras optionnels</h4>
+        <div class="custom-extras">
+          <label class="extra-option">
+            <input type="checkbox" id="extra-upscale" onchange="onExtraChange()">
+            <span>Amélioration des images du client (+5 EUR/CHF)</span>
+          </label>
+          <label class="extra-option">
+            <input type="checkbox" id="extra-qr" onchange="onExtraChange()">
+            <span>Message en QR intégré (+5 EUR/CHF)</span>
+          </label>
+          <input type="text" id="extra-qr-message" placeholder="Message/URL pour le QR" oninput="onExtraChange()"
+            disabled>
+          <label class="extra-option">
+            <input type="checkbox" id="extra-adapter" onchange="onExtraChange()">
+            <span>Inclure adaptateur de prise USB (+4 EUR/CHF)</span>
+          </label>
+        </div>
+        <small class="text-small-gray">Les extras sont ajoutés par article.</small>
+      </div>
+
+      <div class="custom-summary">
+        <div>Prix de base : €<span id="custom-base-price">0.00</span></div>
+        <div>Total avec extras et modèle : €<span id="custom-total">0.00</span></div>
+      </div>
+
+      <div class="custom-actions">
+        <button class="custom-btn ghost" onclick="closeCustomization()">Annuler</button>
+        <button class="custom-btn primary" onclick="confirmCustomization()" data-add-to-cart-btn>Ajouter au
+          panier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Testimonios -->
+  <section class="testimonials-section">
+    <div class="testimonials-header">
+      <h2>Témoignages</h2>
+      <p>Ce que disent nos clients</p>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="testimonial-quote">"</div>
+        <div class="testimonial-flag">🇪🇸 Espagne</div>
+        <p class="testimonial-text">Impression impeccable et excellent service. Je recommencerai.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">MG</div>
+          <div class="testimonial-author">María G.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">"</div>
+        <div class="testimonial-flag">🇬🇧 Royaume-Uni</div>
+        <p class="testimonial-text">Qualité exceptionnelle et livraison rapide. Hautement recommandé.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">JT</div>
+          <div class="testimonial-author">James T.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">"</div>
+        <div class="testimonial-flag">🇫🇷 France</div>
+        <p class="testimonial-text">Qualité exceptionnelle et service professionnel.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">CD</div>
+          <div class="testimonial-author">Claire D.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">"</div>
+        <div class="testimonial-flag">🇩🇪 Allemagne</div>
+        <p class="testimonial-text">Qualité excellente et très fiable.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">AK</div>
+          <div class="testimonial-author">Anna K.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">"</div>
+        <div class="testimonial-flag">🇮🇹 Italie</div>
+        <p class="testimonial-text">Qualité supérieure et grande attention aux détails.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">LR</div>
+          <div class="testimonial-author">Luca R.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="testimonial-quote">"</div>
+        <div class="testimonial-flag">🇵🇹 Portugal</div>
+        <p class="testimonial-text">Qualité excellente et service impeccable.</p>
+        <div class="testimonial-footer">
+          <div class="testimonial-avatar">IM</div>
+          <div class="testimonial-author">Inês M.</div>
+          <div class="testimonial-stars">★★★★★</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="faq-section">
+    <div class="container">
+      <h2>Questions Fréquentes</h2>
+      <p class="faq-subtitle">Résolvez vos doutes sur nos produits et services</p>
+
+      <div class="faq-container">
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Qu'est-ce qu'une lithophanie ?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Une lithophanie est une œuvre d'art en 3D qui, lorsqu'elle est éclairée par derrière, projette une image. Nous créons
+              des lithophanies personnalisées en utilisant des imprimantes FDM de haute précision avec des résultats de très haute qualité et
+              de détail.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Combien de temps prend une commande ?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Le temps de production est de 3 à 5 jours ouvrables. L'expédition dépend de votre emplacement. Pour les expéditions
+              spéciales, contactez-nous directement par WhatsApp.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Quel format d'image dois-je envoyer ?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Nous acceptons JPG et PNG. Nous recommandons de télécharger 3 images en format vertical ou 2 images en format
+              horizontal.</p>
+          </div>
+        </div>
+
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Faites-vous des envois internationaux ?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Oui, nous expédions dans toute l'Europe et dans le monde entier. Les frais d'expédition sont calculés au moment du paiement selon la
+              destination et la taille du produit.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Puis-je faire des retours ?</span>
+            <span class="faq-toggle">+</span>
+          </button>
+          <div class="faq-answer">
+            <p>Les retours sont acceptés dans les 7 jours si le produit arrive cassé ou avec des défauts. Il doit être en
+              parfait état. Le client couvre les frais de retour.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-content">
+      <div class="footer-section">
+        <h4>✨ LITUM3D</h4>
+        <ul>
+          <li>Lithophanies premium avec technologie FDM</li>
+          <li>Design personnalisé et exclusif</li>
+          <li>Qualité garantie 100%</li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Liens Rapides</h4>
+        <ul>
+          <li><a href="/index-fr">Accueil</a></li>
+          <li><a href="/shop">Shop</a></li>
+          <li><a href="/gallery-fr">Galerie</a></li>
+          <li><a href="/about-fr">À propos</a></li>
+          <li><a href="/contact-fr">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Contact</h4>
+        <ul>
+          <li>📧 contact@litum3d.com</li>
+          <li>📞 +41 77 218 62 29</li>
+          <li>📍 Berne, Suisse</li>
+          <li>⏰ Lun-Ven 9:00-18:00</li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>🔔 Newsletter</h4>
+        <p class="text-small-light">Abonnez-vous pour obtenir des offres exclusives et des nouveautés.</p>
+        <form class="newsletter-form" onsubmit="subscribeNewsletter(event)">
+          <input type="email" placeholder="Votre email..." required aria-label="Email pour newsletter">
+          <button type="submit">S'abonner</button>
+        </form>
+        <p class="text-extra-small">Pas de spam, seulement de bonnes nouvelles.</p>
+      </div>
+      <div class="footer-section">
+        <h4>Suivez-nous</h4>
+        <div class="footer-socials">
+          <a href="#" title="Instagram">📷</a>
+          <a href="#" title="Facebook">f</a>
+          <a href="#" title="Twitter">𝕏</a>
+          <a href="#" title="TikTok">♪</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; <span class="year">2025</span> LITUM3D. Tous droits réservés.</p>
+      <p>🎨 Lithophanies Premium | Excellence en Impression 3D</p>
+      <p class="footer-policy-links">
+        <a href="/privacy-policy">Politique de Confidentialité</a> |
+        <a href="/cookies-policy">Politique de Cookies</a> |
+        <a href="/terms-conditions">Termes et Conditions</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="/js/cart.js"></script>
+  <script src="/js/carousel.js"></script>
+  <script src="/js/home.js"></script>
+  <script src="/js/product-variants.js"></script>
+
+  <!-- Botón flotante WhatsApp -->
+  <a href="https://wa.me/41772186229" class="whatsapp-button" title="Contacter par WhatsApp" target="_blank"
+    rel="noopener noreferrer">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="white">
+      <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
+    </svg>
+  </a>
+
+  <!-- Google Analytics placeholder - Replace with your GA4 tracking ID -->
+  <!-- 
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX');
+  </script>
+  -->
+
+</body>
+
+</html>

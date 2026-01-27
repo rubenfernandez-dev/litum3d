@@ -53,4 +53,54 @@ router.get('/success', (req, res) => {
   res.sendFile(path.join(viewsDir, 'success.html'));
 });
 
+// Rutas en alemán
+router.get('/de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'index-de.html'));
+});
+
+router.get('/gallery-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'gallery-de.html'));
+});
+
+router.get('/about-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'about-de.html'));
+});
+
+router.get('/contact-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'contact-de.html'));
+});
+
+router.get('/cart-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'cart-de.html'));
+});
+
+router.get('/shop-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'shop-de.html'));
+});
+
+// Rutas en francés
+router.get('/fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'index-fr.html'));
+});
+
+router.get('/gallery-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'gallery-fr.html'));
+});
+
+router.get('/about-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'about-fr.html'));
+});
+
+router.get('/contact-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'contact-fr.html'));
+});
+
+router.get('/cart-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'cart-fr.html'));
+});
+
+router.get('/shop-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'shop-fr.html'));
+});
+
 module.exports = router;
