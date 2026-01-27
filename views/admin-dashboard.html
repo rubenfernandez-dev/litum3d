@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/img/logos/favicon.png" />
+    <link rel="apple-touch-icon" href="/img/logos/favicon.png" />
+
     <title>Admin Dashboard - LITUM 3D</title>
     <style>
         * {
@@ -464,7 +470,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         @media (max-width: 768px) {
@@ -488,12 +496,16 @@
         }
     </style>
 </head>
+
 <body>
     <div class="dashboard-header">
         <h1 class="dashboard-title">📊 Panel de Administración</h1>
         <div style="display:flex; gap:10px; align-items:center;">
-            <a href="/admin/products" class="logout-btn" style="text-decoration:none; display:inline-block; background: rgba(150, 100, 255, 0.2); color: #9664ff; border-color: rgba(150, 100, 255, 0.3);">📦 Productos</a>
-            <a href="/admin/account" class="logout-btn" style="text-decoration:none; display:inline-block;">⚙️ Mi Cuenta</a>
+            <a href="/admin/products" class="logout-btn"
+                style="text-decoration:none; display:inline-block; background: rgba(150, 100, 255, 0.2); color: #9664ff; border-color: rgba(150, 100, 255, 0.3);">📦
+                Productos</a>
+            <a href="/admin/account" class="logout-btn" style="text-decoration:none; display:inline-block;">⚙️ Mi
+                Cuenta</a>
             <button class="logout-btn" onclick="logout()">🚪 Cerrar Sesión</button>
         </div>
     </div>
@@ -521,9 +533,10 @@
         <div class="orders-header">
             <h2 class="orders-title">📦 Pedidos Recientes</h2>
         </div>
-        
+
         <!-- Filtros avanzados -->
-        <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+        <div
+            style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
             <div style="flex: 1; min-width: 150px;">
                 <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Estado</label>
                 <select class="filter-select" id="statusFilter" onchange="filterOrders()">
@@ -538,18 +551,26 @@
             </div>
             <div style="flex: 1; min-width: 150px;">
                 <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Email Cliente</label>
-                <input type="text" id="emailFilter" placeholder="Buscar por email" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;" oninput="filterOrders()">
+                <input type="text" id="emailFilter" placeholder="Buscar por email"
+                    style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;"
+                    oninput="filterOrders()">
             </div>
             <div style="flex: 1; min-width: 130px;">
                 <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Desde</label>
-                <input type="date" id="dateFromFilter" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;" onchange="filterOrders()">
+                <input type="date" id="dateFromFilter"
+                    style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;"
+                    onchange="filterOrders()">
             </div>
             <div style="flex: 1; min-width: 130px;">
                 <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Hasta</label>
-                <input type="date" id="dateToFilter" style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;" onchange="filterOrders()">
+                <input type="date" id="dateToFilter"
+                    style="width: 100%; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff; font-size: 13px;"
+                    onchange="filterOrders()">
             </div>
             <div>
-                <button onclick="clearFilters()" style="padding: 8px 15px; background: rgba(255,68,68,0.2); color: #ff6b6b; border: 1px solid rgba(255,68,68,0.3); border-radius: 6px; cursor: pointer; font-size: 12px;">🗑️ Limpiar</button>
+                <button onclick="clearFilters()"
+                    style="padding: 8px 15px; background: rgba(255,68,68,0.2); color: #ff6b6b; border: 1px solid rgba(255,68,68,0.3); border-radius: 6px; cursor: pointer; font-size: 12px;">🗑️
+                    Limpiar</button>
             </div>
         </div>
 
@@ -580,10 +601,12 @@
                 </div>
                 <div class="form-group">
                     <label for="statusComment">Comentario (opcional):</label>
-                    <textarea id="statusComment" rows="3" placeholder="Ej: El cliente solicitó cambio de dirección"></textarea>
+                    <textarea id="statusComment" rows="3"
+                        placeholder="Ej: El cliente solicitó cambio de dirección"></textarea>
                 </div>
                 <div class="order-details" style="margin-top: 20px;">
-                    <div class="detail-row" style="border-bottom: 1px solid rgba(150, 100, 255, 0.3); padding-bottom: 8px; margin-bottom: 12px;">
+                    <div class="detail-row"
+                        style="border-bottom: 1px solid rgba(150, 100, 255, 0.3); padding-bottom: 8px; margin-bottom: 12px;">
                         <span class="detail-label" style="font-weight: bold;">📋 Historial de Cambios</span>
                     </div>
                     <div id="orderHistory" style="max-height: 200px; overflow-y: auto;">
@@ -694,8 +717,8 @@
 
             // Filtrar por email
             if (emailFilter) {
-                filtered = filtered.filter(o => 
-                    (o.email || '').toLowerCase().includes(emailFilter) || 
+                filtered = filtered.filter(o =>
+                    (o.email || '').toLowerCase().includes(emailFilter) ||
                     (o.customer_name || '').toLowerCase().includes(emailFilter)
                 );
             }
@@ -829,9 +852,9 @@
 
                     const historyHtml = data.history.map(h => {
                         const date = new Date(h.created_at);
-                        const dateStr = date.toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit', year: 'numeric'});
-                        const timeStr = date.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'});
-                        
+                        const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
                         return `
                             <div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
@@ -868,7 +891,7 @@
                 const response = await fetch(`/admin/pedidos/${currentEditingOrderId}/estado`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         estado: newStatus,
                         comentario: comentario || null
                     })
@@ -908,4 +931,5 @@
         loadOrders();
     </script>
 </body>
+
 </html>

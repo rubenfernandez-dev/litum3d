@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/img/logos/favicon.png" />
+  <link rel="apple-touch-icon" href="/img/logos/favicon.png" />
+
   <title>Pedido Confirmado - LITUM3D</title>
   <link rel="stylesheet" href="/css/styles.css">
   <script src="/js/navbar.js"></script>
@@ -111,7 +117,8 @@
       flex-wrap: wrap;
     }
 
-    .btn-primary, .btn-secondary {
+    .btn-primary,
+    .btn-secondary {
       padding: 12px 30px;
       border: none;
       border-radius: 8px;
@@ -156,6 +163,7 @@
         transform: scale(0);
         opacity: 0;
       }
+
       to {
         transform: scale(1);
         opacity: 1;
@@ -180,12 +188,14 @@
         flex-direction: column;
       }
 
-      .btn-primary, .btn-secondary {
+      .btn-primary,
+      .btn-secondary {
         width: 100%;
       }
     }
   </style>
 </head>
+
 <body>
   <nav class="navbar">
     <div class="nav-container">
@@ -209,7 +219,8 @@
     <div class="success-container">
       <div class="success-icon">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          <path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
         </svg>
       </div>
 
@@ -250,7 +261,8 @@
         </div>
 
         <div class="email-notification">
-          <p>✉️ Se han enviado confirmaciones a tu dirección de email. Por favor, revisa tu bandeja de entrada y spam.</p>
+          <p>✉️ Se han enviado confirmaciones a tu dirección de email. Por favor, revisa tu bandeja de entrada y spam.
+          </p>
         </div>
       </div>
     </div>
@@ -313,4 +325,5 @@
     document.getElementById('order-date').textContent = dateStr;
   </script>
 </body>
+
 </html>

@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/img/logos/favicon.png" />
+    <link rel="apple-touch-icon" href="/img/logos/favicon.png" />
     <title>Gestión de Productos - LITUM 3D</title>
     <style>
         * {
@@ -295,6 +299,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1 class="title">📦 Gestión de Productos</h1>
@@ -348,7 +353,8 @@
                                 <option value="">Selecciona una base</option>
                                 <!-- Opciones dinámicas -->
                             </select>
-                            <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="openVariantModal('base')">+ Añadir</button>
+                            <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;"
+                                onclick="openVariantModal('base')">+ Añadir</button>
                         </div>
                     </div>
                     <div class="form-group">
@@ -358,7 +364,8 @@
                                 <option value="">Selecciona una forma</option>
                                 <!-- Opciones dinámicas -->
                             </select>
-                            <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="openVariantModal('forma')">+ Añadir</button>
+                            <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;"
+                                onclick="openVariantModal('forma')">+ Añadir</button>
                         </div>
                     </div>
                 </form>
@@ -503,12 +510,12 @@
                         const optionEl = document.createElement('option');
                         optionEl.value = opt.id;
                         optionEl.textContent = opt.nombre;
-                        
+
                         if (isBase) {
                             baseSelect.appendChild(optionEl);
                             baseCount++;
                         }
-                        
+
                         if (isShape) {
                             const shapeOption = document.createElement('option');
                             shapeOption.value = opt.id;
@@ -618,22 +625,22 @@
             const price_delta = document.getElementById('variantPriceDeltaInput').value.trim();
             const stock = parseInt(document.getElementById('variantStockInput').value) || 100;
             const product_id = document.getElementById('productId').value;
-            
+
             if (!nombre) {
                 alert('Introduce un nombre para la variante');
                 return;
             }
-            
+
             if (!product_id) {
                 alert('Por favor, primero selecciona o crea un producto antes de añadir variantes');
                 return;
             }
-            
+
             if (stock <= 0) {
                 alert('El stock debe ser mayor a 0');
                 return;
             }
-            
+
             // Enviar al backend (endpoint a definir, ejemplo: /admin/variantes)
             try {
                 console.log('📤 Enviando variante:', { tipo: currentVariantType, nombre, price_delta, stock, product_id });
@@ -673,4 +680,5 @@
     </script>
     <!-- Código JS principal está dentro del <script> anterior -->
 </body>
+
 </html>
