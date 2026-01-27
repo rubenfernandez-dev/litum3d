@@ -93,13 +93,13 @@ router.get('/api/productos/:id/modelos', async (req, res) => {
 // POST crear producto
 router.post('/api/productos', async (req, res) => {
   try {
-    const { nombre, descripcion, precio, stock, imagen } = req.body || {};
+    const { nombre, descripcion, precio, stock, imagen, nombre_de, nombre_fr, descripcion_de, descripcion_fr } = req.body || {};
     if (!nombre || !precio) {
       return res.status(400).json({ error: 'Falta nombre o precio' });
     }
     const [result] = await pool.query(
-      'INSERT INTO productos (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)',
-      [nombre, descripcion || null, precio, stock || 0, imagen || null]
+      'INSERT INTO productos (nombre, descripcion, precio, stock, imagen, nombre_de, nombre_fr, descripcion_de, descripcion_fr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [nombre, descripcion || null, precio, stock || 0, imagen || null, nombre_de || null, nombre_fr || null, descripcion_de || null, descripcion_fr || null]
     );
     res.status(201).json({ id: result.insertId, nombre, precio });
   } catch (err) {

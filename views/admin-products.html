@@ -326,12 +326,28 @@
                 <form id="productForm">
                     <input type="hidden" id="productId">
                     <div class="form-group">
-                        <label for="productName">Nombre del Producto *</label>
+                        <label for="productName">Nombre del Producto (Español) *</label>
                         <input type="text" id="productName" required>
                     </div>
                     <div class="form-group">
-                        <label for="productDescription">Descripción</label>
+                        <label for="productNameDe">Nombre (Alemán)</label>
+                        <input type="text" id="productNameDe" placeholder="Deutsche Name">
+                    </div>
+                    <div class="form-group">
+                        <label for="productNameFr">Nombre (Francés)</label>
+                        <input type="text" id="productNameFr" placeholder="Nom français">
+                    </div>
+                    <div class="form-group">
+                        <label for="productDescription">Descripción (Español)</label>
                         <textarea id="productDescription"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="productDescriptionDe">Descripción (Alemán)</label>
+                        <textarea id="productDescriptionDe" placeholder="Deutsche Beschreibung"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="productDescriptionFr">Descripción (Francés)</label>
+                        <textarea id="productDescriptionFr" placeholder="Description française"></textarea>
                     </div>
                     <div class="form-group">
                         <label for="productPrice">Precio (€) *</label>
@@ -537,6 +553,10 @@
                 const id = document.getElementById('productId').value;
                 const nombre = document.getElementById('productName').value.trim();
                 const descripcion = document.getElementById('productDescription').value.trim();
+                const nombre_de = document.getElementById('productNameDe').value.trim();
+                const nombre_fr = document.getElementById('productNameFr').value.trim();
+                const descripcion_de = document.getElementById('productDescriptionDe').value.trim();
+                const descripcion_fr = document.getElementById('productDescriptionFr').value.trim();
                 const precio = parseFloat(document.getElementById('productPrice').value);
                 const stock = parseInt(document.getElementById('productStock').value, 10) || 0;
                 const imagen = document.getElementById('productImage').value.trim() || null;
@@ -551,6 +571,10 @@
                 const body = {
                     nombre,
                     descripcion: descripcion || null,
+                    nombre_de: nombre_de || null,
+                    nombre_fr: nombre_fr || null,
+                    descripcion_de: descripcion_de || null,
+                    descripcion_fr: descripcion_fr || null,
                     precio,
                     stock,
                     imagen
@@ -589,6 +613,10 @@
                 document.getElementById('productId').value = p.id;
                 document.getElementById('productName').value = p.nombre || '';
                 document.getElementById('productDescription').value = p.descripcion || '';
+                document.getElementById('productNameDe').value = p.nombre_de || '';
+                document.getElementById('productNameFr').value = p.nombre_fr || '';
+                document.getElementById('productDescriptionDe').value = p.descripcion_de || '';
+                document.getElementById('productDescriptionFr').value = p.descripcion_fr || '';
                 document.getElementById('productPrice').value = p.precio || '';
                 document.getElementById('productStock').value = p.stock || 0;
                 document.getElementById('productImage').value = p.imagen || '';
