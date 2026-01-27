@@ -96,7 +96,19 @@ router.post('/api/productos', async (req, res) => {
     const { nombre, descripcion, precio, stock, imagen } = req.body || {};
     if (!nombre || !precio) {
       return res.status(400).json({ error: 'Falta nombre o precio' });
-    } (con soporte de traducciones)
+    }
+    const [result] = await pool.query(
+      'INSERT INTO productos (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)',
+      [nombre, descripcion || null, precio, stock || 0, imagen || null]
+    );
+    res.status(201).json({ id: result.insertId, nombre, precio });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al crear producto' });
+  }
+});
+
+// PUT actualizar producto (con soporte de traducciones)
 router.put('/api/productos/:id', async (req, res) => {
   try {
     const { nombre, descripcion, precio, stock, imagen, nombre_de, nombre_fr, descripcion_de, descripcion_fr } = req.body || {};
@@ -110,19 +122,7 @@ router.put('/api/productos/:id', async (req, res) => {
     if (nombre_de !== undefined) { fields.push('nombre_de = ?'); values.push(nombre_de); }
     if (nombre_fr !== undefined) { fields.push('nombre_fr = ?'); values.push(nombre_fr); }
     if (descripcion_de !== undefined) { fields.push('descripcion_de = ?'); values.push(descripcion_de); }
-    if (descripcion_fr !== undefined) { fields.push('descripcion_fr = ?'); values.push(descripcion_fr
-
-// PUT actualizar producto
-router.put('/api/productos/:id', async (req, res) => {
-  try {
-    const { nombre, descripcion, precio, stock, imagen } = req.body || {};
-    const fields = [];
-    const values = [];
-    if (nombre !== undefined) { fields.push('nombre = ?'); values.push(nombre); }
-    if (descripcion !== undefined) { fields.push('descripcion = ?'); values.push(descripcion); }
-    if (precio !== undefined) { fields.push('precio = ?'); values.push(precio); }
-    if (stock !== undefined) { fields.push('stock = ?'); values.push(stock); }
-    if (imagen !== undefined) { fields.push('imagen = ?'); values.push(imagen); }
+    if (descripcion_fr !== undefined) { fields.push('descripcion_fr = ?'); values.push(descripcion_fr); }
     if (!fields.length) return res.status(400).json({ error: 'Sin campos para actualizar' });
     values.push(req.params.id);
     const [result] = await pool.query(`UPDATE productos SET ${fields.join(', ')} WHERE id = ?`, values);
