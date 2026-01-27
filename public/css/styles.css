@@ -259,6 +259,10 @@
 }
 
 @media (max-width: 768px) {
+  body {
+    padding-top: 160px;
+  }
+
   .product-desc-title {
     font-size: 24px;
   }
@@ -730,6 +734,40 @@ header {
   background: rgba(15, 52, 96, 0.7);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  height: auto;
+  gap: 1rem;
+}
+
+.header-top .logo {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  overflow: hidden;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.header-top .logo img {
+  height: 150px;
+  width: auto;
+  object-fit: contain;
+}
+
+.header-top .language-selector {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 nav {
@@ -891,7 +929,7 @@ nav a:hover {
 
 /* Espaciador para fixed header */
 body {
-  padding-top: 60px;
+  padding-top: 120px;
 }
 
 /* ============================================
@@ -1554,6 +1592,18 @@ footer {
 }
 
 @media (max-width: 768px) {
+  .header-top {
+    padding: 0.8rem 1rem;
+  }
+
+  .header-top .logo {
+    height: 40px;
+  }
+
+  .header-top .logo img {
+    height: 100px;
+  }
+
   nav {
     padding: 0.8rem 1rem;
   }
@@ -1569,7 +1619,7 @@ footer {
   nav .menu {
     position: fixed;
     left: -100%;
-    top: 60px;
+    top: 110px;
     flex-direction: column;
     background: rgba(15, 52, 96, 0.95);
     backdrop-filter: blur(20px);
