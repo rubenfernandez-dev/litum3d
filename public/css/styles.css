@@ -530,12 +530,24 @@
     margin-bottom: 30px;
   }
 
-  .litofania-block-2 .litofania-image {
-    order: 0;
+  /* En móvil siempre texto primero, imagen después */
+  .litofania-text {
+    order: 1;
   }
 
   .litofania-image {
+    order: 2;
     min-height: 250px;
+  }
+
+  .litofania-block-2 .litofania-text,
+  .litofania-block-4 .litofania-text {
+    order: 1;
+  }
+
+  .litofania-block-2 .litofania-image,
+  .litofania-block-4 .litofania-image {
+    order: 2;
   }
 
   .litofania-placeholder {
