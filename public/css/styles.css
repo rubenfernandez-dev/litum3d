@@ -3,6 +3,9 @@
    Tema: Glassmorphism + Efecto de Luz
    ============================================ */
 
+/* Web font para emojis/banderas */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
+
 /* Variables */
 :root {
 .customization-modal {
@@ -888,9 +891,11 @@ nav a:hover {
 
 .lang-flag {
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1.8rem;
   padding: 0.3rem 0.5rem;
   transition: transform 0.2s ease;
+  line-height: 1;
+  font-family: 'Noto Color Emoji', sans-serif;
 }
 
 .lang-flag:hover {
@@ -926,8 +931,10 @@ nav a:hover {
   padding: 0.5rem 1rem;
   color: var(--light);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   transition: all 0.2s ease;
+  line-height: 1.4;
+  font-family: 'Noto Color Emoji', sans-serif;
 }
 
 .lang-dropdown a:hover {
@@ -1131,12 +1138,21 @@ h2::after {
 /* ============================================
    PRODUCTS GRID - Gallery
    ============================================ */
+h2:has(+ .products-grid) {
+  text-align: center;
+}
+
 .products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 2rem;
   margin-bottom: 3rem;
   animation: fadeIn 0.8s ease-out;
+}
+
+.product-card {
+  width: 280px;
 }
 
 @keyframes fadeIn {
