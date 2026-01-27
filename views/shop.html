@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description"
+    content="Tienda de litofanías personalizadas. Catálogo completo de modelos 3D premium, personalización fácil y entrega rápida desde Suiza." />
+  <meta name="keywords" content="tienda litofanías, comprar litofanía, litofanía personalizada, lámpara 3D, regalo" />
+  <meta name="author" content="LITUM3D" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://litum3d.com/tienda" />
+  <meta property="og:title" content="Tienda - LITUM3D Litofanías" />
+  <meta property="og:description" content="Catálogo completo de litofanías personalizadas. Personaliza tu modelo en segundos." />
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://litum3d.com/tienda" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%23e0ad61'>✨</text></svg>" />
+
+  <title>Tienda - LITUM3D Litofanías Premium</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script src="/js/cookie-banner.js"></script>
+  <script src="/js/navbar.js"></script>
+</head>
+
+<body>
+  <header>
+    <nav>
+      <a href="/" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
+      <button class="hamburger" id="hamburger-btn" aria-label="Abrir menú">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="menu" id="nav-menu">
+        <a href="/">Inicio</a>
+        <a href="/gallery">Galería</a>
+        <a href="/tienda">Tienda</a>
+        <a href="/about">Sobre</a>
+        <a href="/contact">Contacto</a>
+        <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
+          🛒
+          <span class="cart-badge" id="cart-badge">0</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Sección Introducción Tienda -->
+    <section class="shop-hero">
+      <div class="container">
+        <h1 class="shop-hero-title">Tienda de Litofanías Personalizadas</h1>
+        <p class="shop-hero-subtitle">Elige tu modelo y personalízalo en segundos</p>
+      </div>
+    </section>
+
+    <!-- Sección de Filtros -->
+    <section class="shop-filters-section">
+      <div class="container">
+        <div class="filters-container">
+          <!-- Filtro por Forma -->
+          <div class="filter-group">
+            <label for="filter-shape" class="filter-label">📐 Forma:</label>
+            <select id="filter-shape" class="filter-select" onchange="applyFilters()">
+              <option value="">Todas las formas</option>
+              <option value="esfera">Esfera</option>
+              <option value="cubo">Cubo</option>
+              <option value="cilindro">Cilindro</option>
+              <option value="cono">Cono</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+
+          <!-- Filtro por Base -->
+          <div class="filter-group">
+            <label for="filter-base" class="filter-label">🔧 Base:</label>
+            <select id="filter-base" class="filter-select" onchange="applyFilters()">
+              <option value="">Todas las bases</option>
+              <option value="madera">Madera natural</option>
+              <option value="metal">Metal mate</option>
+              <option value="plastico">Plástico premium</option>
+              <option value="cristal">Cristal</option>
+            </select>
+          </div>
+
+          <!-- Botón Limpiar Filtros -->
+          <button class="filter-clear-btn" onclick="clearFilters()">🔄 Limpiar filtros</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Catálogo de Productos -->
+    <section class="shop-products-section">
+      <div class="container">
+        <div class="products-grid" id="shop-products">
+          <p>Cargando catálogo de productos...</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de personalización (compartido con index) -->
+  <div class="customization-modal" id="customization-modal">
+    <div class="customization-dialog">
+      <button class="custom-close" onclick="closeCustomization()">✕</button>
+      <h3 id="custom-modal-title">Personalizar</h3>
+      <p class="opacity-light">Selecciona tus opciones y personaliza tu producto.</p>
+
+      <!-- SECCIÓN DE VARIANTES -->
+      <div class="custom-section" data-variants-section>
+        <div class="variant-types-container"></div>
+      </div>
+
+      <!-- PRECIO CON VARIANTES -->
+      <div class="price-with-variants" style="margin-bottom: 1.5rem;">
+        <span class="price-label">Precio final:</span>
+        <span class="final-price" data-variant-price>€0.00</span>
+      </div>
+
+      <div class="custom-section">
+        <h4>Modelo</h4>
+        <div id="custom-models" class="custom-models">Cargando modelos...</div>
+      </div>
+
+      <div class="custom-section">
+        <h4>Notas de personalización</h4>
+        <textarea id="custom-notes" placeholder="Indicaciones especiales"></textarea>
+      </div>
+
+      <div class="custom-section">
+        <h4>Fotos (máx 3)</h4>
+        <input type="file" id="custom-files" accept="image/jpeg,image/png" multiple
+          onchange="handleFileSelection(this)">
+        <div id="custom-file-list" class="custom-file-list"></div>
+      </div>
+
+      <div class="custom-section">
+        <h4>Extras opcionales</h4>
+        <div class="custom-extras">
+          <label class="extra-option">
+            <input type="checkbox" id="extra-upscale" onchange="onExtraChange()">
+            <span>Upscale de imágenes del cliente (+5 EUR/CHF)</span>
+          </label>
+          <label class="extra-option">
+            <input type="checkbox" id="extra-qr" onchange="onExtraChange()">
+            <span>Mensaje en QR integrado (+5 EUR/CHF)</span>
+          </label>
+          <input type="text" id="extra-qr-message" placeholder="Mensaje/URL para el QR" oninput="onExtraChange()"
+            disabled>
+          <label class="extra-option">
+            <input type="checkbox" id="extra-adapter" onchange="onExtraChange()">
+            <span>Incluir adaptador de enchufe USB (+4 EUR/CHF)</span>
+          </label>
+        </div>
+        <small class="text-small-gray">Los extras se añaden por artículo.</small>
+      </div>
+
+      <div class="custom-summary">
+        <div>Precio base: €<span id="custom-base-price">0.00</span></div>
+        <div>Total con extras y modelo: €<span id="custom-total">0.00</span></div>
+      </div>
+
+      <div class="custom-actions">
+        <button class="custom-btn ghost" onclick="closeCustomization()">Cancelar</button>
+        <button class="custom-btn primary" onclick="confirmCustomization()" data-add-to-cart-btn>Añadir al
+          carrito</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-content">
+      <div class="footer-section">
+        <h4>✨ LITUM3D</h4>
+        <ul>
+          <li>Litofanías premium con tecnología FDM</li>
+          <li>Diseño personalizado y exclusivo</li>
+          <li>Calidad garantizada 100%</li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Enlaces Rápidos</h4>
+        <ul>
+          <li><a href="/">Inicio</a></li>
+          <li><a href="/tienda">Tienda</a></li>
+          <li><a href="/gallery">Galería Completa</a></li>
+          <li><a href="/about">Sobre Nosotros</a></li>
+          <li><a href="/contact">Contacto</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Contacto</h4>
+        <ul>
+          <li>📧 contact@litum3d.com</li>
+          <li>📞 +41 77 218 62 29</li>
+          <li>📍 Berna, Suiza</li>
+          <li>⏰ Lun-Vie 9:00-18:00</li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>🔔 Newsletter</h4>
+        <p class="text-small-light">Suscríbete para obtener ofertas exclusivas y novedades.</p>
+        <form class="newsletter-form" onsubmit="subscribeNewsletter(event)">
+          <input type="email" placeholder="Tu email..." required aria-label="Email para newsletter">
+          <button type="submit">Suscribir</button>
+        </form>
+        <p class="text-extra-small">Sin spam, solo noticias excelentes.</p>
+      </div>
+      <div class="footer-section">
+        <h4>Síguenos</h4>
+        <div class="footer-socials">
+          <a href="#" title="Instagram">📷</a>
+          <a href="#" title="Facebook">f</a>
+          <a href="#" title="Twitter">𝕏</a>
+          <a href="#" title="TikTok">♪</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; <span class="year">2025</span> LITUM3D. Todos los derechos reservados.</p>
+      <p>🎨 Litofanías Premium | Impresión 3D de Excelencia</p>
+      <p class="footer-policy-links">
+        <a href="/privacy-policy">Política de Privacidad</a> |
+        <a href="/cookies-policy">Política de Cookies</a> |
+        <a href="/terms-conditions">Términos y Condiciones</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="/js/cart.js"></script>
+  <script src="/js/shop.js"></script>
+  <script src="/js/product-variants.js"></script>
+
+  <!-- Botón flotante WhatsApp -->
+  <a href="https://wa.me/41772186229" class="whatsapp-button" title="Contactar por WhatsApp" target="_blank"
+    rel="noopener noreferrer">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+      <path
+        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.272-.099-.47-.148-.669.15-.205.297-.765.966-.938 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371 0-.57 0-.198 0-.52.075-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a6.963 6.963 0 00-6.984 6.977c0 1.71.642 3.338 1.811 4.61l-1.93 7.044 7.194-1.885a6.956 6.956 0 004.079 1.3h.004c3.864 0 6.99-3.117 6.99-6.977 0-1.862-.72-3.612-2.034-4.926-1.314-1.314-3.065-2.037-4.927-2.037z" />
+    </svg>
+  </a>
+
+</body>
+
+</html>

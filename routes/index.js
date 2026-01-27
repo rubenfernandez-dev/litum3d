@@ -13,6 +13,14 @@ router.get('/gallery', (req, res) => {
   res.sendFile(path.join(viewsDir, 'gallery.html'));
 });
 
+router.get('/tienda', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'shop.html'));
+});
+
+router.get('/shop', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'shop.html'));
+});
+
 router.get('/about', (req, res) => {
   res.sendFile(path.join(viewsDir, 'about.html'));
 });

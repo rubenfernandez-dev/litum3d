@@ -50,6 +50,7 @@
       <div class="menu" id="nav-menu">
         <a href="/">Inicio</a>
         <a href="/gallery">Galería</a>
+        <a href="/shop">Tienda</a>
         <a href="/about">Sobre</a>
         <a href="/contact">Contacto</a>
         <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
@@ -85,6 +86,90 @@
       <button class="carousel-arrow next" onclick="moveCarousel(1)">❯</button>
 
       <div class="carousel-nav" id="carousel-dots"></div>
+    </section>
+
+    <!-- NUEVA SECCIÓN: Qué es una Litofanía (4 bloques alternando texto/foto) -->
+    <section class="litofania-intro-section">
+      <div class="container">
+        <h2 class="litofania-intro-title">Descubre la magia de las litofanías personalizadas</h2>
+        <p class="litofania-intro-subtitle">Transforma tus momentos especiales en obras de arte iluminadas</p>
+
+        <!-- Bloque 1: Texto - Foto -->
+        <div class="litofania-block litofania-block-1">
+          <div class="litofania-text">
+            <h3>✨ ¿Qué es una litofanía?</h3>
+            <p>Una litofanía es una obra de arte tridimensional que cobra vida cuando la iluminas. Al colocar una fuente de luz detrás, la imagen en relieve se proyecta en tonos de gris, creando un efecto mágico y envolvente. Es como tener un lienzo vivo que cambia con la intensidad de la luz.</p>
+            <p>Perfecta para congelar momentos emocionales: una foto familiar, un retrato especial, un paisaje favorito. Cada litofanía es única porque es personalizada con TU foto.</p>
+          </div>
+          <div class="litofania-image">
+            <!-- Reemplaza la ruta por tu imagen -->
+            <img src="/img/productos/cachorros.png" alt="Litofanía iluminada" class="litofania-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="litofania-placeholder litofania-emoji" style="display: none;">🌟</div>
+          </div>
+        </div>
+
+        <!-- Bloque 2: Foto - Texto -->
+        <div class="litofania-block litofania-block-2">
+          <div class="litofania-image">
+            <!-- Reemplaza la ruta por tu imagen -->
+            <img src="/img/productos/pasillo.png" alt="Regalo personalizado" class="litofania-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="litofania-placeholder litofania-emoji" style="display: none;">💡</div>
+          </div>
+          <div class="litofania-text">
+            <h3>🎁 El regalo personalizado perfecto</h3>
+            <p>¿Buscas un regalo único y memorable? Una litofanía personalizada es la respuesta. Con tu foto especial, creamos una lámpara que cuenta la historia de un momento importante.</p>
+            <ul class="litofania-list">
+              <li><strong>Cumpleaños:</strong> Inmortaliza una sonrisa especial</li>
+              <li><strong>Aniversarios:</strong> Revive el momento de dos corazones</li>
+              <li><strong>Día de Madre/Padre:</strong> Homenaje emocional en luz</li>
+              <li><strong>Bodas:</strong> Recuerdo eterno de un día perfecto</li>
+              <li><strong>Bebés/Mascotas:</strong> Celebra a los seres queridos</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Bloque 3: Texto - Foto -->
+        <div class="litofania-block litofania-block-3">
+          <div class="litofania-text">
+            <h3>🏆 Calidad artesanal premium desde Suiza</h3>
+            <p>Cada litofanía se fabrica con precisión en Suiza usando tecnología de impresión 3D de última generación. No es un simple producto: es una obra de arte cuidadosamente elaborada.</p>
+            <p>Con más de 8 años de experiencia en impresión 3D profesional, garantizamos:</p>
+            <ul class="litofania-list">
+              <li>✓ Detalle impecable en cada franja de tono</li>
+              <li>✓ Materiales duraderos y de primera calidad</li>
+              <li>✓ Acabado perfecto y sin defectos</li>
+              <li>✓ Bases estables y iluminación LED cálida</li>
+              <li>✓ Satisfacción garantizada</li>
+            </ul>
+          </div>
+          <div class="litofania-image">
+            <!-- Reemplaza la ruta por tu imagen -->
+            <img src="/img/productos/pared2.jpg" alt="Calidad artesanal" class="litofania-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="litofania-placeholder litofania-emoji" style="display: none;">🎨</div>
+          </div>
+        </div>
+
+        <!-- Bloque 4: Foto - Texto + CTA -->
+        <div class="litofania-block litofania-block-4">
+          <div class="litofania-image">
+            <!-- Reemplaza la ruta por tu imagen -->
+            <img src="/img/productos/antes.despues.png" alt="Personalización rápida" class="litofania-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="litofania-placeholder litofania-emoji" style="display: none;">🚀</div>
+          </div>
+          <div class="litofania-text">
+            <h3>🌈 Personalización rápida y fácil</h3>
+            <p>El proceso es simple y emocionante. Sube tu foto favorita, elige la forma y base que prefieres, y nosotros nos encargamos del resto. En 3-5 días tendrás tu litofanía lista para brillar.</p>
+            <p><strong>Cada compra incluye:</strong></p>
+            <ul class="litofania-list">
+              <li>Litofanía 3D personalizada en alta resolución</li>
+              <li>Base de lámpara estable y elegante</li>
+              <li>Luz LED blanco cálido (eficiente y duradera)</li>
+              <li>Embalaje seguro y envío rápido</li>
+            </ul>
+            <a href="/tienda" class="litofania-cta-btn">✨ Crear mi litofanía</a>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Destacados con botón de compra -->
@@ -417,7 +502,8 @@
         <h4>Enlaces Rápidos</h4>
         <ul>
           <li><a href="/">Inicio</a></li>
-          <li><a href="/gallery">Galería Completa</a></li>
+          <li><a href="/tienda">Tienda</a></li>
+          <li><a href="/gallery">Galería</a></li>
           <li><a href="/about">Sobre Nosotros</a></li>
           <li><a href="/contact">Contacto</a></li>
         </ul>
