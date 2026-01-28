@@ -101,15 +101,13 @@ function renderReviews(reviews) {
         return `
             <div class="review-card">
                 <div class="review-content">
+                    <div class="review-info">
+                        <div class="review-author">${review.nombre}</div>
+                        ${review.email ? `<div class="review-email">${review.email}</div>` : ''}
+                        <div class="review-stars">${stars}</div>
+                        <div class="review-date">${date}</div>
+                    </div>
                     <div class="review-text">
-                        <div class="review-header">
-                            <div>
-                                <div class="review-author">${review.nombre}</div>
-                                ${review.email ? `<div class="review-email">${review.email}</div>` : ''}
-                                <div class="review-stars">${stars}</div>
-                            </div>
-                            <div class="review-date">${date}</div>
-                        </div>
                         <div class="review-comment">${review.comentario}</div>
                     </div>
                     <div class="review-media">
