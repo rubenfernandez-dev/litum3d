@@ -3111,9 +3111,10 @@ footer {
 
 .review-content {
   display: grid;
-  grid-template-columns: 120px 1fr 320px;
+  grid-template-columns: 120px 450px 320px;
   gap: 2rem;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: auto;
 }
 
 .review-info {
@@ -3132,7 +3133,7 @@ footer {
 .review-comment {
   color: rgba(255, 255, 255, 0.85);
   line-height: 1.6;
-  max-width: 700px;
+  max-width: 450px;
   word-wrap: break-word;
 }
 
