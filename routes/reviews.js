@@ -146,7 +146,7 @@ router.post('/api/reviews', upload.array('fotos', 5), async (req, res) => {
 
 // Middleware para verificar que el usuario es admin
 function requireAdmin(req, res, next) {
-  if (!req.session || !req.session.admin) {
+  if (!req.session || !req.session.adminId) {
     return res.status(401).json({ error: 'No autorizado' });
   }
   next();
