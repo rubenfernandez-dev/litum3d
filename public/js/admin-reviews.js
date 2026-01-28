@@ -73,6 +73,21 @@ function renderReviews() {
             console.log(`⚠️ Reseña "${review.nombre}" NO tiene imágenes`);
         }
         
+        let videoHtml = '';
+        if (review.video_url) {
+            console.log(`🎥 Reseña "${review.nombre}" tiene video:`, review.video_url);
+            videoHtml = `
+                <div style="margin-top:16px; position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:8px;">
+                    <video src="${review.video_url}" 
+                           style="position:absolute; top:0; left:0; width:100%; height:100%; border-radius:8px;"
+                           controls preload="metadata"
+                           onerror="console.log('❌ Error cargando video:', this.src)">
+                        Tu navegador no soporta videos HTML5
+                    </video>
+                </div>
+            `;
+        }
+        
         return `
             <div style="background: rgba(255,255,255,0.05); border-radius:12px; padding:20px; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
@@ -95,6 +110,7 @@ function renderReviews() {
                 </div>
                 
                 ${imagesHtml}
+                ${videoHtml}
                 
                 <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;">
                     ${review.estado === 'pendiente' ? `

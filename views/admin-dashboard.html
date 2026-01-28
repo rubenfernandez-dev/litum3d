@@ -684,6 +684,13 @@
                         <div id="previewImages" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
                     </div>
                     
+                    <div class="form-group">
+                        <label>Video (opcional - URL de Cloudinary o servidor)</label>
+                        <input type="url" id="reviewVideo" name="video_url" placeholder="https://res.cloudinary.com/..." 
+                            style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff;">
+                        <small style="opacity:0.7; font-size:12px; display:block; margin-top:6px;">Pega la URL directa del video en Cloudinary o un servidor</small>
+                    </div>
+                    
                     <div class="modal-footer" style="border-top:none; padding-top:0;">
                         <button type="button" class="btn btn-cancel" onclick="closeCreateReviewModal()">Cancelar</button>
                         <button type="submit" class="btn btn-save">Crear Reseña</button>

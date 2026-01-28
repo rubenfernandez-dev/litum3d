@@ -32,7 +32,7 @@ function renderReviews(reviews) {
     
     if (!reviews || reviews.length === 0) {
         container.innerHTML = `
-            <div style="text-align:center; padding:40px; grid-column: 1 / -1; opacity:0.7;">
+            <div style="text-align:center; padding:40px; opacity:0.7;">
                 📭 Aún no hay reseñas. ¡Sé el primero en dejar una!
             </div>
         `;
@@ -41,7 +41,25 @@ function renderReviews(reviews) {
     
     console.log('🎨 Renderizando', reviews.length, 'reseña(s)');
     
-    container.innerHTML = reviews.map(review => {
+    // Calcular promedio de calificaciones
+    const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+    const totalStars = '⭐'.repeat(Math.round(avgRating));
+    
+    // HTML del promedio
+    const averageHtml = `
+        <div class="average-rating-section">
+            <div class="average-rating-content">
+                <h3>Calificación Promedio</h3>
+                <div class="average-rating-display">
+                    <div class="average-rating-number">${avgRating}</div>
+                    <div class="average-rating-stars">${totalStars} <span class="max-stars">/ 5</span></div>
+                    <div class="average-rating-count">Basado en ${reviews.length} reseña${reviews.length !== 1 ? 's' : ''}</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = averageHtml + reviews.map(review => {
         const stars = '⭐'.repeat(review.rating);
         const date = new Date(review.fecha_creacion).toLocaleDateString('es-ES', {
             year: 'numeric',
@@ -67,17 +85,38 @@ function renderReviews(reviews) {
             console.log(`⚠️ Reseña "${review.nombre}" NO tiene imágenes`);
         }
         
+        let videoHtml = '';
+        if (review.video_url) {
+            console.log(`✅ Reseña "${review.nombre}" tiene video:`, review.video_url);
+            videoHtml = `
+                <div class="review-video">
+                    <video width="100%" controls onerror="console.log('❌ Error cargando video:', '${review.video_url}')">
+                        <source src="${review.video_url}" type="video/mp4">
+                        Tu navegador no soporta videos HTML5.
+                    </video>
+                </div>
+            `;
+        }
+        
         return `
             <div class="review-card">
-                <div class="review-header">
-                    <div>
-                        <div class="review-author">${review.nombre}</div>
-                        <div class="review-stars">${stars}</div>
+                <div class="review-content">
+                    <div class="review-text">
+                        <div class="review-header">
+                            <div>
+                                <div class="review-author">${review.nombre}</div>
+                                ${review.email ? `<div class="review-email">${review.email}</div>` : ''}
+                                <div class="review-stars">${stars}</div>
+                            </div>
+                            <div class="review-date">${date}</div>
+                        </div>
+                        <div class="review-comment">${review.comentario}</div>
                     </div>
-                    <div class="review-date">${date}</div>
+                    <div class="review-media">
+                        ${videoHtml}
+                        ${imagesHtml}
+                    </div>
                 </div>
-                <div class="review-comment">${review.comentario}</div>
-                ${imagesHtml}
             </div>
         `;
     }).join('');

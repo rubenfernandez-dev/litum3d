@@ -212,17 +212,26 @@ router.post('/api/admin/reviews', requireAdmin, upload.array('fotos', 5), async 
   try {
     await conn.beginTransaction();
     
-    const { nombre, email, comentario, rating, estado, destacada } = req.body;
+    const { nombre, email, comentario, rating, estado, destacada, video_url } = req.body;
     
     // Validaciones
     if (!nombre || !comentario || !rating) {
       throw new Error('Faltan campos obligatorios');
     }
     
+    // Validar URL de video si se proporciona
+    if (video_url) {
+      try {
+        new URL(video_url);
+      } catch (e) {
+        throw new Error('La URL del video no es válida');
+      }
+    }
+    
     // Insertar reseña
     const [result] = await conn.query(
-      'INSERT INTO reviews (nombre, email, comentario, rating, estado, destacada) VALUES (?, ?, ?, ?, ?, ?)',
-      [nombre, email || null, comentario, rating, estado || 'aprobada', destacada === 'true' ? 1 : 0]
+      'INSERT INTO reviews (nombre, email, comentario, rating, estado, destacada, video_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [nombre, email || null, comentario, rating, estado || 'aprobada', destacada === 'true' ? 1 : 0, video_url || null]
     );
     
     const reviewId = result.insertId;
