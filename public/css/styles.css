@@ -1119,6 +1119,7 @@ h2 {
   margin: 3rem 0 2rem 0;
   background: linear-gradient(135deg, var(--gold), var(--light));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   position: relative;
   padding-bottom: 1rem;
@@ -1168,7 +1169,6 @@ h2:has(+ .products-grid) {
   overflow: hidden;
   transition: all 0.4s ease;
   position: relative;
-  group: card;
 }
 
 .product-card::before {

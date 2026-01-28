@@ -10,41 +10,311 @@ let currentFilter = 'todas';
 const STATIC_GALLERY = [
   {
     id: 'fam-1',
-    nombre: 'Familia en la playa',
+    nombre: 'Familia generacional',
     collection: 'familia',
-    imagen: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589514/WhatsApp_Image_2026-01-27_at_22.50.32_a4mbub.jpg'
+  },
+  {
+    id: 'fam-1',
+    nombre: 'Hermanos',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589512/WhatsApp_Image_2026-01-27_at_22.50.32_1_asvuan.jpg'
+  },
+  {
+    id: 'fam-1',
+    nombre: 'Bebés gemelos',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589511/WhatsApp_Image_2026-01-27_at_22.07.14_shtgel.jpg'
+  },
+  {
+    id: 'fam-1',
+    nombre: 'Familia al completo',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589508/WhatsApp_Image_2026-01-27_at_22.07.14_2_njgqwd.jpg'
+  },
+  {
+    id: 'fam-1',
+    nombre: 'Nuestro primer bebé',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589507/WhatsApp_Image_2026-01-27_at_22.07.14_1_gnelt4.jpg'
+  },
+  {
+    id: 'fam-1',
+    nombre: 'Vino el segundo',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589502/WhatsApp_Image_2026-01-27_at_22.07.13_5_lnf5wc.jpg'
+  },
+  {
+    id: 'fam-1',
+    nombre: 'Recien nacidos',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589500/WhatsApp_Image_2026-01-27_at_22.07.13_3_pasrqc.jpg'
+  },
+  {
+    id: 'fam-1',
+    nombre: 'La mayor conexión',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589498/WhatsApp_Image_2026-01-27_at_22.07.13_2_n1bjku.jpg'
+  },
+  {
+    id: 'fam-1',
+    nombre: 'Lazos familiares',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589497/WhatsApp_Image_2026-01-27_at_22.07.13_1_i5s81h.jpg'
   },
   {
     id: 'mas-1',
-    nombre: 'Mascota feliz',
+    nombre: 'Cachorros',
     collection: 'mascotas',
-    imagen: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516843/WhatsApp_Image_2026-01-27_at_10.22.17_pade0w.jpg'
+  },
+  {
+    id: 'mas-1',
+    nombre: 'Mi perro feliz',
+    collection: 'mascotas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516843/WhatsApp_Image_2026-01-27_at_10.22.17_6_dt5ukq.jpg'
+  },
+  {
+    id: 'mas-1',
+    nombre: 'Gatito curioso',
+    collection: 'mascotas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516842/WhatsApp_Image_2026-01-27_at_10.22.17_4_rjem3t.jpg'
+  },
+  {
+    id: 'mas-1',
+    nombre: 'momentos inolvidables',
+    collection: 'mascotas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516842/WhatsApp_Image_2026-01-27_at_10.22.17_3_ky5qqa.jpg'
+  },
+  {
+    id: 'mas-1',
+    nombre: 'Mis dos mejores amigos',
+    collection: 'mascotas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516841/WhatsApp_Image_2026-01-27_at_10.22.17_2_fgekyw.jpg'
+  },
+  {
+    id: 'mas-1',
+    nombre: 'Cachorros amorosos',
+    collection: 'mascotas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516841/WhatsApp_Image_2026-01-27_at_10.22.17_1_eppd5z.jpg'
+  },
+  {
+    id: 'par-1',
+    nombre: 'Pareja San Valentin',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589493/WhatsApp_Image_2026-01-27_at_23.30.30_8_v7lllg.jpg'
   },
   {
     id: 'par-1',
     nombre: 'Pareja en atardecer',
     collection: 'parejas',
-    imagen: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589490/WhatsApp_Image_2026-01-27_at_23.30.30_7_jm44zv.jpg'
+  },
+  {
+    id: 'par-1',
+    nombre: 'Paseo romántico',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589489/WhatsApp_Image_2026-01-27_at_23.30.30_6_wkgv3i.jpg'
+  },
+  {
+    id: 'par-1',
+    nombre: 'Momentos felices',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589494/WhatsApp_Image_2026-01-27_at_23.30.30_e3pyyn.jpg'
+  },
+  {
+    id: 'par-1',
+    nombre: 'Oso amoroso',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589487/WhatsApp_Image_2026-01-27_at_23.30.30_4_enpmyv.jpg'
+  },
+  {
+    id: 'par-1',
+    nombre: 'La Pedida',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589486/WhatsApp_Image_2026-01-27_at_23.30.30_3_odsvmk.jpg'
+  },
+  {
+    id: 'par-1',
+    nombre: 'Brindis de amor',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589487/WhatsApp_Image_2026-01-27_at_23.30.30_5_soou9l.jpg'
+  },
+  {
+    id: 'par-1',
+    nombre: 'Viene el primero',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589495/WhatsApp_Image_2026-01-27_at_22.07.12_exiab2.jpg'
   },
   {
     id: 'bod-1',
-    nombre: 'Boda en jardín',
+    nombre: 'Boda en las mmontañas',
     collection: 'bodas',
-    imagen: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516844/WhatsApp_Image_2026-01-27_at_10.22.18_2_bxfgsn.jpg'
+  },
+  {
+    id: 'bod-1',
+    nombre: 'Boda en la iglesia',
+    collection: 'bodas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516844/WhatsApp_Image_2026-01-27_at_10.22.18_5_hjbq70.jpg'
+  },
+  {
+    id: 'bod-1',
+    nombre: 'Boda, miradas cómplices',
+    collection: 'bodas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516844/WhatsApp_Image_2026-01-27_at_10.22.18_4_lh3v5n.jpg'
+  },
+  {
+    id: 'bod-1',
+    nombre: 'Boda, sentiminetos puros',
+    collection: 'bodas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516844/WhatsApp_Image_2026-01-27_at_10.22.18_3_l4pqez.jpg'
+  },
+  {
+    id: 'bod-1',
+    nombre: 'Boda en familia',
+    collection: 'bodas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516843/WhatsApp_Image_2026-01-27_at_10.22.18_1_wxebhr.jpg'
+  },
+  {
+    id: 'bod-1',
+    nombre: 'Boda, el anillo',
+    collection: 'bodas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516843/WhatsApp_Image_2026-01-27_at_10.22.17_9_gcmkyz.jpg'
+  },
+  {
+    id: 'bod-1',
+    nombre: 'Boda, mascota incluida',
+    collection: 'bodas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516843/WhatsApp_Image_2026-01-27_at_10.22.17_7_lrshvm.jpg'
+  },
+  {
+    id: 'bod-1',
+    nombre: 'Boda, abrazo eterno',
+    collection: 'bodas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516843/WhatsApp_Image_2026-01-27_at_10.22.17_8_vbczlm.jpg'
+  },
+  {
+    id: 'bod-1',
+    nombre: 'Boda, ceremonia al aire libre',
+    collection: 'bodas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769516841/WhatsApp_Image_2026-01-27_at_10.22.18_eeeoig.jpg'
   },
   {
     id: 'viaj-1',
-    nombre: 'Viajes',
+    nombre: 'Londres, puente de Londres',
     collection: 'viajes',
-    imagen: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600383/WhatsApp_Image_2026-01-28_at_12.38.38_3_qo9ys4.jpg'
   },
-    {
+  {
+    id: 'viaj-1',
+    nombre: 'Londres, Big Ben',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600376/WhatsApp_Image_2026-01-28_at_12.38.38_2_ggkhq3.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Paris, Torre Eiffel',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600375/WhatsApp_Image_2026-01-28_at_12.38.39_5_aza2ag.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Suiza, Alpes',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600375/WhatsApp_Image_2026-01-28_at_12.38.37_2_rhd5zd.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Nueva York',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600375/WhatsApp_Image_2026-01-28_at_12.38.39_odeis7.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Londres, cabina roja',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600376/WhatsApp_Image_2026-01-28_at_12.38.38_1_yvqzoa.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Estatua de la Libertad',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600375/WhatsApp_Image_2026-01-28_at_12.38.38_7_wcsegk.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Cataratas del Niágara',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600376/WhatsApp_Image_2026-01-28_at_12.38.37_nijizf.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Machupichu',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600375/WhatsApp_Image_2026-01-28_at_12.38.39_4_cyefok.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Puente de Brooklyn',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600374/WhatsApp_Image_2026-01-28_at_12.38.38_6_r7luwn.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Venecia, góndola',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600374/WhatsApp_Image_2026-01-28_at_12.38.38_5_gpl6uh.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Paseo en París',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600375/WhatsApp_Image_2026-01-28_at_12.38.39_6_ia1v7l.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Roma, Coliseo',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600374/WhatsApp_Image_2026-01-28_at_12.38.39_3_it0129.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'praga',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600374/WhatsApp_Image_2026-01-28_at_12.38.38_4_sleyey.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Grecia, Santorini',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600374/WhatsApp_Image_2026-01-28_at_12.38.39_2_z39uad.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Brasil, Cristo Redentor',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600376/WhatsApp_Image_2026-01-28_at_12.38.37_3_oakpmn.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Grecia, Partenón',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600375/WhatsApp_Image_2026-01-28_at_12.38.39_1_gooclc.jpg'
+  },
+  {
+    id: 'viaj-1',
+    nombre: 'Holanda',
+    collection: 'viajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769600375/WhatsApp_Image_2026-01-28_at_12.38.37_4_o4llbt.jpg'
+  },
+  {
     id: 'paisaje-1',
     nombre: 'Paisajes',
     collection: 'paisajes',
     imagen: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
   },
-    {
+  {
     id: 'anime-1',
     nombre: 'Anime',
     collection: 'anime',
@@ -109,9 +379,9 @@ function renderGallery(images) {
     <div class="product-card gallery-card" style="animation-delay: ${idx * 0.05}s;" onclick="openImageModal('${escapeHtml(img.imagen)}', '${escapeHtml(img.nombre || 'Galería')}')">
       <div class="product-image">
         ${img.imagen
-          ? `<img src="${escapeHtml(img.imagen)}" alt="${escapeHtml(img.nombre || 'Galería')}" onerror="this.onerror=null; this.parentElement.innerHTML='✨';">`
-          : '✨'
-        }
+      ? `<img src="${escapeHtml(img.imagen)}" alt="${escapeHtml(img.nombre || 'Galería')}" onerror="this.onerror=null; this.parentElement.innerHTML='✨';">`
+      : '✨'
+    }
       </div>
       <div class="gallery-card-overlay">
         <button class="gallery-cta-btn" onclick="event.stopPropagation(); openImageModal('${escapeHtml(img.imagen)}', '${escapeHtml(img.nombre || 'Galería')}')">

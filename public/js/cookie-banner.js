@@ -12,34 +12,60 @@
     const banner = document.createElement('div');
     banner.id = 'cookie-banner';
     banner.innerHTML = `
-      <div style="background-color: #2c3e50; color: white; padding: 20px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; box-shadow: 0 -2px 10px rgba(0,0,0,0.2);">
-        <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-          <div style="flex: 1; min-width: 250px;">
-            <h4 style="margin: 0 0 10px 0; font-size: 1.1em;">🍪 Política de Cookies</h4>
-            <p style="margin: 0; font-size: 0.9em; line-height: 1.5;">
-              Utilizamos cookies para mejorar tu experiencia, personalizar contenido y analizar tráfico. 
-              <a href="/privacy-policy.html" style="color: #3498db; text-decoration: none;">Leer más</a>
-            </p>
-          </div>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button id="cookie-only-essential" style="padding: 10px 20px; background-color: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-              Solo Esenciales
-            </button>
-            <button id="cookie-customize" style="padding: 10px 20px; background-color: #34495e; color: white; border: 1px solid white; border-radius: 4px; cursor: pointer; font-weight: bold;">
-              Personalizar
-            </button>
-            <button id="cookie-accept-all" style="padding: 10px 20px; background-color: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-              Aceptar Todo
-            </button>
+      <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 25px 20px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); animation: slideUp 0.3s ease-out;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+          <div style="display: flex; align-items: flex-start; gap: 25px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 280px;">
+              <h4 style="margin: 0 0 12px 0; font-size: 1.15em; font-weight: 600;">🍪 Política de Cookies</h4>
+              <p style="margin: 0; font-size: 0.95em; line-height: 1.6; color: #ecf0f1;">
+                Utilizamos cookies para mejorar tu experiencia, personalizar contenido y analizar tráfico. Tu privacidad es importante para nosotros.
+                <a href="/privacy-policy" style="color: #3498db; text-decoration: none; font-weight: 500; margin-left: 5px;">Leer más</a>
+              </p>
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end; min-width: 300px;">
+              <button id="cookie-only-essential" style="padding: 12px 24px; background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.95em; transition: all 0.2s; white-space: nowrap;">
+                Rechazar
+              </button>
+              <button id="cookie-customize" style="padding: 12px 24px; background-color: rgba(52, 73, 94, 0.8); color: white; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.95em; transition: all 0.2s; white-space: nowrap;">
+                Personalizar
+              </button>
+              <button id="cookie-accept-all" style="padding: 12px 28px; background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.95em; transition: all 0.2s; white-space: nowrap;">
+                Aceptar Todo
+              </button>
+            </div>
           </div>
         </div>
       </div>
+      <style>
+        @keyframes slideUp {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        #cookie-banner button:hover {
+          opacity: 0.9;
+          transform: translateY(-2px);
+        }
+      </style>
     `;
     document.body.appendChild(banner);
 
-    document.getElementById('cookie-accept-all').addEventListener('click', () => acceptAllCookies());
-    document.getElementById('cookie-only-essential').addEventListener('click', () => acceptEssentialOnly());
-    document.getElementById('cookie-customize').addEventListener('click', () => showCustomizeModal());
+    // Agregar event listeners
+    const acceptAllBtn = document.getElementById('cookie-accept-all');
+    const essentialBtn = document.getElementById('cookie-only-essential');
+    const customizeBtn = document.getElementById('cookie-customize');
+
+    if (acceptAllBtn) acceptAllBtn.addEventListener('click', () => acceptAllCookies());
+    if (essentialBtn) essentialBtn.addEventListener('click', () => acceptEssentialOnly());
+    if (customizeBtn) customizeBtn.addEventListener('click', () => showCustomizeModal());
+
+    // Bloquear scroll si el usuario no ha decidido (opcional, comentado)
+    // document.body.style.overflow = 'hidden';
   }
 
   function acceptAllCookies() {
@@ -156,15 +182,24 @@
   }
 
   // Inicializar al cargar la página
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      if (!getCookieConsent()) {
-        showBanner();
-      }
-    });
-  } else {
+  function initCookieBanner() {
     if (!getCookieConsent()) {
       showBanner();
     }
   }
+
+  // Ejecutar al cargar la página
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCookieBanner);
+  } else {
+    // El DOM ya está listo
+    initCookieBanner();
+  }
+
+  // También asegurar que se muestre si se carga dinámicamente
+  window.addEventListener('load', () => {
+    if (!getCookieConsent() && !document.getElementById('cookie-banner')) {
+      showBanner();
+    }
+  });
 })();

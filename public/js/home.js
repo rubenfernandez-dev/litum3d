@@ -364,6 +364,14 @@ async function confirmCustomization() {
   if (!customizationState.product) return;
   const notes = document.getElementById('custom-notes').value.trim();
 
+  // Validar consentimiento de fotos si hay archivos subidos
+  const photoConsentCheckbox = document.getElementById('photo-consent');
+  if (customizationState.files.length > 0 && photoConsentCheckbox && !photoConsentCheckbox.checked) {
+    alert('⚠️ Debes aceptar el tratamiento de tus fotos para continuar.\n\nTus fotos se usarán solo para crear tu litofanía y se borrarán automáticamente tras la fabricación.');
+    photoConsentCheckbox.focus();
+    return;
+  }
+
   try {
     let uploaded = [];
     if (customizationState.files.length) {
