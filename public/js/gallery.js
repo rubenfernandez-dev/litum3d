@@ -16,6 +16,12 @@ const STATIC_GALLERY = [
   },
   {
     id: 'fam-1',
+    nombre: 'Vino el segundo',
+    collection: 'familia',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589502/WhatsApp_Image_2026-01-27_at_22.07.13_5_lnf5wc.jpg'
+  },
+  {
+    id: 'fam-1',
     nombre: 'Hermanos',
     collection: 'familia',
     imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589512/WhatsApp_Image_2026-01-27_at_22.50.32_1_asvuan.jpg'
@@ -37,12 +43,6 @@ const STATIC_GALLERY = [
     nombre: 'Nuestro primer bebé',
     collection: 'familia',
     imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589507/WhatsApp_Image_2026-01-27_at_22.07.14_1_gnelt4.jpg'
-  },
-  {
-    id: 'fam-1',
-    nombre: 'Vino el segundo',
-    collection: 'familia',
-    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589502/WhatsApp_Image_2026-01-27_at_22.07.13_5_lnf5wc.jpg'
   },
   {
     id: 'fam-1',
@@ -100,15 +100,9 @@ const STATIC_GALLERY = [
   },
   {
     id: 'par-1',
-    nombre: 'Pareja San Valentin',
+    nombre: 'Momentos felices',
     collection: 'parejas',
-    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589493/WhatsApp_Image_2026-01-27_at_23.30.30_8_v7lllg.jpg'
-  },
-  {
-    id: 'par-1',
-    nombre: 'Pareja en atardecer',
-    collection: 'parejas',
-    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589490/WhatsApp_Image_2026-01-27_at_23.30.30_7_jm44zv.jpg'
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589494/WhatsApp_Image_2026-01-27_at_23.30.30_e3pyyn.jpg'
   },
   {
     id: 'par-1',
@@ -118,21 +112,27 @@ const STATIC_GALLERY = [
   },
   {
     id: 'par-1',
-    nombre: 'Momentos felices',
-    collection: 'parejas',
-    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589494/WhatsApp_Image_2026-01-27_at_23.30.30_e3pyyn.jpg'
-  },
-  {
-    id: 'par-1',
     nombre: 'Oso amoroso',
     collection: 'parejas',
     imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589487/WhatsApp_Image_2026-01-27_at_23.30.30_4_enpmyv.jpg'
   },
   {
     id: 'par-1',
+    nombre: 'Pareja San Valentin',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589493/WhatsApp_Image_2026-01-27_at_23.30.30_8_v7lllg.jpg'
+  },
+  {
+    id: 'par-1',
     nombre: 'La Pedida',
     collection: 'parejas',
     imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589486/WhatsApp_Image_2026-01-27_at_23.30.30_3_odsvmk.jpg'
+  },
+  {
+    id: 'par-1',
+    nombre: 'Pareja en atardecer',
+    collection: 'parejas',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769589490/WhatsApp_Image_2026-01-27_at_23.30.30_7_jm44zv.jpg'
   },
   {
     id: 'par-1',
@@ -312,13 +312,13 @@ const STATIC_GALLERY = [
     id: 'paisaje-1',
     nombre: 'Paisajes',
     collection: 'paisajes',
-    imagen: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+    imagen: ''
   },
   {
     id: 'anime-1',
     nombre: 'Anime',
     collection: 'anime',
-    imagen: 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
+    imagen: '',
   },
 ];
 
