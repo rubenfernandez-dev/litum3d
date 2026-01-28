@@ -7,4 +7,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Verificar que Cloudinary está configurado
+const isCloudinaryConfigured = () => {
+  return process.env.CLOUDINARY_CLOUD_NAME && 
+         process.env.CLOUDINARY_API_KEY && 
+         process.env.CLOUDINARY_API_SECRET;
+};
+
 module.exports = cloudinary;
+module.exports.isConfigured = isCloudinaryConfigured;

@@ -5,6 +5,13 @@ const { pool } = require('../config/db');
 const cloudinary = require('../config/cloudinary');
 const fs = require('fs').promises;
 
+// Verificar si Cloudinary está disponible
+const isCloudinaryAvailable = () => {
+  return process.env.CLOUDINARY_CLOUD_NAME && 
+         process.env.CLOUDINARY_API_KEY && 
+         process.env.CLOUDINARY_API_SECRET;
+};
+
 // Configurar multer para almacenamiento temporal
 const upload = multer({ 
   dest: 'uploads/temp/',
@@ -88,30 +95,39 @@ router.post('/api/reviews', upload.array('fotos', 5), async (req, res) => {
     
     // Subir imágenes a Cloudinary si hay
     if (req.files && req.files.length > 0) {
-      for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
-        
-        try {
-          // Subir a Cloudinary
-          const uploadResult = await cloudinary.uploader.upload(file.path, {
-            folder: 'litum3d/reviews',
-            transformation: [
-              { width: 800, height: 800, crop: 'limit' },
-              { quality: 'auto:good' }
-            ]
-          });
-          
-          // Guardar referencia en BD
-          await conn.query(
-            'INSERT INTO review_images (review_id, cloudinary_url, cloudinary_public_id, orden) VALUES (?, ?, ?, ?)',
-            [reviewId, uploadResult.secure_url, uploadResult.public_id, i]
-          );
-          
-          // Eliminar archivo temporal
+      // Verificar que Cloudinary está configurado
+      if (!isCloudinaryAvailable()) {
+        console.warn('⚠️ Cloudinary no configurado, guardando sin imágenes');
+        // Limpiar archivos temporales
+        for (const file of req.files) {
           await fs.unlink(file.path).catch(() => {});
-        } catch (uploadError) {
-          console.error('Error subiendo imagen:', uploadError);
-          // Continuar con las demás imágenes
+        }
+      } else {
+        for (let i = 0; i < req.files.length; i++) {
+          const file = req.files[i];
+          
+          try {
+            // Subir a Cloudinary
+            const uploadResult = await cloudinary.uploader.upload(file.path, {
+              folder: 'litum3d/reviews',
+              transformation: [
+                { width: 800, height: 800, crop: 'limit' },
+                { quality: 'auto:good' }
+              ]
+            });
+            
+            // Guardar referencia en BD
+            await conn.query(
+              'INSERT INTO review_images (review_id, cloudinary_url, cloudinary_public_id, orden) VALUES (?, ?, ?, ?)',
+              [reviewId, uploadResult.secure_url, uploadResult.public_id, i]
+            );
+            
+            // Eliminar archivo temporal
+            await fs.unlink(file.path).catch(() => {});
+          } catch (uploadError) {
+            console.error('Error subiendo imagen:', uploadError);
+            // Continuar con las demás imágenes
+          }
         }
       }
     }
@@ -213,23 +229,37 @@ router.post('/api/admin/reviews', requireAdmin, upload.array('fotos', 5), async 
     
     // Subir imágenes a Cloudinary si hay
     if (req.files && req.files.length > 0) {
-      for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
-        
-        const uploadResult = await cloudinary.uploader.upload(file.path, {
-          folder: 'litum3d/reviews',
-          transformation: [
-            { width: 800, height: 800, crop: 'limit' },
-            { quality: 'auto:good' }
-          ]
-        });
-        
-        await conn.query(
-          'INSERT INTO review_images (review_id, cloudinary_url, cloudinary_public_id, orden) VALUES (?, ?, ?, ?)',
-          [reviewId, uploadResult.secure_url, uploadResult.public_id, i]
-        );
-        
-        await fs.unlink(file.path).catch(() => {});
+      // Verificar que Cloudinary está configurado
+      if (!isCloudinaryAvailable()) {
+        console.warn('⚠️ Cloudinary no configurado, guardando sin imágenes');
+        // Limpiar archivos temporales
+        for (const file of req.files) {
+          await fs.unlink(file.path).catch(() => {});
+        }
+      } else {
+        for (let i = 0; i < req.files.length; i++) {
+          const file = req.files[i];
+          
+          try {
+            const uploadResult = await cloudinary.uploader.upload(file.path, {
+              folder: 'litum3d/reviews',
+              transformation: [
+                { width: 800, height: 800, crop: 'limit' },
+                { quality: 'auto:good' }
+              ]
+            });
+            
+            await conn.query(
+              'INSERT INTO review_images (review_id, cloudinary_url, cloudinary_public_id, orden) VALUES (?, ?, ?, ?)',
+              [reviewId, uploadResult.secure_url, uploadResult.public_id, i]
+            );
+            
+            await fs.unlink(file.path).catch(() => {});
+          } catch (uploadError) {
+            console.error('Error subiendo imagen:', uploadError);
+            // Continuar con las demás imágenes
+          }
+        }
       }
     }
     

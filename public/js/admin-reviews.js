@@ -7,20 +7,23 @@ let currentReviewId = null;
 async function loadReviews(estado = '') {
     try {
         const url = estado ? `/api/admin/reviews?estado=${estado}` : '/api/admin/reviews';
+        console.log('📥 Cargando reseñas desde:', url);
         const response = await fetch(url);
         
         if (!response.ok) {
-            throw new Error('Error al cargar reseñas');
+            throw new Error(`Error HTTP ${response.status} al cargar reseñas`);
         }
         
         const data = await response.json();
+        console.log('✅ Reseñas cargadas:', data.length, 'reseña(s)');
+        console.log('Datos recibidos:', JSON.stringify(data.slice(0, 2), null, 2));
         reviews = data;
         renderReviews();
     } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ Error cargando reseñas:', error);
         document.getElementById('reviewsContent').innerHTML = `
             <div style="text-align:center; padding:40px; opacity:0.7;">
-                ⚠️ Error al cargar reseñas
+                ⚠️ Error al cargar reseñas: ${error.message}
             </div>
         `;
     }
@@ -39,6 +42,9 @@ function renderReviews() {
         return;
     }
     
+    console.log('📊 Renderizando reseñas:', reviews.length);
+    console.log('Primera reseña:', JSON.stringify(reviews[0], null, 2));
+    
     container.innerHTML = reviews.map(review => {
         const statusColors = {
             'pendiente': '#ffa500',
@@ -51,16 +57,20 @@ function renderReviews() {
         
         let imagesHtml = '';
         if (review.imagenes && review.imagenes.length > 0) {
+            console.log(`✅ Reseña "${review.nombre}" tiene ${review.imagenes.length} imagen(es)`, review.imagenes);
             imagesHtml = `
                 <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
                     ${review.imagenes.map((img, idx) => `
                         <img src="${img}" 
                              alt="Foto ${idx + 1}" 
                              style="width:80px; height:80px; object-fit:cover; border-radius:8px; cursor:pointer; border: 2px solid rgba(255,255,255,0.1);"
+                             onerror="console.log('❌ Error cargando imagen:', this.src)"
                              onclick="window.open('${img}', '_blank')">
                     `).join('')}
                 </div>
             `;
+        } else {
+            console.log(`⚠️ Reseña "${review.nombre}" NO tiene imágenes`);
         }
         
         return `

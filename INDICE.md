@@ -94,9 +94,54 @@
 
 ---
 
+### 7. **CLOUDINARY-CONFIG.md** ☁️ CONFIGURACIÓN CLOUDINARY
+📄 **Propósito:** Guía técnica de Cloudinary  
+📊 **Contenido:**
+- Problema: Imágenes en reseñas no se guardan
+- Causa: Variables de entorno no configuradas
+- Solución detallada (3 pasos)
+- Testing local
+- Archivos modificados
+- Comportamiento con/sin Cloudinary
+
+👉 **Leer si las imágenes de reseñas no funcionan**
+
+---
+
+### 8. **DEPLOYMENT-CLOUDINARY.md** 🚀 DEPLOYMENT CLOUDINARY
+📄 **Propósito:** Guía de deployment en producción  
+📊 **Contenido:**
+- Problema y causa raíz
+- Solución (3 pasos simples)
+- Obtener credenciales Cloudinary
+- Configurar variables de entorno
+- Reiniciar aplicación
+- Verificación
+- Comportamiento esperado
+- Troubleshooting
+
+👉 **Leer ANTES de actualizar producción**
+
+---
+
+### 9. **FIXES-RESUMEN.md** 📋 RESUMEN DE FIXES
+📄 **Propósito:** Resumen ejecutivo de cambios  
+📊 **Contenido:**
+- Problema original y causa
+- Soluciones implementadas (4)
+- Cambios de código
+- Comportamiento nuevo
+- Próximos pasos
+- Testing local
+- Resumen de mejoras
+
+👉 **Leer para entender qué se arregló exactamente**
+
+---
+
 ## 💻 ARCHIVOS DE CÓDIGO
 
-### CREADOS (2)
+### CREADOS (3)
 
 #### ✨ `views/shop.html` (Nueva página)
 **Ruta de acceso:** `/tienda` o `/shop`  
@@ -124,7 +169,19 @@
 
 ---
 
-### MODIFICADOS (5)
+#### ✨ `scripts/check-cloudinary.js` (Nueva herramienta)
+**Líneas:** 48  
+**Propósito:** Verificar que Cloudinary está configurado  
+**Uso:** `node scripts/check-cloudinary.js`  
+**Funcionalidad:**
+- Verifica variables de entorno de Cloudinary
+- Muestra estado de configuración
+- Ayuda en diagnosticar problemas
+- Se ejecuta antes de deployment
+
+---
+
+### MODIFICADOS (7)
 
 #### ✅ `views/index.html` (Homepage mejorada)
 **Cambios:** +250 líneas  
@@ -179,6 +236,36 @@
 **Nuevas rutas:**
 - GET /tienda → shop.html
 - GET /shop → shop.html (alias)
+
+---
+
+#### ✅ `config/cloudinary.js` (Validación añadida)
+**Cambios:** +8 líneas  
+**Nuevo:**
+- Función `isConfigured()` para validar credenciales
+- Verifica CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+- Permite fallback graceful cuando no está configurado
+
+---
+
+#### ✅ `routes/reviews.js` (Manejo robusto de Cloudinary)
+**Cambios:** +35 líneas  
+**Nuevo:**
+- Función `isCloudinaryAvailable()` para validar config
+- Ambos endpoints (POST /api/reviews y POST /api/admin/reviews) ahora:
+  - Verifican que Cloudinary está disponible
+  - Suben imágenes si es posible
+  - Continúan sin imágenes si Cloudinary no está disponible
+  - Nunca rompen el flujo de creación de reseñas
+
+---
+
+#### ✅ `.env.example` (Documentación actualizada)
+**Cambios:** +4 líneas  
+**Nuevo:**
+- Variables de Cloudinary documentadas
+- Instrucciones sobre dónde obtener credenciales
+- Comentarios sobre qué es requerido
 
 ---
 

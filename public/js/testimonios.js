@@ -5,6 +5,7 @@ let selectedRating = 0;
 // Cargar reseñas aprobadas
 async function loadReviews() {
     try {
+        console.log('📥 Cargando reseñas públicas...');
         const response = await fetch('/api/reviews');
         
         if (!response.ok) {
@@ -12,9 +13,11 @@ async function loadReviews() {
         }
         
         const reviews = await response.json();
+        console.log('✅ Reseñas cargadas:', reviews.length);
+        console.log('Primera reseña:', JSON.stringify(reviews[0], null, 2));
         renderReviews(reviews);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ Error:', error);
         document.getElementById('reviews-container').innerHTML = `
             <div style="text-align:center; padding:40px; grid-column: 1 / -1; opacity:0.7;">
                 ⚠️ Error al cargar reseñas. Por favor, intenta de nuevo más tarde.
@@ -36,6 +39,8 @@ function renderReviews(reviews) {
         return;
     }
     
+    console.log('🎨 Renderizando', reviews.length, 'reseña(s)');
+    
     container.innerHTML = reviews.map(review => {
         const stars = '⭐'.repeat(review.rating);
         const date = new Date(review.fecha_creacion).toLocaleDateString('es-ES', {
@@ -46,16 +51,20 @@ function renderReviews(reviews) {
         
         let imagesHtml = '';
         if (review.imagenes && review.imagenes.length > 0) {
+            console.log(`✅ Reseña "${review.nombre}" tiene ${review.imagenes.length} imagen(es):`, review.imagenes);
             imagesHtml = `
                 <div class="review-images">
                     ${review.imagenes.map((img, idx) => `
                         <img src="${img}" 
                              alt="Foto ${idx + 1} de ${review.nombre}" 
                              class="review-image"
+                             onerror="console.log('❌ Error cargando imagen:', '${img}')"
                              onclick="openImageModal('${img}')">
                     `).join('')}
                 </div>
             `;
+        } else {
+            console.log(`⚠️ Reseña "${review.nombre}" NO tiene imágenes`);
         }
         
         return `
