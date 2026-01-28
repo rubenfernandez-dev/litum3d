@@ -504,6 +504,8 @@
             <a href="/admin/products" class="logout-btn"
                 style="text-decoration:none; display:inline-block; background: rgba(150, 100, 255, 0.2); color: #9664ff; border-color: rgba(150, 100, 255, 0.3);">📦
                 Productos</a>
+            <button class="logout-btn" onclick="showReviewsSection()" 
+                style="background: rgba(100, 200, 255, 0.2); color: #64c8ff; border-color: rgba(100, 200, 255, 0.3);">⭐ Reseñas</button>
             <a href="/admin/account" class="logout-btn" style="text-decoration:none; display:inline-block;">⚙️ Mi
                 Cuenta</a>
             <button class="logout-btn" onclick="logout()">🚪 Cerrar Sesión</button>
@@ -578,6 +580,115 @@
             <div class="loading">
                 <div class="spinner"></div>
                 <p>Cargando pedidos...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Reseñas -->
+    <div id="reviewsSection" class="orders-container" style="display:none; margin-top:20px;">
+        <div class="orders-header">
+            <div>
+                <h2 class="orders-title">⭐ Gestión de Reseñas</h2>
+                <p style="font-size:12px; opacity:0.7; margin-top:4px;">Modera y gestiona las reseñas de clientes</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="showCreateReviewModal()" class="logout-btn" 
+                    style="background: rgba(100, 200, 255, 0.2); color: #64c8ff; border-color: rgba(100, 200, 255, 0.3);">
+                    ➕ Nueva Reseña
+                </button>
+                <button onclick="showOrdersSection()" class="logout-btn">
+                    ← Volver a Pedidos
+                </button>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <label style="font-size: 12px; opacity: 0.8; display: block; margin-bottom: 5px;">Filtrar por estado:</label>
+            <select class="filter-select" id="reviewStatusFilter" onchange="filterReviews()">
+                <option value="">Todas</option>
+                <option value="pendiente">⏳ Pendientes</option>
+                <option value="aprobada">✅ Aprobadas</option>
+                <option value="rechazada">❌ Rechazadas</option>
+            </select>
+        </div>
+
+        <div id="reviewsContent" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap:20px; padding:20px;">
+            <div style="text-align:center; padding:40px; opacity:0.7; grid-column: 1 / -1;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando reseñas...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para crear nueva reseña -->
+    <div class="modal" id="createReviewModal">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">➕ Crear Nueva Reseña</div>
+            <div class="modal-body">
+                <form id="createReviewForm" onsubmit="submitNewReview(event)">
+                    <div class="form-group">
+                        <label>Nombre del Cliente *</label>
+                        <input type="text" name="nombre" required 
+                            style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email (opcional)</label>
+                        <input type="email" name="email" 
+                            style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Calificación *</label>
+                        <select name="rating" required 
+                            style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; cursor:pointer;">
+                            <option value="5">⭐⭐⭐⭐⭐ (5/5)</option>
+                            <option value="4">⭐⭐⭐⭐ (4/5)</option>
+                            <option value="3">⭐⭐⭐ (3/5)</option>
+                            <option value="2">⭐⭐ (2/5)</option>
+                            <option value="1">⭐ (1/5)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Comentario *</label>
+                        <textarea name="comentario" required rows="4" 
+                            style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; resize:vertical;"
+                            placeholder="Escribe el comentario de la reseña..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select name="estado" 
+                            style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; cursor:pointer;">
+                            <option value="aprobada">✅ Aprobada (publicar inmediatamente)</option>
+                            <option value="pendiente">⏳ Pendiente (revisar después)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="checkbox" name="destacada" value="true" 
+                                style="width:18px; height:18px; cursor:pointer;">
+                            <span>⭐ Marcar como destacada (aparecerá en página principal)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Fotos (opcional, máx. 5)</label>
+                        <input type="file" id="reviewPhotos" name="fotos" accept="image/*" multiple 
+                            style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:#fff; cursor:pointer;">
+                        <div id="previewImages" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
+                    </div>
+                    
+                    <div class="modal-footer" style="border-top:none; padding-top:0;">
+                        <button type="button" class="btn btn-cancel" onclick="closeCreateReviewModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-save">Crear Reseña</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -930,6 +1041,9 @@
         // Cargar pedidos al iniciar
         loadOrders();
     </script>
+    
+    <!-- Script de gestión de reseñas -->
+    <script src="/js/admin-reviews.js"></script>
 </body>
 
 </html>

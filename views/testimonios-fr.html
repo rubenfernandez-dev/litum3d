@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/img/logos/favicon.png" />
+  <link rel="apple-touch-icon" href="/img/logos/favicon.png" />
+
+  <title>Témoignages - LITUM3D</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script src="/js/navbar.js"></script>
+</head>
+
+<body>
+  <header>
+    <div class="header-top">
+      <a href="/index-fr" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
+      <div class="language-selector">
+        <span class="lang-flag">&#x1F1EB;&#x1F1F7;</span>
+        <div class="lang-dropdown">
+          <a href="/testimonios" title="Español">&#x1F1EA;&#x1F1F8; ES</a>
+          <a href="/testimonios-de" title="Deutsch">&#x1F1E9;&#x1F1EA; DE</a>
+          <a href="/testimonios-fr" title="Français">&#x1F1EB;&#x1F1F7; FR</a>
+        </div>
+      </div>
+    </div>
+    <nav>
+      <button class="hamburger" id="hamburger-btn" aria-label="Ouvrir le menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="menu" id="nav-menu">
+        <a href="/index-fr">Accueil</a>
+        <a href="/gallery-fr">Galerie</a>
+        <a href="/shop-fr">Boutique</a>
+        <a href="/about-fr">À propos</a>
+        <a href="/contact-fr">Contact</a>
+        <a href="/cart-fr" class="cart-icon-wrapper" title="Voir le panier">
+          🛒
+          <span class="cart-badge">0</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <h2>⭐ Témoignages de Nos Clients</h2>
+
+    <!-- Reseñas -->
+    <div id="reviews-container" class="reviews-grid">
+      <div style="text-align:center; padding:40px; grid-column: 1 / -1;">
+        <p style="opacity:0.7;">Chargement des avis...</p>
+      </div>
+    </div>
+
+    <!-- Formulario para dejar reseña -->
+    <section class="leave-review-section" style="max-width: 700px; margin: 3rem auto;">
+      <h3 style="color: var(--gold); text-align:center; margin-bottom:1.5rem;">Laissez Votre Avis</h3>
+      <form id="review-form" class="review-form">
+        <label>
+          Nom *
+          <input type="text" name="nombre" required placeholder="Votre nom" />
+        </label>
+        
+        <label>
+          Email (optionnel)
+          <input type="email" name="email" placeholder="votre@email.com" />
+          <small style="opacity:0.7; font-size:12px;">Ne sera pas publié</small>
+        </label>
+        
+        <label>
+          Évaluation *
+          <div class="star-rating" id="star-rating">
+            <span class="star" data-rating="1">⭐</span>
+            <span class="star" data-rating="2">⭐</span>
+            <span class="star" data-rating="3">⭐</span>
+            <span class="star" data-rating="4">⭐</span>
+            <span class="star" data-rating="5">⭐</span>
+          </div>
+          <input type="hidden" name="rating" id="rating-input" required />
+        </label>
+        
+        <label>
+          Votre Avis *
+          <textarea name="comentario" required rows="4" 
+            placeholder="Partagez votre expérience avec nos produits..."></textarea>
+        </label>
+        
+        <label>
+          Photos (optionnel, max. 5)
+          <input type="file" name="fotos" accept="image/*" multiple id="review-photos" />
+          <small style="opacity:0.7; font-size:12px;">Partagez des photos de votre produit</small>
+          <div id="photo-preview" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;"></div>
+        </label>
+        
+        <button type="submit" id="submit-btn">Envoyer l'Avis</button>
+        <div id="form-status" style="margin-top:15px; text-align:center;"></div>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 LITUM3D. Tous droits réservés.</p>
+    <div>
+      <a href="/terms-conditions">Conditions</a>
+      <a href="/privacy-policy">Confidentialité</a>
+      <a href="/cookies-policy">Cookies</a>
+    </div>
+  </footer>
+
+  <script src="/js/cart.js"></script>
+  <script src="/js/testimonios.js"></script>
+  <script src="/js/cookie-banner.js"></script>
+</body>
+
+</html>

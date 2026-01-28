@@ -569,6 +569,23 @@
     </div>
   </section>
 
+  <!-- Sección de Reseñas Destacadas -->
+  <section class="reviews-section">
+    <div class="container">
+      <h2>⭐ Ce Que Disent Nos Clients</h2>
+      <div id="featured-reviews" class="featured-reviews-grid">
+        <div style="text-align:center; padding:40px; opacity:0.7; grid-column: 1 / -1;">
+          <p>Chargement des avis...</p>
+        </div>
+      </div>
+      <div style="text-align:center; margin-top:30px;">
+        <a href="/testimonios-fr" class="btn-primary" style="display:inline-block; padding:15px 30px; text-decoration:none;">
+          Voir Tous les Avis →
+        </a>
+      </div>
+    </div>
+  </section>
+
   <footer>
     <div class="footer-content">
       <div class="footer-section">
@@ -651,6 +668,31 @@
     gtag('config', 'G-XXXXXXXXXX');
   </script>
   -->
+
+  <script>
+    async function loadFeaturedReviews() {
+      try {
+        const response = await fetch('/api/reviews?destacadas=true');
+        if (!response.ok) throw new Error('Error');
+        const reviews = await response.json();
+        const container = document.getElementById('featured-reviews');
+        if (!reviews || reviews.length === 0) {
+          container.innerHTML = '<div style="text-align:center; padding:40px; opacity:0.7; grid-column: 1 / -1;"><p>Bientôt, vous verrez ici les avis de nos clients</p></div>';
+          return;
+        }
+        const featured = reviews.slice(0, 3);
+        container.innerHTML = featured.map(review => {
+          const stars = '⭐'.repeat(review.rating);
+          let imageHtml = '';
+          if (review.imagenes && review.imagenes[0]) {
+            imageHtml = `<img src="${review.imagenes[0]}" alt="Photo" style="width:100%; height:200px; object-fit:cover; border-radius:8px; margin-bottom:15px;">`;
+          }
+          return `<div class="review-card">${imageHtml}<div class="review-stars">${stars}</div><div class="review-comment" style="margin: 15px 0; line-height:1.6;">${review.comentario.substring(0, 150)}${review.comentario.length > 150 ? '...' : ''}</div><div class="review-author" style="font-weight:600; opacity:0.8;">— ${review.nombre}</div></div>`;
+        }).join('');
+      } catch (error) { console.error('Error:', error); }
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', loadFeaturedReviews); } else { loadFeaturedReviews(); }
+  </script>
 
 </body>
 

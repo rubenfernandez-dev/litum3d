@@ -15,6 +15,7 @@ const estadosRoutes = require('./routes/estados');
 const paymentsRoutes = require('./routes/payments');
 const adminRoutes = require('./routes/admin');
 const uploadsRoutes = require('./routes/uploads');
+const reviewsRoutes = require('./routes/reviews');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,6 +60,7 @@ app.use(pedidosRoutes);
 app.use(estadosRoutes);
 app.use('/api', paymentsRoutes);
 app.use(uploadsRoutes);
+app.use(reviewsRoutes);
 app.use('/admin', adminRoutes);
 
 app.use((req, res) => {

@@ -29,6 +29,10 @@ router.get('/contact', (req, res) => {
   res.sendFile(path.join(viewsDir, 'contact.html'));
 });
 
+router.get('/testimonios', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'testimonios.html'));
+});
+
 router.get('/cart', (req, res) => {
   res.sendFile(path.join(viewsDir, 'cart.html'));
 });
@@ -70,6 +74,10 @@ router.get('/contact-de', (req, res) => {
   res.sendFile(path.join(viewsDir, 'contact-de.html'));
 });
 
+router.get('/testimonios-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'testimonios-de.html'));
+});
+
 router.get('/cart-de', (req, res) => {
   res.sendFile(path.join(viewsDir, 'cart-de.html'));
 });
@@ -93,6 +101,10 @@ router.get('/about-fr', (req, res) => {
 
 router.get('/contact-fr', (req, res) => {
   res.sendFile(path.join(viewsDir, 'contact-fr.html'));
+});
+
+router.get('/testimonios-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'testimonios-fr.html'));
 });
 
 router.get('/cart-fr', (req, res) => {
