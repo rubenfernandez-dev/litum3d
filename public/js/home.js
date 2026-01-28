@@ -480,6 +480,81 @@ function buildNotesWithExtras(notes, extras) {
   return parts.join(' | ');
 }
 
+// Cargar reseñas destacadas en la página de inicio
+async function loadFeaturedReviews() {
+  const container = document.getElementById('featured-reviews');
+  
+  try {
+    const response = await fetch('/api/reviews');
+    if (!response.ok) throw new Error('Error al cargar reseñas');
+    
+    const reviews = await response.json();
+    
+    if (!reviews || reviews.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:40px; grid-column: 1 / -1; opacity:0.7;">
+          📭 Aún no hay reseñas. ¡Sé el primero en dejar una!
+        </div>
+      `;
+      return;
+    }
+    
+    // Mostrar de 3 a 5 reseñas (o menos si no hay suficientes)
+    const reviewsToShow = reviews.slice(0, Math.min(5, reviews.length));
+    
+    container.innerHTML = reviewsToShow.map(review => {
+      const stars = '⭐'.repeat(review.rating);
+      const date = new Date(review.fecha_creacion).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      let imagesHtml = '';
+      if (review.imagenes && review.imagenes.length > 0) {
+        imagesHtml = `
+          <div class="review-images">
+            ${review.imagenes.slice(0, 2).map((img, idx) => `
+              <img src="${img}" 
+                   alt="Foto ${idx + 1} de ${review.nombre}" 
+                   class="review-image"
+                   style="width:100px; height:100px; object-fit:cover; border-radius:8px;"
+                   onerror="console.log('Error cargando imagen:', '${img}')"
+                   onclick="openImageModal('${img}')">
+            `).join('')}
+          </div>
+        `;
+      }
+      
+      return `
+        <div class="review-card-featured" style="padding: 1.5rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(224, 173, 97, 0.2); border-radius: 12px; transition: all 0.3s ease;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+            <div>
+              <div style="font-weight: 600; color: #fff; margin-bottom: 0.3rem;">${review.nombre}</div>
+              <div style="color: #ffd700; font-size: 0.9rem; letter-spacing: 0.1rem;">${stars}</div>
+            </div>
+            <div style="font-size: 0.85rem; opacity: 0.7;">${date}</div>
+          </div>
+          <div style="color: rgba(255, 255, 255, 0.85); line-height: 1.5; margin-bottom: 1rem;">${review.comentario.substring(0, 150)}${review.comentario.length > 150 ? '...' : ''}</div>
+          ${imagesHtml}
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    console.error('Error cargando reseñas:', error);
+    container.innerHTML = `
+      <div style="text-align:center; padding:40px; grid-column: 1 / -1; opacity:0.7;">
+        ⚠️ Error al cargar reseñas
+      </div>
+    `;
+  }
+}
+
+// Ejecutar cuando se carga la página
+document.addEventListener('DOMContentLoaded', () => {
+  loadFeaturedReviews();
+});
+
 
 
 

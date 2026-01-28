@@ -61,6 +61,7 @@
         <a href="/">Inicio</a>
         <a href="/gallery">Galería</a>
         <a href="/shop">Tienda</a>
+        <a href="/testimonios">Reseñas</a>
         <a href="/about">Sobre</a>
         <a href="/contact">Contacto</a>
         <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
@@ -631,9 +632,10 @@
           <p>Cargando reseñas...</p>
         </div>
       </div>
-      <div style="text-align:center; margin-top:30px;">
-        <a href="/testimonios" class="btn-primary" style="display:inline-block; padding:15px 30px; text-decoration:none;">
-          Ver Todas las Reseñas →
+      <div style="text-align:center; margin-top:40px;">
+        <a href="/testimonios" class="btn-see-all-reviews">
+          Ver Todas las Reseñas
+          <span style="margin-left: 8px; display: inline-block; transition: transform 0.3s ease;">→</span>
         </a>
       </div>
     </div>
@@ -724,50 +726,8 @@
   -->
 
   <!-- Script para cargar reseñas destacadas -->
+  <script src="/js/home.js"></script>
   <script>
-    async function loadFeaturedReviews() {
-      try {
-        console.log('📥 Cargando reseñas destacadas...');
-        const response = await fetch('/api/reviews?destacadas=true');
-        if (!response.ok) throw new Error('Error');
-        
-        const reviews = await response.json();
-        console.log('✅ Reseñas destacadas cargadas:', reviews.length);
-        console.log('Datos recibidos:', JSON.stringify(reviews.slice(0, 2), null, 2));
-        const container = document.getElementById('featured-reviews');
-        
-        if (!reviews || reviews.length === 0) {
-          container.innerHTML = '<div style="text-align:center; padding:40px; opacity:0.7; grid-column: 1 / -1;"><p>Próximamente verás aquí las opiniones de nuestros clientes</p></div>';
-          return;
-        }
-        
-        // Limitar a 3 reseñas destacadas
-        const featured = reviews.slice(0, 3);
-        
-        container.innerHTML = featured.map(review => {
-          const stars = '⭐'.repeat(review.rating);
-          let imageHtml = '';
-          if (review.imagenes && review.imagenes[0]) {
-            console.log(`✅ Reseña "${review.nombre}" tiene imagen:`, review.imagenes[0]);
-            imageHtml = `<img src="${review.imagenes[0]}" alt="Foto de ${review.nombre}" style="width:100%; height:200px; object-fit:cover; border-radius:8px; margin-bottom:15px; onerror='console.log(\"❌ Error cargando imagen:\", this.src);">`;
-          } else {
-            console.log(`⚠️ Reseña "${review.nombre}" NO tiene imagen`);
-          }
-          
-          return `
-            <div class="review-card">
-              ${imageHtml}
-              <div class="review-stars">${stars}</div>
-              <div class="review-comment" style="margin: 15px 0; line-height:1.6;">${review.comentario.substring(0, 150)}${review.comentario.length > 150 ? '...' : ''}</div>
-              <div class="review-author" style="font-weight:600; opacity:0.8;">— ${review.nombre}</div>
-            </div>
-          `;
-        }).join('');
-      } catch (error) {
-        console.error('❌ Error:', error);
-      }
-    }
-    
     // Cargar al final para no bloquear la página
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', loadFeaturedReviews);

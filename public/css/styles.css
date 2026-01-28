@@ -3453,3 +3453,29 @@ footer {
   }
 }
 
+/* Botón Ver Todas las Reseñas */
+.btn-see-all-reviews {
+  display: inline-block;
+  padding: 12px 35px;
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.2) 0%, rgba(150, 100, 255, 0.2) 100%);
+  border: 2px solid rgba(100, 200, 255, 0.5);
+  border-radius: 8px;
+  color: #64c8ff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-see-all-reviews:hover {
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.4) 0%, rgba(150, 100, 255, 0.4) 100%);
+  border-color: rgba(100, 200, 255, 0.8);
+  box-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
+  transform: translateY(-3px);
+}
+
+.btn-see-all-reviews:hover span {
+  transform: translateX(4px);
+}
+
