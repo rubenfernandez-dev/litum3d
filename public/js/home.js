@@ -527,16 +527,20 @@ async function loadFeaturedReviews() {
       }
       
       return `
-        <div class="review-card-featured" style="padding: 1.5rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(224, 173, 97, 0.2); border-radius: 12px; transition: all 0.3s ease;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-            <div>
+        <div class="review-card">
+          <div class="review-content">
+            <div class="review-info">
               <div style="font-weight: 600; color: #fff; margin-bottom: 0.3rem;">${review.nombre}</div>
+              <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.5rem;">${review.email || ''}</div>
               <div style="color: #ffd700; font-size: 0.9rem; letter-spacing: 0.1rem;">${stars}</div>
             </div>
-            <div style="font-size: 0.85rem; opacity: 0.7;">${date}</div>
+            <div class="review-text">
+              <div class="review-comment">${review.comentario.substring(0, 200)}${review.comentario.length > 200 ? '...' : ''}</div>
+            </div>
+            <div class="review-media">
+              ${imagesHtml}
+            </div>
           </div>
-          <div style="color: rgba(255, 255, 255, 0.85); line-height: 1.5; margin-bottom: 1rem;">${review.comentario.substring(0, 150)}${review.comentario.length > 150 ? '...' : ''}</div>
-          ${imagesHtml}
         </div>
       `;
     }).join('');

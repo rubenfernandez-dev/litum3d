@@ -40,39 +40,36 @@
 
 <body>
   <header>
-    <div class="header-container">
+    <div class="header-top">
       <a href="/" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
-      
+      <div class="language-selector">
+        <span class="lang-flag">🇪🇸</span>
+        <div class="lang-dropdown">
+          <a href="/" title="Español">🇪🇸 </a>
+          <a href="/de" title="Deutsch">🇩🇪 </a>
+          <a href="/fr" title="Français">🇫🇷 </a>
+        </div>
+      </div>
+    </div>
+    <nav>
       <button class="hamburger" id="hamburger-btn" aria-label="Abrir menú">
         <span></span>
         <span></span>
         <span></span>
       </button>
-      
-      <nav class="menu" id="nav-menu">
+      <div class="menu" id="nav-menu">
         <a href="/">Inicio</a>
         <a href="/gallery">Galería</a>
         <a href="/shop">Tienda</a>
         <a href="/testimonios">Reseñas</a>
         <a href="/about">Sobre</a>
         <a href="/contact">Contacto</a>
-      </nav>
-      
-      <div class="header-right">
-        <div class="language-selector">
-          <span class="lang-flag">🇪🇸</span>
-          <div class="lang-dropdown">
-            <a href="/" title="Español">🇪🇸 </a>
-            <a href="/de" title="Deutsch">🇩🇪 </a>
-            <a href="/fr" title="Français">🇫🇷 </a>
-          </div>
-        </div>
         <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
           🛒
           <span class="cart-badge">0</span>
         </a>
       </div>
-    </div>
+    </nav>
   </header>
 
   <main>
@@ -349,6 +346,10 @@
           </div>
         </div>
       </div>
+      
+      <div style="text-align: center; margin-top: 3rem;">
+        <a href="/shop" class="cta-btn">✨ Crear mi Litofanía</a>
+      </div>
     </div>
   </section>
 
@@ -379,6 +380,10 @@
         <h3>Garantía</h3>
         <p>Satisfacción garantizada y revisión previa al envío.</p>
       </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 2.5rem;">
+      <a href="/shop" class="cta-btn">🛍️ Ver Todos los Productos</a>
     </div>
   </section>
 
@@ -473,76 +478,6 @@
   <div class="products-grid" id="featured-products">
     <p>Cargando productos...</p>
   </div>
-
-  <!-- Testimonios -->
-  <section class="testimonials-section">
-    <div class="testimonials-header">
-      <h2>Testimonios</h2>
-      <p>Lo que dicen nuestros clientes</p>
-    </div>
-    <div class="testimonials-grid">
-      <div class="testimonial-card">
-        <div class="testimonial-quote">“</div>
-        <div class="testimonial-flag">🇪🇸 España</div>
-        <p class="testimonial-text">Impresión impecable y trato excelente. Repetiré.</p>
-        <div class="testimonial-footer">
-          <div class="testimonial-avatar">MG</div>
-          <div class="testimonial-author">María G.</div>
-          <div class="testimonial-stars">★★★★★</div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="testimonial-quote">“</div>
-        <div class="testimonial-flag">🇬🇧 United Kingdom</div>
-        <p class="testimonial-text">Outstanding quality and fast delivery. Highly recommend.</p>
-        <div class="testimonial-footer">
-          <div class="testimonial-avatar">JT</div>
-          <div class="testimonial-author">James T.</div>
-          <div class="testimonial-stars">★★★★★</div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="testimonial-quote">“</div>
-        <div class="testimonial-flag">🇫🇷 France</div>
-        <p class="testimonial-text">Qualité exceptionnelle et service professionnel.</p>
-        <div class="testimonial-footer">
-          <div class="testimonial-avatar">CD</div>
-          <div class="testimonial-author">Claire D.</div>
-          <div class="testimonial-stars">★★★★★</div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="testimonial-quote">“</div>
-        <div class="testimonial-flag">🇩🇪 Deutschland</div>
-        <p class="testimonial-text">Hervorragende Qualität und sehr zuverlässig.</p>
-        <div class="testimonial-footer">
-          <div class="testimonial-avatar">AK</div>
-          <div class="testimonial-author">Anna K.</div>
-          <div class="testimonial-stars">★★★★★</div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="testimonial-quote">“</div>
-        <div class="testimonial-flag">🇮🇹 Italia</div>
-        <p class="testimonial-text">Qualità superiore e grande attenzione ai dettagli.</p>
-        <div class="testimonial-footer">
-          <div class="testimonial-avatar">LR</div>
-          <div class="testimonial-author">Luca R.</div>
-          <div class="testimonial-stars">★★★★★</div>
-        </div>
-      </div>
-      <div class="testimonial-card">
-        <div class="testimonial-quote">“</div>
-        <div class="testimonial-flag">🇵🇹 Portugal</div>
-        <p class="testimonial-text">Qualidade excelente e atendimento impecável.</p>
-        <div class="testimonial-footer">
-          <div class="testimonial-avatar">IM</div>
-          <div class="testimonial-author">Inês M.</div>
-          <div class="testimonial-stars">★★★★★</div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- FAQ Section -->
   <section class="faq-section">
@@ -640,6 +575,9 @@
           Ver Todas las Reseñas
           <span style="margin-left: 8px; display: inline-block; transition: transform 0.3s ease;">→</span>
         </a>
+        <div style="margin-top: 2rem;">
+          <a href="/shop" class="cta-btn">💡 Crear mi Propia Litofanía</a>
+        </div>
       </div>
     </div>
   </section>
@@ -729,7 +667,6 @@
   -->
 
   <!-- Script para cargar reseñas destacadas -->
-  <script src="/js/home.js"></script>
   <script>
     // Cargar al final para no bloquear la página
     if (document.readyState === 'loading') {
