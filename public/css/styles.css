@@ -553,7 +553,6 @@
   max-width: 1400px;
   margin: 0 auto;
 }
-
 .target-card {
   display: flex;
   flex-direction: column;
@@ -573,8 +572,10 @@
   inset: 0;
   border-radius: 12px;
   padding: 2px;
+
   background: linear-gradient(135deg, var(--gold), #f0c070);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -975,18 +976,17 @@ header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  position: fixed;
 }
 
 .header-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: 0.8rem 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-  height: auto;
+  flex-shrink: 0;
   gap: 1rem;
 }
 
@@ -1006,20 +1006,23 @@ header {
 }
 
 .header-top .language-selector {
-  margin-left: auto;
+  position: absolute;
+  right: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
   flex-shrink: 0;
 }
 
 nav {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 0.8rem 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-  height: 70px;
-  max-height: 70px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  width: auto;
+  flex: 1;
+  height: auto;
+  max-height: none;
 }
 
 nav .logo {
@@ -1873,18 +1876,30 @@ footer {
 @media (max-width: 768px) {
   .header-top {
     padding: 0.8rem 1rem;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
   }
 
   .header-top .logo {
     height: 40px;
+    flex-shrink: 1;
   }
 
   .header-top .logo img {
     height: 100px;
   }
 
+  .header-top .language-selector {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
   nav {
-    padding: 0.8rem 1rem;
+    padding: 0;
+    flex: 1;
   }
   
   nav .logo {
