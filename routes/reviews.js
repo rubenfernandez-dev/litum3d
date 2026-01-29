@@ -17,7 +17,7 @@ const upload = multer({
   dest: 'uploads/temp/',
   limits: { 
     fileSize: 5 * 1024 * 1024, // 5MB máximo por archivo
-    files: 5 // Máximo 5 archivos
+    files: 10 // Máximo 10 archivos
   },
   fileFilter: (req, file, cb) => {
     // Solo permitir imágenes
@@ -68,7 +68,7 @@ router.get('/api/reviews', async (req, res) => {
 });
 
 // POST /api/reviews - Crear nueva reseña desde frontend (queda pendiente)
-router.post('/api/reviews', upload.array('fotos', 5), async (req, res) => {
+router.post('/api/reviews', upload.array('fotos', 10), async (req, res) => {
   const conn = await pool.getConnection();
   
   try {
@@ -206,7 +206,7 @@ router.get('/api/admin/reviews', requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/reviews - Crear reseña desde admin
-router.post('/api/admin/reviews', requireAdmin, upload.array('fotos', 5), async (req, res) => {
+router.post('/api/admin/reviews', requireAdmin, upload.array('fotos', 10), async (req, res) => {
   const conn = await pool.getConnection();
   
   try {

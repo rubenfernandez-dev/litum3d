@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   nombre VARCHAR(100) NOT NULL,
   email VARCHAR(150),
   comentario TEXT NOT NULL,
+  video_url VARCHAR(500) NULL,
   rating TINYINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
   estado ENUM('pendiente', 'aprobada', 'rechazada') DEFAULT 'pendiente',
   destacada BOOLEAN DEFAULT FALSE,
@@ -14,7 +15,8 @@ CREATE TABLE IF NOT EXISTS reviews (
   fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_estado (estado),
   INDEX idx_destacada (destacada),
-  INDEX idx_fecha (fecha_creacion)
+  INDEX idx_fecha (fecha_creacion),
+  INDEX idx_video_url (video_url)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla de imágenes de reseñas (relación 1:N)
