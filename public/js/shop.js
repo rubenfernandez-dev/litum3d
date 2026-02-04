@@ -160,17 +160,17 @@ async function loadModelsForProduct(productId) {
 
     // Buscar el tipo de variante de modelo (usualmente por nombre)
     const modelVariant = variantTypes.find(v =>
-      v.name.toLowerCase().includes('model') ||
-      v.name.toLowerCase().includes('forma') ||
-      v.name.toLowerCase().includes('shape')
+      v.nombre.toLowerCase().includes('model') ||
+      v.nombre.toLowerCase().includes('forma') ||
+      v.nombre.toLowerCase().includes('shape')
     );
 
     if (modelVariant && modelVariant.options && modelVariant.options.length > 0) {
       customizationState.models = modelVariant.options;
       modelsContainer.innerHTML = modelVariant.options.map(opt => `
         <label class="custom-model-option">
-          <input type="radio" name="model" value="${opt.id}" onchange="selectModel(${opt.id}, '${escapeHtml(opt.name)}', ${opt.price_delta || 0})">
-          <span>${escapeHtml(opt.name)} ${opt.price_delta ? `(+€${parseFloat(opt.price_delta).toFixed(2)})` : ''}</span>
+          <input type="radio" name="model" value="${opt.id}" onchange="selectModel(${opt.id}, '${escapeHtml(opt.nombre)}', ${opt.price_delta || 0})">
+          <span>${escapeHtml(opt.nombre)} ${opt.price_delta ? `(+€${parseFloat(opt.price_delta).toFixed(2)})` : ''}</span>
         </label>
       `).join('');
     } else {
@@ -210,9 +210,9 @@ async function loadVariantTypes(productId) {
 
     // Filtrar solo tipos de variante que NO sean modelo
     const otherVariants = variantTypes.filter(v =>
-      !v.name.toLowerCase().includes('model') &&
-      !v.name.toLowerCase().includes('forma') &&
-      !v.name.toLowerCase().includes('shape')
+      !v.nombre.toLowerCase().includes('model') &&
+      !v.nombre.toLowerCase().includes('forma') &&
+      !v.nombre.toLowerCase().includes('shape')
     );
 
     if (otherVariants.length === 0) {
@@ -222,12 +222,12 @@ async function loadVariantTypes(productId) {
 
     container.innerHTML = otherVariants.map(variantType => `
       <div class="variant-type-group">
-        <label>${variantType.name}</label>
+        <label>${variantType.nombre}</label>
         <select onchange="onVariantChange()">
-          <option value="">Selecciona ${variantType.name.toLowerCase()}</option>
+          <option value="">Selecciona ${variantType.nombre.toLowerCase()}</option>
           ${variantType.options.map(opt => `
             <option value="${opt.id}" data-price="${opt.price_delta || 0}">
-              ${escapeHtml(opt.name)} ${opt.price_delta ? `(+€${parseFloat(opt.price_delta).toFixed(2)})` : ''}
+              ${escapeHtml(opt.nombre)} ${opt.price_delta ? `(+€${parseFloat(opt.price_delta).toFixed(2)})` : ''}
             </option>
           `).join('')}
         </select>
