@@ -18,7 +18,9 @@ let customizationState = {
 async function loadShopProducts() {
   const container = document.getElementById('shop-products');
   try {
-    const res = await fetch('/api/productos');
+    // Detectar idioma de la página
+    const lang = document.documentElement.lang || 'es';
+    const res = await fetch(`/api/productos?lang=${lang}`);
     if (!res.ok) throw new Error('Error al obtener productos');
 
     allShopProducts = await res.json() || [];
