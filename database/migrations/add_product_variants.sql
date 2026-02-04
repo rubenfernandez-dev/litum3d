@@ -100,22 +100,22 @@ ALTER TABLE detalle_pedidos ADD FOREIGN KEY (combination_id) REFERENCES product_
 
 -- EJEMPLO DE DATOS - DESCOMENTA PARA PROBAR
 -- ===================================================================
--- Para un producto con ID 1, agregar tipos de variantes
-INSERT INTO product_variant_types (product_id, nombre, descripcion, is_required, display_order) 
+-- Para un producto con ID 1, agregar tipos de variantes (solo si no existen)
+INSERT IGNORE INTO product_variant_types (product_id, nombre, descripcion, is_required, display_order) 
 VALUES 
   (1, 'Base', 'Tipo de base del producto', TRUE, 1),
   (1, 'Forma', 'Forma del producto', TRUE, 2);
 
 -- Agregar opciones para la variante "Base" (obtén el type_id de la consulta anterior)
 -- Suponiendo que el primer INSERT tuvo id=1:
-INSERT INTO product_variant_options (variant_type_id, nombre, descripcion, price_delta, stock, display_order) 
+INSERT IGNORE INTO product_variant_options (variant_type_id, nombre, descripcion, price_delta, stock, display_order) 
 VALUES 
   (1, 'Madera', 'Base de madera natural', 5.00, 20, 1),
   (1, 'Plástico', 'Base de plástico reforzado', 2.00, 30, 2),
   (1, 'Metal', 'Base de metal cromado', 8.00, 15, 3);
 
 -- Agregar opciones para la variante "Forma" (type_id = 2)
-INSERT INTO product_variant_options (variant_type_id, nombre, descripcion, price_delta, stock, display_order) 
+INSERT IGNORE INTO product_variant_options (variant_type_id, nombre, descripcion, price_delta, stock, display_order) 
 VALUES 
   (2, 'Cilíndrica', 'Forma cilíndrica estándar', 0.00, 25, 1),
   (2, 'Cuadrada', 'Forma cuadrada moderna', 3.00, 20, 2),
