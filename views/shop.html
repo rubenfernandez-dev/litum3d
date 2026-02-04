@@ -73,37 +73,26 @@
             </div>
         </section>
 
-        <!-- Sección de Filtros -->
-        <section class="shop-filters-section">
+        <!-- Sección Informativa: Guía de Litofanías -->
+        <section class="shop-info-section">
             <div class="container">
-                <div class="filters-container">
-                    <!-- Filtro por Forma -->
-                    <div class="filter-group">
-                        <label for="filter-shape" class="filter-label">📐 Forma:</label>
-                        <select id="filter-shape" class="filter-select" onchange="applyFilters()">
-                            <option value="">Todas las formas</option>
-                            <option value="esfera">Esfera</option>
-                            <option value="cubo">Cubo</option>
-                            <option value="cilindro">Cilindro</option>
-                            <option value="cono">Cono</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
+                <h2 style="text-align: center; margin-bottom: 2rem;">Cómo Personalizar tu Litofanía</h2>
+                <div class="info-cards-grid">
+                    <div class="info-card">
+                        <div class="info-card-icon">🔄</div>
+                        <h3>Litofanías Cilíndricas/Cónicas</h3>
+                        <p>2-3 fotos según la orientación (horizontal o vertical). Nosotros ajustamos perfectamente tus imágenes para que se vea impecable.</p>
                     </div>
-
-                    <!-- Filtro por Base -->
-                    <div class="filter-group">
-                        <label for="filter-base" class="filter-label">🔧 Base:</label>
-                        <select id="filter-base" class="filter-select" onchange="applyFilters()">
-                            <option value="">Todas las bases</option>
-                            <option value="madera">Madera natural</option>
-                            <option value="metal">Metal mate</option>
-                            <option value="plastico">Plástico premium</option>
-                            <option value="cristal">Cristal</option>
-                        </select>
+                    <div class="info-card">
+                        <div class="info-card-icon">📦</div>
+                        <h3>Litofanías Cuadradas</h3>
+                        <p>4 fotos, una para cada cara del cubo. Perfecto para múltiples imágenes en un solo producto.</p>
                     </div>
-
-                    <!-- Botón Limpiar Filtros -->
-                    <button class="filter-clear-btn" onclick="clearFilters()">🔄 Limpiar filtros</button>
+                    <div class="info-card">
+                        <div class="info-card-icon">✨</div>
+                        <h3>Edición con IA</h3>
+                        <p>¿Necesitas cambios en tus fotos? Podemos generar imágenes con IA para modificar ciertos elementos y adaptarlos perfectamente a tu diseño. Cambiar de lugar o paisaje.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -147,7 +136,7 @@
             </div>
 
             <div class="custom-section">
-                <h4>Fotos (máx 3)</h4>
+                <h4>Fotos (máx 4)</h4>
                 <input type="file" id="custom-files" accept="image/jpeg,image/png" multiple
                     onchange="handleFileSelection(this)">
                 <div id="custom-file-list" class="custom-file-list"></div>

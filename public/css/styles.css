@@ -3017,6 +3017,66 @@ footer {
   border-color: rgba(224, 173, 97, 0.6);
 }
 
+/* Shop Info Section - Guía de Litofanías */
+.shop-info-section {
+  padding: 50px 20px;
+  background: linear-gradient(135deg, rgba(224, 173, 97, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-bottom: 1px solid rgba(224, 173, 97, 0.1);
+}
+
+.shop-info-section .container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.shop-info-section h2 {
+  font-size: 28px;
+  color: var(--text-light);
+  font-weight: 700;
+}
+
+.info-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 30px;
+}
+
+.info-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(224, 173, 97, 0.2);
+  border-radius: 12px;
+  padding: 30px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.info-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(224, 173, 97, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.info-card-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.info-card h3 {
+  font-size: 18px;
+  color: rgba(224, 173, 97, 1);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.info-card p {
+  font-size: 14px;
+  color: rgba(245, 245, 247, 0.7);
+  line-height: 1.6;
+}
+
 /* Shop Products Section */
 .shop-products-section {
   padding: 40px 20px;

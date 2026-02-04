@@ -298,8 +298,8 @@ function handleFileSelection(input) {
   const fileList = document.getElementById('custom-file-list');
   const files = Array.from(input.files || []);
 
-  if (files.length > 3) {
-    alert('Máximo 3 archivos permitidos');
+  if (files.length > 4) {
+    alert('Máximo 4 archivos permitidos');
     return;
   }
 
