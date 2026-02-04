@@ -1410,6 +1410,10 @@ h2:has(+ .products-grid) {
   width: 280px;
 }
 
+.hover-swap-card {
+  width: 250px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -1459,6 +1463,10 @@ h2:has(+ .products-grid) {
   overflow: hidden;
 }
 
+.hover-swap-card .product-image {
+  height: 210px;
+}
+
 .product-image img {
   width: 100%;
   height: 100%;
@@ -1468,8 +1476,42 @@ h2:has(+ .products-grid) {
   transition: transform 0.5s ease;
 }
 
+/* Hover swap images (Shop destacados) */
+.hover-swap {
+  position: relative;
+}
+
+.hover-swap img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.35s ease, transform 0.5s ease;
+}
+
+.hover-swap .hover-swap-front {
+  opacity: 1;
+}
+
+.hover-swap .hover-swap-back {
+  opacity: 0;
+}
+
+.hover-swap-card:hover .hover-swap-front {
+  opacity: 0;
+}
+
+.hover-swap-card:hover .hover-swap-back {
+  opacity: 1;
+}
+
 .product-card:hover .product-image img {
   transform: scale(1.1);
+}
+
+.hover-swap-card:hover .product-image img {
+  transform: none;
 }
 
 .product-image::after {
@@ -1490,6 +1532,21 @@ h2:has(+ .products-grid) {
   padding: 1.5rem;
   position: relative;
   z-index: 2;
+}
+
+.hover-swap-card .product-content {
+  padding: 0.5rem 0.8rem;
+}
+
+.hover-swap-card .product-name {
+  font-size: 0.95rem;
+  margin: 0 0 0.2rem 0;
+}
+
+.hover-swap-card .product-desc {
+  font-size: 0.7rem;
+  margin: 0;
+  opacity: 0.8;
 }
 
 .product-card.gallery-card .product-content {
@@ -3075,6 +3132,81 @@ footer {
   font-size: 14px;
   color: rgba(245, 245, 247, 0.7);
   line-height: 1.6;
+}
+
+/* Shop Featured Section */
+.shop-featured-section {
+  padding: 40px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(224, 173, 97, 0.1);
+}
+
+.shop-featured-section .container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.shop-featured-section h2 {
+  font-size: 28px;
+  color: var(--text-light);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Lightbox for image zoom */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  cursor: zoom-out;
+  padding: 20px;
+}
+
+.image-lightbox.active {
+  display: flex;
+}
+
+.lightbox-image {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 40px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  line-height: 1;
+  padding: 0;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(224, 173, 97, 0.8);
+  transform: rotate(90deg);
+}
+
+.hover-swap-card .product-image {
+  cursor: pointer;
 }
 
 /* Shop Products Section */

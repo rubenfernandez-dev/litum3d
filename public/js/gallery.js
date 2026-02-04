@@ -310,9 +310,75 @@ const STATIC_GALLERY = [
   },
   {
     id: 'paisaje-1',
-    nombre: 'Paisajes',
+    nombre: 'Mutterhorn and Lake, Suiza',
     collection: 'paisajes',
-    imagen: ''
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213356/file_000000008e7871f5963a25bca4b24c1c_nj9mu9.png'
+  },
+    {
+    id: 'paisaje-2',
+    nombre: 'Lauterbrunnen, Suiza',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213356/file_00000000d44871f5adc9b9e61777d8d6_luvnhw.png'
+  },
+    {
+    id: 'paisaje-3',
+    nombre: 'Mutterhorn Zermatt, Suiza',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213356/file_000000006f28722f8134b730b2438bd1_1_wj2mev.png'
+  },
+    {
+    id: 'paisaje-4',
+    nombre: 'Seceda Dolomitas, Italia',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213356/file_000000007004722f91e625ce4a3baf85_y9hhkf.png'
+  },
+    {
+    id: 'paisaje-5',
+    nombre: 'Lucerne, Suiza',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213356/file_000000008094720c97c3b5c50975605c_nnqk08.png'
+  },
+    {
+    id: 'paisaje-6',
+    nombre: 'Interlaken, Suiza',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213356/file_00000000decc720c8a60584746a6e34c_un8p7q.png'
+  },
+    {
+    id: 'paisaje-7',
+    nombre: 'Lake Lucerne, Suiza',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213356/file_00000000a34c720c957722eeb44a3f75_gsc0na.png'
+  },
+    {
+    id: 'paisaje-8',
+    nombre: 'Grindelwald, Suiza',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1769633027/litum3d/reviews/vol5jmjmby7hx0vaf4lp.jpg'
+  },
+    {
+    id: 'paisaje-9',
+    nombre: 'Cime di Lavaredo, Dolomitas',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213355/file_000000006090722f94cda82b1a8c051b_ki7kc7.png'
+  },
+    {
+    id: 'paisaje-10',
+    nombre: 'Lago di Braies, Dolomitas',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213354/file_00000000cab0720ca6451e42e988e061_cfxhbf.png'
+  },
+    {
+    id: 'paisaje-11',
+    nombre: 'Lauterbrunnen Cascade, Suiza',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213354/file_00000000fd30720ca2de1bfb14130934_nmpigj.png'
+  },
+      {
+    id: 'paisaje-11',
+    nombre: 'Alpe di Siusi, Dolomitas',
+    collection: 'paisajes',
+    imagen: 'https://res.cloudinary.com/du4fvhum1/image/upload/v1770213354/file_00000000ea3471fdb34287f1b618e7d1_ymjuou.png'
   },
   {
     id: 'anime-1',

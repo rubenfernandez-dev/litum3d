@@ -71,37 +71,26 @@
             </div>
         </section>
 
-        <!-- Sección de Filtros -->
-        <section class="shop-filters-section">
+        <!-- Sección Informativa: Guía de Litofanías -->
+        <section class="shop-info-section">
             <div class="container">
-                <div class="filters-container">
-                    <!-- Filtro por Forma -->
-                    <div class="filter-group">
-                        <label for="filter-shape" class="filter-label">📐 Forme:</label>
-                        <select id="filter-shape" class="filter-select" onchange="applyFilters()">
-                            <option value="">Toutes les formes</option>
-                            <option value="esfera">Esfera</option>
-                            <option value="cubo">Cubo</option>
-                            <option value="cilindro">Cilindro</option>
-                            <option value="cono">Cono</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
+                <h2 style="text-align: center; margin-bottom: 2rem;">Comment personnaliser ta lithophanie</h2>
+                <div class="info-cards-grid">
+                    <div class="info-card">
+                        <div class="info-card-icon">🔄</div>
+                        <h3>Lithophanies cylindriques/coniques</h3>
+                        <p>2-3 photos selon l'orientation (horizontale ou verticale). Nous adaptons parfaitement tes images pour qu'elles soient impeccables.</p>
                     </div>
-
-                    <!-- Filtro por Base -->
-                    <div class="filter-group">
-                        <label for="filter-base" class="filter-label">🔧 Base:</label>
-                        <select id="filter-base" class="filter-select" onchange="applyFilters()">
-                            <option value="">Toutes les bases</option>
-                            <option value="madera">Madera natural</option>
-                            <option value="metal">Metal mate</option>
-                            <option value="plastico">Plástico premium</option>
-                            <option value="cristal">Cristal</option>
-                        </select>
+                    <div class="info-card">
+                        <div class="info-card-icon">📦</div>
+                        <h3>Lithophanies carrées</h3>
+                        <p>4 photos, une pour chaque face du cube. Parfait pour plusieurs images dans un seul produit.</p>
                     </div>
-
-                    <!-- Botón Limpiar Filtros -->
-                    <button class="filter-clear-btn" onclick="clearFilters()">🔄 Effacer les filtres</button>
+                    <div class="info-card">
+                        <div class="info-card-icon">✨</div>
+                        <h3>Édition par IA</h3>
+                        <p>As-tu besoin de modifications sur tes photos ? Nous pouvons générer des images avec l'IA pour modifier certains éléments et les adapter parfaitement à ton design. Changer de lieu ou de paysage.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -114,7 +103,72 @@
                 </div>
             </div>
         </section>
+
+        <!-- Sección Destacados: Hover Swap -->
+        <section class="shop-featured-section">
+            <div class="container">
+                <h2>Produits en vedette</h2>
+                <div class="products-grid hover-swap-grid">
+                    <article class="product-card hover-swap-card">
+                        <div class="product-image hover-swap">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1767468615/WhatsApp_Image_2025-12-21_at_21.04.25_djfc0m.jpg" alt="Produit 1 - vue de face" class="hover-swap-front">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1769592325/ChatGPT_Image_3_ene_2026_20_21_53_qmfuwx.png" alt="Produit 1 - vue alternative" class="hover-swap-back">
+                        </div>
+                        <div class="product-content">
+                            <h3 class="product-name">Rétro simple - Corde</h3>
+                            <p class="product-desc">Lampe murale rustique avec design de corde.</p>
+                        </div>
+                    </article>
+                    <article class="product-card hover-swap-card">
+                        <div class="product-image hover-swap">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1767468613/WhatsApp_Image_2025-12-21_at_21.04.25_2_rnu4le.jpg" alt="Produit 2 - vue de face" class="hover-swap-front">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1767468620/2_rdltuk.png" alt="Produit 2 - vue alternative" class="hover-swap-back">
+                        </div>
+                        <div class="product-content">
+                            <h3 class="product-name">Moderne bois - rond</h3>
+                            <p class="product-desc">Lampe murale moderne avec socle en bois rond.</p>
+                        </div>
+                    </article>
+                    <article class="product-card hover-swap-card">
+                        <div class="product-image hover-swap">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1767468610/WhatsApp_Image_2025-12-21_at_21.04.25_1_dbdwgi.jpg" alt="Produit 2 - vue de face" class="hover-swap-front">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1770212997/file_00000000d37c720aaba4d152b2b21c49_pjdtvf.png" alt="Produit 2 - vue alternative" class="hover-swap-back">
+                        </div>
+                        <div class="product-content">
+                            <h3 class="product-name">Moderne bois - carré</h3>
+                            <p class="product-desc">Lampe murale moderne avec socle en bois carré.</p>
+                        </div>
+                    </article>
+                    <article class="product-card hover-swap-card">
+                        <div class="product-image hover-swap">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1767468608/WhatsApp_Image_2025-12-21_at_21.04.24_3_urio3h.jpg" alt="Produit 3 - vue de face" class="hover-swap-front">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1767468645/15_zzsdfp.png" alt="Produit 3 - vue alternative" class="hover-swap-back">
+                        </div>
+                        <div class="product-content">
+                            <h3 class="product-name">Rétro bois - corde</h3>
+                            <p class="product-desc">Lampe murale en bois rustique avec design de corde.</p>
+                        </div>
+                    </article>
+                    <article class="product-card hover-swap-card">
+                        <div class="product-image hover-swap">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1770210866/1_w888wz.png" alt="Produit 4 - vue de face" class="hover-swap-front">
+                            <img src="https://res.cloudinary.com/du4fvhum1/image/upload/v1770210867/2_mdlg78.png" alt="Produit 4 - vue alternative" class="hover-swap-back">
+                        </div>
+                        <div class="product-content">
+                            <h3 class="product-name">Lampe murale métal-courbée</h3>
+                            <p class="product-desc">Lampe murale moderne avec structure métallique courbée.</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
     </main>
+
+    <!-- Lightbox para ampliar imágenes -->
+    <div class="image-lightbox" id="image-lightbox">
+        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+        <img src="" alt="" class="lightbox-image" id="lightbox-image">
+    </div>
 
     <!-- Modal de personalización (compartido con index) -->
     <div class="customization-modal" id="customization-modal">
@@ -246,6 +300,7 @@
     <script src="/js/cart.js"></script>
     <script src="/js/shop.js"></script>
     <script src="/js/product-variants.js"></script>
+    <script src="/js/image-lightbox.js"></script>
 
     <!-- Botón flotante WhatsApp -->
     <a href="https://wa.me/41772186229" class="whatsapp-button" title="Contacter par WhatsApp" target="_blank"
