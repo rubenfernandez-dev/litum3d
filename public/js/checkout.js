@@ -1,26 +1,45 @@
-// Stripe Checkout
-const stripe = Stripe('pk_live_51SJ8ABQJLhAe8SB3QmErgOpkRJxgcWcZVvRyCNZaE4wHLPdaUyEvoCBn7zYaZeKGNDNGNqcvbVIWA9ooStNcV3h200CfiF2Gdh');
-let cardElement;
-const CURRENCY_MAP = { ES: { code: 'EUR', symbol: '€' }, CH: { code: 'CHF', symbol: 'CHF' } };
-let eurChfRate = 1.00; // live rate fetched from backend when needed
+// Stripe Checkout (Payment Element)
+let stripe;
+let elements;
+let paymentElement;
+let clientSecret = null;
+let paymentIntentId = null;
+const CURRENCY = { code: 'CHF', symbol: 'CHF' };
 
-function initializeCheckout() {
-  const elements = stripe.elements();
-  cardElement = elements.create('card', {
-    hidePostalCode: true
-  });
-  cardElement.mount('#card-element');
-
+async function initializeCheckout() {
+  await initializeStripe();
   // Render order summary
   renderOrderSummary();
   updateTotalAmount();
 
   // Form submission
   document.getElementById('checkout-form').addEventListener('submit', handleCheckout);
-  // Preload FX if CH is selected by default
-  const countrySel = document.getElementById('customer_country');
-  if (countrySel && countrySel.value === 'CH') {
-    loadFxRate();
+
+  const initPayment = async () => {
+    const handled = await handleReturnFromRedirect();
+    if (!handled) {
+      await setupPaymentElement();
+    }
+  };
+
+  initPayment();
+}
+
+async function initializeStripe() {
+  const statusDiv = document.getElementById('payment-status');
+  try {
+    const response = await fetch('/api/stripe-config');
+    const result = await response.json();
+    if (!result.ok || !result.publicKey) {
+      throw new Error('Stripe no configurado');
+    }
+    stripe = Stripe(result.publicKey);
+  } catch (err) {
+    console.error('Stripe init error:', err);
+    if (statusDiv) {
+      statusDiv.className = 'status error';
+      statusDiv.textContent = `✗ ${err.message}`;
+    }
   }
 }
 
@@ -33,9 +52,7 @@ function renderOrderSummary() {
     return;
   }
 
-  const countrySel = document.getElementById('customer_country');
-  const country = countrySel ? countrySel.value : 'ES';
-  const currency = CURRENCY_MAP[country] || CURRENCY_MAP['ES'];
+  const currency = CURRENCY;
 
   // Totales: usar directamente item.price del carrito (ya incluye extras)
   let totalGross = 0;
@@ -81,38 +98,13 @@ function renderOrderSummary() {
 }
 
 function updateTotalAmount() {
-  const countrySel = document.getElementById('customer_country');
-  const country = countrySel ? countrySel.value : 'ES';
-  const currency = CURRENCY_MAP[country] || CURRENCY_MAP['ES'];
   let total = getCartTotal(); // precios ya incluyen IVA
   document.getElementById('total-amount').textContent = total.toFixed(2);
   const symbolEl = document.getElementById('currency-symbol');
-  if (symbolEl) symbolEl.textContent = currency.symbol + ' ';
+  if (symbolEl) symbolEl.textContent = CURRENCY.symbol + ' ';
+  updatePayButtonLabel(CURRENCY, total);
   if (document.getElementById('cart-badge')) {
     document.getElementById('cart-badge').textContent = getCartCount();
-  }
-}
-
-function onCountryChange() {
-  const countrySel = document.getElementById('customer_country');
-  const country = countrySel ? countrySel.value : 'ES';
-  if (country === 'CH') {
-    loadFxRate().finally(updateTotalAmount);
-  } else {
-    eurChfRate = 1.00;
-    updateTotalAmount();
-  }
-}
-
-async function loadFxRate() {
-  try {
-    const resp = await fetch('/api/fx/eur-chf');
-    const data = await resp.json();
-    if (data.ok && Number.isFinite(data.rate) && data.rate > 0) {
-      eurChfRate = parseFloat(data.rate);
-    }
-  } catch (e) {
-    // keep previous or default
   }
 }
 
@@ -133,87 +125,219 @@ async function handleCheckout(e) {
   // Get form data
   const countrySel = document.getElementById('customer_country');
   const country = countrySel ? countrySel.value : 'ES';
-  const currency = CURRENCY_MAP[country] || CURRENCY_MAP['ES'];
+  const currency = CURRENCY;
 
-  const customerData = {
-    name: form.customer_name.value,
-    email: form.customer_email.value,
-    phone: form.customer_phone.value,
-    address: form.customer_address.value,
-    city: form.customer_city.value,
-    zip: form.customer_zip.value,
-    country: country
-  };
+  const customerData = getCustomerData(form, country);
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Procesando...';
   statusDiv.textContent = '';
 
   try {
-    // Create payment method with Stripe
-    const { paymentMethod, error } = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement,
-      billing_details: {
-        name: customerData.name,
-        email: customerData.email,
-        address: {
-          line1: customerData.address,
-          city: customerData.city,
-          postal_code: customerData.zip,
-          country: customerData.country
-        },
-        phone: customerData.phone
-      }
+    if (!stripe || !elements) {
+      throw new Error('No se pudo inicializar el método de pago. Recarga la página.');
+    }
+
+    savePendingOrder({ cart, customerData, currency: currency.code.toLowerCase() });
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/checkout`
+      },
+      redirect: 'if_required'
     });
 
     if (error) {
       throw new Error(error.message);
     }
 
-    // Send to backend
-    const response = await fetch('/api/pay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        paymentMethodId: paymentMethod.id,
-        cart: cart,
-        customerData: customerData,
-        currency: currency.code.toLowerCase()
-      })
-    });
-
-    const result = await response.json();
-
-    if (!result.ok) {
-      throw new Error(result.error || 'Error al procesar el pago');
+    if (paymentIntent && paymentIntent.status === 'succeeded') {
+      await finalizeOrder(paymentIntent.id);
+      return;
     }
 
-    // Success
-    statusDiv.className = 'status success';
-    statusDiv.innerHTML = `
-      <strong>✓ Pago realizado con éxito!</strong><br>
-      <small>Se han enviado confirmaciones a tu email. Serás redirigido...</small>
-    `;
-
-    clearCart();
-
-    // Redirect after 3 seconds
-    setTimeout(() => {
-      window.location.href = `/success?orderId=${result.orderId}`;
-    }, 3000);
-
+    if (paymentIntent && paymentIntent.status === 'processing') {
+      statusDiv.className = 'status success';
+      statusDiv.textContent = 'Pago en proceso. Serás redirigido si es necesario.';
+      return;
+    }
   } catch (err) {
     console.error('Checkout error:', err);
     statusDiv.className = 'status error';
     statusDiv.textContent = `✗ ${err.message}`;
     submitBtn.disabled = false;
     // Reset button label with current currency
-    const countryReset = document.getElementById('customer_country')?.value || 'ES';
-    const currReset = CURRENCY_MAP[countryReset] || CURRENCY_MAP['ES'];
+    const currReset = CURRENCY;
     let totalReset = getCartTotal(); // sin conversión
     submitBtn.textContent = `Pagar ${currReset.symbol} ${totalReset.toFixed(2)}`;
   }
+}
+
+function getCustomerData(form, country) {
+  return {
+    name: form?.customer_name?.value || '',
+    email: form?.customer_email?.value || '',
+    phone: form?.customer_phone?.value || '',
+    address: form?.customer_address?.value || '',
+    city: form?.customer_city?.value || '',
+    zip: form?.customer_zip?.value || '',
+    country: country || 'ES'
+  };
+}
+
+function updatePayButtonLabel(currency, total) {
+  const btn = document.querySelector('#checkout-form button[type="submit"]');
+  if (!btn) return;
+  const curr = currency || CURRENCY;
+  const amount = Number.isFinite(total) ? total : getCartTotal();
+  btn.textContent = `Pagar ${curr.symbol} ${amount.toFixed(2)}`;
+}
+
+async function setupPaymentElement() {
+  const statusDiv = document.getElementById('payment-status');
+  try {
+    if (!stripe) {
+      throw new Error('Stripe no está listo');
+    }
+    const cart = getCart();
+    if (!cart.length) return;
+
+    const countrySel = document.getElementById('customer_country');
+    const country = countrySel ? countrySel.value : 'ES';
+    const currency = CURRENCY;
+
+    const form = document.getElementById('checkout-form');
+    const customerData = getCustomerData(form, country);
+
+    const response = await fetch('/api/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cart,
+        customerData,
+        currency: currency.code.toLowerCase()
+      })
+    });
+
+    const result = await response.json();
+    if (!result.ok) {
+      throw new Error(result.error || 'No se pudo iniciar el pago');
+    }
+
+    clientSecret = result.clientSecret;
+    paymentIntentId = result.paymentIntentId;
+
+    if (paymentElement) {
+      paymentElement.unmount();
+    }
+
+    const order = ['paypal', 'twint', 'amazon_pay', 'card'];
+
+    elements = stripe.elements({ clientSecret });
+    paymentElement = elements.create('payment', {
+      layout: {
+        type: 'accordion',
+        defaultCollapsed: false,
+        radios: true,
+        spacedAccordionItems: true
+      },
+      paymentMethodOrder: order
+    });
+    paymentElement.mount('#payment-element');
+  } catch (err) {
+    console.error('Payment element error:', err);
+    if (statusDiv) {
+      statusDiv.className = 'status error';
+      statusDiv.textContent = `✗ ${err.message}`;
+    }
+  }
+}
+
+function savePendingOrder(data) {
+  try {
+    localStorage.setItem('pendingOrder', JSON.stringify(data));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function getPendingOrder() {
+  try {
+    const raw = localStorage.getItem('pendingOrder');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function clearPendingOrder() {
+  try {
+    localStorage.removeItem('pendingOrder');
+  } catch (e) {
+    // ignore
+  }
+}
+
+async function finalizeOrder(piId) {
+  const statusDiv = document.getElementById('payment-status');
+  const pending = getPendingOrder();
+  if (!pending) {
+    throw new Error('No se encontraron datos del pedido. Intenta de nuevo.');
+  }
+
+  const response = await fetch('/api/confirm-payment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      paymentIntentId: piId || paymentIntentId,
+      cart: pending.cart,
+      customerData: pending.customerData,
+      currency: pending.currency
+    })
+  });
+
+  const result = await response.json();
+  if (!result.ok) {
+    throw new Error(result.error || 'No se pudo confirmar el pago');
+  }
+
+  statusDiv.className = 'status success';
+  statusDiv.innerHTML = `
+    <strong>✓ Pago realizado con éxito!</strong><br>
+    <small>Se han enviado confirmaciones a tu email. Serás redirigido...</small>
+  `;
+
+  clearCart();
+  clearPendingOrder();
+
+  setTimeout(() => {
+    window.location.href = `/success?orderId=${result.orderId}`;
+  }, 1500);
+}
+
+async function handleReturnFromRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const piId = params.get('payment_intent');
+  if (!piId) return false;
+
+  const statusDiv = document.getElementById('payment-status');
+  if (statusDiv) {
+    statusDiv.className = 'status';
+    statusDiv.textContent = 'Confirmando pago...';
+  }
+
+  try {
+    await finalizeOrder(piId);
+  } catch (err) {
+    console.error('Return confirm error:', err);
+    if (statusDiv) {
+      statusDiv.className = 'status error';
+      statusDiv.textContent = `✗ ${err.message}`;
+    }
+  }
+
+  return true;
 }
 
 function escapeHtml(text) {
@@ -227,4 +351,6 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-document.addEventListener('DOMContentLoaded', initializeCheckout);
+document.addEventListener('DOMContentLoaded', () => {
+  initializeCheckout();
+});

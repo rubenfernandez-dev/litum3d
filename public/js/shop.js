@@ -351,9 +351,12 @@ async function confirmCustomization() {
   }
 
   try {
+    const extras = getExtrasFromUI();
+    const variantDelta = getVariantsPriceDelta();
+
     // Crear FormData para envío de archivos
     const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+    files.forEach(file => formData.append('images', file));
     formData.append('product_id', customizationState.product.id);
     formData.append('model_id', customizationState.selectedModelId);
     formData.append('notes', notes);
@@ -375,41 +378,40 @@ async function confirmCustomization() {
     formData.append('extra_adapter', document.getElementById('extra-adapter')?.checked ? '1' : '0');
 
     // Subir archivos y obtener IDs
-    const uploadRes = await fetch('/api/pedidos/upload-files', {
+    const uploadRes = await fetch('/api/uploads/custom', {
       method: 'POST',
       body: formData
     });
 
     if (!uploadRes.ok) {
-      const errorData = await uploadRes.json();
-      alert('Error al subir archivos: ' + (errorData.message || 'Error desconocido'));
+      let errorMsg = 'Error desconocido';
+      try {
+        const errorData = await uploadRes.json();
+        errorMsg = errorData.message || errorData.error || errorMsg;
+      } catch (e) {
+        const text = await uploadRes.text();
+        if (text) errorMsg = text;
+      }
+      alert('Error al subir archivos: ' + errorMsg);
       return;
     }
 
     const uploadData = await uploadRes.json();
 
-    // Crear item del carrito
-    const cartItem = {
-      product_id: customizationState.product.id,
-      product_name: customizationState.product.nombre,
-      product_price: parseFloat(customizationState.product.precio),
-      quantity: 1,
-      model_id: customizationState.selectedModelId,
-      model_name: customizationState.selectedModelName,
-      model_price_delta: customizationState.selectedModelPriceDelta,
-      uploaded_files: uploadData.files || [],
-      notes: notes,
-      variants: selectedVariants,
-      extras: {
-        upscale: document.getElementById('extra-upscale')?.checked ? true : false,
-        qr: document.getElementById('extra-qr')?.checked ? true : false,
-        qr_message: document.getElementById('extra-qr-message')?.value || '',
-        adapter: document.getElementById('extra-adapter')?.checked ? true : false
-      }
-    };
-
     // Agregar al carrito
-    addToCart(cartItem);
+    addToCart(
+      customizationState.product.id,
+      customizationState.product.nombre,
+      customizationState.product.precio,
+      {
+        modelId: customizationState.selectedModelId,
+        modelName: customizationState.selectedModelName,
+        priceDelta: (parseFloat(customizationState.selectedModelPriceDelta || 0) + variantDelta),
+        images: uploadData.files || [],
+        notes: buildNotesWithExtras(notes, extras),
+        extras: extras
+      }
+    );
 
     // Cerrar modal
     closeCustomization();
@@ -420,6 +422,38 @@ async function confirmCustomization() {
     console.error(err);
     alert('Error al procesar la personalización');
   }
+}
+
+function getExtrasFromUI() {
+  const upscale = document.getElementById('extra-upscale')?.checked || false;
+  const qr = document.getElementById('extra-qr')?.checked || false;
+  const adapter = document.getElementById('extra-adapter')?.checked || false;
+  const qrMessage = document.getElementById('extra-qr-message')?.value || '';
+
+  const extrasTotal = (upscale ? 5 : 0) + (qr ? 5 : 0) + (adapter ? 4 : 0);
+  return { upscale, qr, qrMessage, adapter, extrasTotal, currency: 'CHF' };
+}
+
+function getVariantsPriceDelta() {
+  let variantsCost = 0;
+  document.querySelectorAll('[data-variants-section] select').forEach(select => {
+    const selectedOption = select.querySelector('option:checked');
+    if (selectedOption && selectedOption.value) {
+      variantsCost += parseFloat(selectedOption.dataset.price || 0);
+    }
+  });
+  return variantsCost;
+}
+
+function buildNotesWithExtras(notes, extras) {
+  const parts = [];
+  if (notes && notes.trim()) parts.push(notes.trim());
+  const extrasList = [];
+  if (extras?.upscale) extrasList.push(`Upscale +5 ${extras.currency}`);
+  if (extras?.qr) extrasList.push(`QR +5 ${extras.currency}${extras.qrMessage ? `: ${extras.qrMessage}` : ''}`);
+  if (extras?.adapter) extrasList.push(`Adaptador USB +4 ${extras.currency}`);
+  if (extrasList.length) parts.push(`Extras: ${extrasList.join(' · ')}`);
+  return parts.join(' | ');
 }
 
 /**

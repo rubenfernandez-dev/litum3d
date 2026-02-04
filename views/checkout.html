@@ -73,20 +73,21 @@
           </label>
           <label>
             País *
-            <select name="customer_country" id="customer_country" required onchange="onCountryChange()">
-              <option value="ES" selected>España (EUR)</option>
-              <option value="CH">Suiza (CHF)</option>
+            <select name="customer_country" id="customer_country" required>
+              <option value="ES" selected>España</option>
+              <option value="CH">Suiza</option>
             </select>
           </label>
 
           <h3 style="color: var(--gold); margin-top: 2rem;">Datos de Pago</h3>
 
           <label>
-            Datos de la Tarjeta *
-            <div id="card-element"
+            Método de Pago *
+            <div id="payment-element"
               style="padding: 0.9rem; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(224, 173, 97, 0.3); border-radius: 8px; margin-top: 0.6rem;">
             </div>
           </label>
+          <div id="payment-message" style="margin-top: 0.6rem;"></div>
 
           <button type="submit" style="width: 100%; margin-top: 1.5rem;">
             Pagar <span id="currency-symbol">€</span><span id="total-amount">0.00</span>

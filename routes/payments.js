@@ -1,6 +1,8 @@
 const express = require('express');
 const Stripe = require('stripe');
 const nodemailer = require('nodemailer');
+const path = require('path');
+const fs = require('fs');
 const { pool } = require('../config/db');
 
 const router = express.Router();
@@ -20,6 +22,18 @@ const transporter = nodemailer.createTransport({
 // FX rate cache (EUR→CHF)
 let eurChfCache = { rate: null, updatedAt: 0 };
 const FX_CACHE_TTL_MS = parseInt(process.env.FX_CACHE_TTL_MS || '21600000'); // 6h default
+
+function calculateCartTotals(cart) {
+  let totalCurr = 0;
+  for (const item of cart) {
+    const qty = parseInt(item.quantity || 1);
+    const unit = parseFloat(item.price || 0);
+    totalCurr += unit * qty;
+  }
+  const subtotalCurr = totalCurr / 1.21;
+  const taxCurr = totalCurr - subtotalCurr;
+  return { totalCurr, subtotalCurr, taxCurr };
+}
 
 async function getEurToChfRate() {
   const now = Date.now();
@@ -54,6 +68,10 @@ router.get('/fx/eur-chf', async (req, res) => {
   }
 });
 
+router.get('/stripe-config', (req, res) => {
+  return res.json({ ok: true, publicKey: process.env.STRIPE_PUBLIC_KEY || '' });
+});
+
 router.post('/pay', async (req, res) => {
   const { paymentMethodId, cart, customerData, currency } = req.body;
 
@@ -63,25 +81,17 @@ router.post('/pay', async (req, res) => {
     }
 
     // Calculate totals from cart items
-    // Los precios están siempre en EUR. El total = suma de item.price sin conversión.
-    // currency solo indica en qué moneda mostrar (EUR o CHF) pero no afecta el cálculo.
-    const selectedCurrency = (currency || 'eur').toLowerCase();
+    // Los precios se cobran en CHF. El total = suma de item.price sin conversión.
+    const selectedCurrency = 'chf';
 
     // Debug: log carrito recibido
     console.log('🧾 Carrito recibido:', cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price })));
 
-    let totalCurr = 0;
-    for (const item of cart) {
-      const qty = parseInt(item.quantity || 1);
-      const unit = parseFloat(item.price || 0);
-      totalCurr += unit * qty;
-    }
+    const { totalCurr, subtotalCurr, taxCurr } = calculateCartTotals(cart);
     // Debug: log totales
     console.log(`💶 Moneda seleccionada: ${selectedCurrency.toUpperCase()} | Total calculado: ${totalCurr.toFixed(2)}`);
 
     // Desglose informativo para emails/factura (sin afectar al cobro)
-    const subtotalCurr = totalCurr / 1.21;
-    const taxCurr = totalCurr - subtotalCurr;
     console.log(`📊 Desglose (informativo): Base=${subtotalCurr.toFixed(2)} IVA=${taxCurr.toFixed(2)} TOTAL=${totalCurr.toFixed(2)}`);
 
     // Determine currency
@@ -90,7 +100,7 @@ router.post('/pay', async (req, res) => {
     // Create payment intent with Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount, // smallest unit
-      currency: selectedCurrency === 'chf' ? 'chf' : 'eur',
+      currency: 'chf',
       payment_method: paymentMethodId,
       confirm: true,
       automatic_payment_methods: {
@@ -111,65 +121,17 @@ router.post('/pay', async (req, res) => {
       return res.json({ ok: false, error: 'Pago rechazado. Intenta de nuevo.' });
     }
 
-    // Store order in database
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    const { orderId } = await createOrderFromCart({
+      cart,
+      customerData,
+      totalCurr,
+      selectedCurrency,
+      paymentIntentId: paymentIntent.id,
+      paymentMethodType: paymentIntent.payment_method_types?.[0]
+    });
 
-      // Insert into pedidos
-      const [orderResult] = await conn.query(
-        'INSERT INTO pedidos (usuario_id, estado_id, total, notas) VALUES (?, ?, ?, ?)',
-        [null, 1, totalCurr, `Moneda: ${selectedCurrency.toUpperCase()}`]
-      );
-
-      const orderId = orderResult.insertId;
-
-      // Insert items into detalle_pedidos
-      for (const item of cart) {
-        // Guardar variantes seleccionadas si existen (baseId, shapeId)
-        let variantesSeleccionadas = null;
-        if (item.baseId || item.shapeId) {
-          variantesSeleccionadas = JSON.stringify({ baseId: item.baseId || null, shapeId: item.shapeId || null });
-        }
-        const [detailResult] = await conn.query(
-          'INSERT INTO detalle_pedidos (pedido_id, producto_id, modelo_id, cantidad, precio_unitario, personalizacion_notas, variantes_seleccionadas) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [orderId, item.id, item.modelId || null, item.quantity, item.price, item.notes || null, variantesSeleccionadas]
-        );
-
-        const detalleId = detailResult.insertId;
-        if (Array.isArray(item.images)) {
-          const imagesToStore = item.images.slice(0, 3);
-          for (const img of imagesToStore) {
-            const ruta = typeof img === 'string' ? img : (img.url || img.filename || null);
-            if (ruta) {
-              await conn.query(
-                'INSERT INTO detalle_pedido_imagenes (detalle_pedido_id, ruta) VALUES (?, ?)',
-                [detalleId, ruta]
-              );
-            }
-          }
-        }
-      }
-
-      // Store payment intent ID for reference
-      await conn.query(
-        'UPDATE pedidos SET notas = CONCAT(IFNULL(notas, \'\'), " | Stripe ID: ", ?) WHERE id = ?',
-        [paymentIntent.id, orderId]
-      );
-
-      await conn.commit();
-
-      console.log(`📦 Pedido #${orderId} creado en BD`);
-      console.log(`📧 Intentando enviar emails...`);
-
-      // Send confirmation emails
-      await sendConfirmationEmails(orderId, customerData, cart, totalCurr, selectedCurrency);
-
-      console.log(`✓ Proceso completado para pedido #${orderId}`);
-      res.json({ ok: true, orderId });
-    } finally {
-      conn.release();
-    }
+    console.log(`✓ Proceso completado para pedido #${orderId}`);
+    res.json({ ok: true, orderId });
 
   } catch (err) {
     console.error('Payment error:', err);
@@ -177,60 +139,276 @@ router.post('/pay', async (req, res) => {
   }
 });
 
+router.post('/create-payment-intent', async (req, res) => {
+  const { cart, customerData } = req.body;
+
+  try {
+    if (!cart || !Array.isArray(cart) || cart.length === 0) {
+      return res.json({ ok: false, error: 'Carrito vacío' });
+    }
+
+    const selectedCurrency = 'chf';
+    const { totalCurr, subtotalCurr, taxCurr } = calculateCartTotals(cart);
+
+    console.log(`💶 Crear PI | Moneda: ${selectedCurrency.toUpperCase()} | Total: ${totalCurr.toFixed(2)}`);
+    console.log(`📊 Desglose (informativo): Base=${subtotalCurr.toFixed(2)} IVA=${taxCurr.toFixed(2)} TOTAL=${totalCurr.toFixed(2)}`);
+
+    const amount = Math.round(totalCurr * 100);
+
+    const currencyCode = 'chf';
+    const paymentMethodTypes = ['paypal', 'twint', 'amazon_pay', 'card'];
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: currencyCode,
+      payment_method_types: paymentMethodTypes,
+      description: `Pedido LITUM3D - ${customerData?.name || 'Cliente'}`,
+      receipt_email: customerData?.email || undefined,
+      metadata: {
+        customer_name: customerData?.name || '',
+        customer_email: customerData?.email || '',
+        customer_phone: customerData?.phone || '',
+        currency: selectedCurrency
+      }
+    });
+
+    return res.json({
+      ok: true,
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id
+    });
+  } catch (err) {
+    console.error('Create PI error:', err);
+    return res.json({ ok: false, error: err.message || 'Error al iniciar pago' });
+  }
+});
+
+router.post('/confirm-payment', async (req, res) => {
+  const { paymentIntentId, cart, customerData } = req.body;
+
+  try {
+    if (!paymentIntentId || !cart || !customerData) {
+      return res.json({ ok: false, error: 'Datos incompletos' });
+    }
+
+    const selectedCurrency = 'chf';
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+      return res.json({ ok: false, error: 'Pago no confirmado' });
+    }
+
+    const { totalCurr } = calculateCartTotals(cart);
+    const expectedAmount = Math.round(totalCurr * 100);
+    const expectedCurrency = 'chf';
+
+    if (paymentIntent.amount !== expectedAmount || paymentIntent.currency !== expectedCurrency) {
+      return res.json({ ok: false, error: 'El total del pago no coincide' });
+    }
+
+    const finalCustomerData = {
+      name: customerData?.name || paymentIntent.metadata?.customer_name || null,
+      email: customerData?.email || paymentIntent.metadata?.customer_email || paymentIntent.receipt_email || null,
+      phone: customerData?.phone || paymentIntent.metadata?.customer_phone || null,
+      address: customerData?.address || null,
+      city: customerData?.city || null,
+      zip: customerData?.zip || null,
+      country: customerData?.country || null
+    };
+
+    const { orderId } = await createOrderFromCart({
+      cart,
+      customerData: finalCustomerData,
+      totalCurr,
+      selectedCurrency,
+      paymentIntentId: paymentIntent.id,
+      paymentMethodType: paymentIntent.payment_method_types?.[0]
+    });
+
+    return res.json({ ok: true, orderId });
+  } catch (err) {
+    console.error('Confirm payment error:', err);
+    return res.json({ ok: false, error: err.message || 'Error al confirmar pago' });
+  }
+});
+
+async function createOrderFromCart({ cart, customerData, totalCurr, selectedCurrency, paymentIntentId, paymentMethodType }) {
+  const conn = await pool.getConnection();
+  try {
+    const [existing] = await conn.query(
+      'SELECT id FROM pedidos WHERE notas LIKE ?',
+      [`%Stripe ID: ${paymentIntentId}%`]
+    );
+    if (existing.length) {
+      return { orderId: existing[0].id, alreadyProcessed: true };
+    }
+
+    await conn.beginTransaction();
+
+    // Insert into pedidos
+    const [orderResult] = await conn.query(
+      'INSERT INTO pedidos (usuario_id, estado_id, total, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_zip, customer_country, notas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        null,
+        1,
+        totalCurr,
+        customerData?.name || null,
+        customerData?.email || null,
+        customerData?.phone || null,
+        customerData?.address || null,
+        customerData?.city || null,
+        customerData?.zip || null,
+        customerData?.country || null,
+        `Moneda: ${selectedCurrency.toUpperCase()}`
+      ]
+    );
+
+    const orderId = orderResult.insertId;
+
+    // Insert items into detalle_pedidos
+    for (const item of cart) {
+      const rawModelId = item.modelId ?? item.model_id ?? item.modelID ?? null;
+      let safeModelId = null;
+      if (rawModelId !== undefined && rawModelId !== null && rawModelId !== '') {
+        const parsed = parseInt(rawModelId, 10);
+        if (!Number.isNaN(parsed)) {
+          const [modelRows] = await conn.query(
+            'SELECT id FROM product_models WHERE id = ? LIMIT 1',
+            [parsed]
+          );
+          if (modelRows.length) safeModelId = parsed;
+        }
+      }
+
+      // Guardar variantes seleccionadas si existen (baseId, shapeId)
+      let variantesSeleccionadas = null;
+      if (item.baseId || item.shapeId) {
+        variantesSeleccionadas = JSON.stringify({ baseId: item.baseId || null, shapeId: item.shapeId || null });
+      }
+      const [detailResult] = await conn.query(
+        'INSERT INTO detalle_pedidos (pedido_id, producto_id, modelo_id, cantidad, precio_unitario, personalizacion_notas, variantes_seleccionadas) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [orderId, item.id, safeModelId, item.quantity, item.price, item.notes || null, variantesSeleccionadas]
+      );
+
+      const detalleId = detailResult.insertId;
+      if (Array.isArray(item.images)) {
+        const imagesToStore = item.images.slice(0, 3);
+        for (const img of imagesToStore) {
+          const ruta = typeof img === 'string' ? img : (img.url || img.filename || null);
+          if (ruta) {
+            await conn.query(
+              'INSERT INTO detalle_pedido_imagenes (detalle_pedido_id, ruta) VALUES (?, ?)',
+              [detalleId, ruta]
+            );
+          }
+        }
+      }
+    }
+
+    // Store payment intent ID for reference
+    const methodTag = paymentMethodType ? ` | Método: ${paymentMethodType}` : '';
+    await conn.query(
+      'UPDATE pedidos SET notas = CONCAT(IFNULL(notas, \'\'), ?, " | Stripe ID: ", ?) WHERE id = ?',
+      [methodTag, paymentIntentId, orderId]
+    );
+
+    await conn.commit();
+
+    console.log(`📦 Pedido #${orderId} creado en BD`);
+    console.log(`📧 Intentando enviar emails...`);
+
+    // Send confirmation emails
+    await sendConfirmationEmails(orderId, customerData, cart, totalCurr, selectedCurrency);
+
+    return { orderId, alreadyProcessed: false };
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch (e) {
+      // ignore rollback errors
+    }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 async function sendConfirmationEmails(orderId, customerData, cart, total, selectedCurrency) {
   try {
+    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.BASE_URL || 'https://litum3d.com';
+    const logoUrl = process.env.LOGO_URL
+      ? process.env.LOGO_URL
+      : `${baseUrl.replace(/\/$/, '')}/img/logos/lineal.logo.png`;
     const symbol = selectedCurrency === 'chf' ? 'CHF' : '€';
-    const cartHTML = cart.map(item => `
+    const cartHTML = cart.map(item => {
+      const imageLinks = Array.isArray(item.images) && item.images.length
+        ? `<div style="margin-top:6px;">${item.images.map(img => {
+            const raw = typeof img === 'string' ? img : (img.url || img.filename || '');
+            if (!raw) return '';
+            const url = raw.startsWith('http') ? raw : `${baseUrl.replace(/\/$/, '')}${raw.startsWith('/') ? '' : '/'}${raw}`;
+            return `<a href="${escapeHtml(url)}" style="color:#e0ad61; text-decoration:underline; font-size:12px;" target="_blank">Ver imagen</a>`;
+          }).filter(Boolean).join(' · ')}
+          </div>`
+        : '';
+
+      return `
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">
           ${escapeHtml(item.name)}${item.modelName ? ' · ' + escapeHtml(item.modelName) : ''}
           ${item.notes ? `<br><small style="color:#666;">Notas: ${escapeHtml(item.notes)}</small>` : ''}
-          ${Array.isArray(item.images) && item.images.length ? `<br><small style="color:#666;">Imágenes: ${item.images.length}</small>` : ''}
+          ${Array.isArray(item.images) && item.images.length ? `<br><small style="color:#666;">Imágenes: ${item.images.length}</small></small>` : ''}
+          ${imageLinks}
         </td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${symbol}${item.price.toFixed(2)}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${symbol}${(item.price * item.quantity).toFixed(2)}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const subtotal = total / 1.21;
     const tax = total - subtotal;
 
     // Email to customer
     const customerEmailHTML = `
-      <div style="background:#f5f7fb; padding:24px; font-family:'Segoe UI',Arial,sans-serif; color:#101828;">
-        <div style="max-width:640px; margin:0 auto; background:#ffffff; border:1px solid #e9eef5; border-radius:12px; box-shadow:0 12px 32px rgba(16,24,40,0.08); overflow:hidden;">
-          <div style="background:linear-gradient(135deg,#1a1a2e,#2d2f4a); color:#fff; padding:18px 24px;">
-            <div style="font-size:20px; font-weight:700;">Pedido confirmado</div>
-            <div style="opacity:0.9; font-size:13px;">#${orderId} · Pago recibido</div>
+      <div style="background:#0f172a; padding:32px 16px; font-family:'Segoe UI',Arial,sans-serif; color:#e5e7eb;">
+        <div style="max-width:680px; margin:0 auto; background:#111827; border:1px solid rgba(255,255,255,0.08); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.45); overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#0b1020,#1a1a2e); padding:18px 24px; display:flex; align-items:center; gap:12px;">
+            <div style="background:#ffffff; padding:6px 10px; border-radius:10px; display:flex; align-items:center;">
+              <img src="${logoUrl}" alt="LITUM3D" style="height:36px; width:auto; display:block;" />
+            </div>
+            <div>
+              <div style="font-size:18px; font-weight:700; color:#fff;">Pedido confirmado</div>
+              <div style="opacity:0.8; font-size:13px; color:#cbd5f5;">#${orderId} · Pago recibido</div>
+            </div>
           </div>
 
-          <div style="padding:22px 24px; line-height:1.6;">
-            <p style="margin:0 0 8px 0; font-size:15px;">Hola <strong>${escapeHtml(customerData.name)}</strong>,</p>
-            <p style="margin:0; color:#475467;">Gracias por tu compra en LITUM3D. Estamos preparando tu pedido.</p>
+          <div style="padding:24px; line-height:1.6;">
+            <p style="margin:0 0 8px 0; font-size:15px; color:#e5e7eb;">Hola <strong>${escapeHtml(customerData.name)}</strong>,</p>
+            <p style="margin:0; color:#b6c2d9;">Gracias por tu compra en LITUM3D. Estamos preparando tu pedido.</p>
 
-            <div style="margin:18px 0; padding:14px 16px; background:#f8fafc; border:1px solid #e9eef5; border-radius:10px;">
-              <div style="font-weight:700; font-size:14px; color:#0f172a;">Resumen de pago</div>
-              <div style="margin-top:8px; display:flex; justify-content:space-between; color:#475467; font-size:14px;">
+            <div style="margin:18px 0; padding:14px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px;">
+              <div style="font-weight:700; font-size:14px; color:#f8fafc;">Resumen de pago</div>
+              <div style="margin-top:8px; display:flex; justify-content:space-between; color:#cbd5f5; font-size:14px;">
                 <span>Base (sin IVA)</span><span>${symbol}${subtotal.toFixed(2)}</span>
               </div>
-              <div style="margin-top:4px; display:flex; justify-content:space-between; color:#475467; font-size:14px;">
+              <div style="margin-top:4px; display:flex; justify-content:space-between; color:#cbd5f5; font-size:14px;">
                 <span>IVA (21%)</span><span>${symbol}${tax.toFixed(2)}</span>
               </div>
-              <div style="margin-top:10px; display:flex; justify-content:space-between; font-weight:800; font-size:16px; color:#1a1a2e;">
+              <div style="margin-top:10px; display:flex; justify-content:space-between; font-weight:800; font-size:16px; color:#e0ad61;">
                 <span>TOTAL</span><span>${symbol}${total.toFixed(2)}</span>
               </div>
             </div>
 
             <div style="margin-top:16px;">
-              <div style="font-weight:700; font-size:14px; color:#0f172a; margin-bottom:10px;">Detalles del pedido</div>
-              <table style="width:100%; border-collapse:collapse; border:1px solid #e9eef5;">
+              <div style="font-weight:700; font-size:14px; color:#f8fafc; margin-bottom:10px;">Detalles del pedido</div>
+              <table style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.08);">
                 <thead>
-                  <tr style="background:#f8fafc; border-bottom:1px solid #e9eef5;">
-                    <th style="padding:10px; text-align:left; font-size:13px; color:#344054;">Producto</th>
-                    <th style="padding:10px; text-align:center; font-size:13px; color:#344054;">Cant.</th>
-                    <th style="padding:10px; text-align:right; font-size:13px; color:#344054;">Precio</th>
-                    <th style="padding:10px; text-align:right; font-size:13px; color:#344054;">Subtotal</th>
+                  <tr style="background:rgba(255,255,255,0.04); border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <th style="padding:10px; text-align:left; font-size:12px; color:#cbd5f5;">Producto</th>
+                    <th style="padding:10px; text-align:center; font-size:12px; color:#cbd5f5;">Cant.</th>
+                    <th style="padding:10px; text-align:right; font-size:12px; color:#cbd5f5;">Precio</th>
+                    <th style="padding:10px; text-align:right; font-size:12px; color:#cbd5f5;">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -239,9 +417,9 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
               </table>
             </div>
 
-            <div style="margin-top:18px; padding:12px 14px; background:#fff8ed; border:1px solid #f4e3c3; border-radius:10px;">
-              <div style="font-weight:700; color:#8b5a1e; font-size:14px;">Datos de envío</div>
-              <div style="margin-top:6px; color:#6b7280; font-size:14px; line-height:1.5;">
+            <div style="margin-top:18px; padding:12px 14px; background:rgba(224,173,97,0.08); border:1px solid rgba(224,173,97,0.35); border-radius:12px;">
+              <div style="font-weight:700; color:#f0c070; font-size:14px;">Datos de envío</div>
+              <div style="margin-top:6px; color:#d0d5e0; font-size:14px; line-height:1.5;">
                 ${escapeHtml(customerData.name)}<br>
                 ${escapeHtml(customerData.address)}<br>
                 ${escapeHtml(customerData.zip)} ${escapeHtml(customerData.city)}<br>
@@ -249,10 +427,10 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
               </div>
             </div>
 
-            <p style="margin-top:18px; color:#475467; font-size:13px;">Si tienes dudas, responde a este correo o contáctanos y te ayudaremos.</p>
+            <p style="margin-top:18px; color:#b6c2d9; font-size:13px;">Si tienes dudas, responde a este correo o contáctanos y te ayudaremos.</p>
 
             <div style="margin-top:14px;">
-              <a href="https://litum3d.com" style="display:inline-block; padding:12px 18px; background:#1a1a2e; color:#fff; border-radius:8px; text-decoration:none; font-weight:700; font-size:14px;">Ir a LITUM3D</a>
+              <a href="${baseUrl}" style="display:inline-block; padding:12px 18px; background:linear-gradient(135deg,#e0ad61,#f0c070); color:#1a1a2e; border-radius:10px; text-decoration:none; font-weight:800; font-size:14px;">Ir a LITUM3D</a>
             </div>
           </div>
         </div>
@@ -313,12 +491,32 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
       html: customerEmailHTML
     });
 
-    // Send admin email
+    // Build attachments for admin (uploaded images)
+    const attachments = [];
+    for (const item of cart) {
+      const images = Array.isArray(item.images) ? item.images : [];
+      for (const img of images) {
+        const raw = typeof img === 'string' ? img : (img.url || img.filename || '');
+        if (!raw) continue;
+        const localPath = raw.startsWith('/uploads/')
+          ? path.join(__dirname, '..', raw)
+          : path.join(__dirname, '..', 'uploads', 'custom', raw);
+        if (fs.existsSync(localPath)) {
+          attachments.push({
+            filename: path.basename(localPath),
+            path: localPath
+          });
+        }
+      }
+    }
+
+    // Send admin email (with attachments)
     await transporter.sendMail({
       from: process.env.SMTP_USER || 'noreply@litum3d.com',
       to: process.env.ADMIN_EMAIL || 'contact@litum3d.com',
       subject: `Nuevo Pedido Pagado #${orderId} - ${customerData.name}`,
-      html: adminEmailHTML
+      html: adminEmailHTML,
+      attachments
     });
 
     console.log(`✓ Emails enviados para pedido #${orderId}`);

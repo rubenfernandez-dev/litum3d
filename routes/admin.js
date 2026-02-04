@@ -242,7 +242,7 @@ router.get('/api/dashboard', requireAuth, async (req, res) => {
                 ep.nombre as estado_nombre,
                 p.total,
                 p.created_at,
-                COALESCE(u.nombre, 'Cliente Anónimo') as customer_name
+                COALESCE(p.customer_name, u.nombre, 'Cliente Anónimo') as customer_name
             FROM pedidos p
             JOIN estado_pedido ep ON p.estado_id = ep.id
             LEFT JOIN usuarios u ON p.usuario_id = u.id
@@ -283,7 +283,10 @@ router.put('/pedidos/:id/estado', requireAuth, async (req, res) => {
 
         // Obtener información del pedido incluyendo estado actual
         const orderQuery = `
-            SELECT p.id, p.usuario_id, p.estado_id, u.email, u.nombre, p.total
+                 SELECT p.id, p.usuario_id, p.estado_id,
+                     COALESCE(p.customer_email, u.email) AS email,
+                     COALESCE(p.customer_name, u.nombre) AS nombre,
+                     p.total
             FROM pedidos p
             LEFT JOIN usuarios u ON p.usuario_id = u.id
             WHERE p.id = ?
@@ -330,8 +333,9 @@ router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
 
         // Cabecera del pedido
         const [orders] = await pool.query(`
-            SELECT p.id, p.total, p.created_at, ep.nombre AS estado_nombre,
-                   COALESCE(u.nombre, 'Cliente Anónimo') AS customer_name, u.email
+                 SELECT p.id, p.total, p.created_at, ep.nombre AS estado_nombre,
+                     COALESCE(p.customer_name, u.nombre, 'Cliente Anónimo') AS customer_name,
+                     COALESCE(p.customer_email, u.email) AS email
             FROM pedidos p
             JOIN estado_pedido ep ON p.estado_id = ep.id
             LEFT JOIN usuarios u ON p.usuario_id = u.id

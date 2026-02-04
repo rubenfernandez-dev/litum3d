@@ -2114,7 +2114,7 @@ footer {
 
 .cart-item {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
+  grid-template-columns: minmax(280px, 2.5fr) auto auto auto;
   gap: 1rem;
   align-items: center;
   background: rgba(255, 255, 255, 0.05);
@@ -2125,21 +2125,48 @@ footer {
   margin-bottom: 1rem;
 }
 
+.cart-item-info {
+  min-width: 280px;
+  width: 100%;
+  align-self: start;
+}
+
+.cart-item-info p {
+  margin: 0.25rem 0 0 0;
+  line-height: 1.4;
+}
+
 .cart-item-info h4 {
   margin: 0 0 0.5rem 0;
   color: var(--light);
+  line-height: 1.35;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  max-width: none;
+  display: block;
+}
+
+.cart-item-info p {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  max-width: none;
+  display: block;
 }
 
 .cart-item-price {
   color: var(--gold);
   font-weight: 700;
   font-size: 1.1rem;
+  justify-self: end;
 }
 
 .cart-item-qty {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  justify-self: end;
 }
 
 .cart-item-qty input {
@@ -2156,6 +2183,7 @@ footer {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
+  justify-self: end;
 }
 
 .cart-item-remove:hover {
@@ -3726,5 +3754,16 @@ footer {
 
 .btn-see-all-reviews:hover span {
   transform: translateX(4px);
+}
+
+/* Checkout payment element layout */
+#payment-element {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+#payment-element .__PrivateStripeElement,
+#payment-element .p-PaymentElement {
+  width: 100% !important;
 }
 
