@@ -18,8 +18,16 @@
 
 <body>
   <header>
-    <nav>
+    <div class="header-top">
       <a href="/" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
+      <div class="header-actions">
+        <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
+          🛒
+          <span class="cart-badge" id="cart-badge">0</span>
+        </a>
+      </div>
+    </div>
+    <nav>
       <button class="hamburger" id="hamburger-btn" aria-label="Abrir menú">
         <span></span>
         <span></span>
@@ -30,10 +38,6 @@
         <a href="/gallery">Galería</a>
         <a href="/about">Sobre</a>
         <a href="/contact">Contacto</a>
-        <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
-          🛒
-          <span class="cart-badge" id="cart-badge">0</span>
-        </a>
       </div>
     </nav>
   </header>
