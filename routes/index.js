@@ -82,6 +82,14 @@ router.get('/cart-de', (req, res) => {
   res.sendFile(path.join(viewsDir, 'cart-de.html'));
 });
 
+router.get('/checkout-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'checkout-de.html'));
+});
+
+router.get('/success-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'success-de.html'));
+});
+
 router.get('/shop-de', (req, res) => {
   res.sendFile(path.join(viewsDir, 'shop-de.html'));
 });
@@ -109,6 +117,14 @@ router.get('/testimonios-fr', (req, res) => {
 
 router.get('/cart-fr', (req, res) => {
   res.sendFile(path.join(viewsDir, 'cart-fr.html'));
+});
+
+router.get('/checkout-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'checkout-fr.html'));
+});
+
+router.get('/success-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'success-fr.html'));
 });
 
 router.get('/shop-fr', (req, res) => {

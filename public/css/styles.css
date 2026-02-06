@@ -2212,6 +2212,14 @@ footer {
   margin-left: auto;
 }
 
+.checkout-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
 .cart-summary-row {
   display: flex;
   justify-content: space-between;
@@ -2241,6 +2249,10 @@ footer {
     max-width: 100%;
     margin-left: 0;
     margin-top: 1rem;
+  }
+
+  .checkout-layout {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2839,15 +2851,19 @@ footer {
    ============================================ */
 
 .carousel-slide-1 {
-  background-image: url('/img/productos/carrusel1.jpeg');
+  background-image: url('https://res.cloudinary.com/du4fvhum1/image/upload/v1770376118/ChatGPT_Image_6_feb_2026_12_08_03_m3d8oy.png');
 }
 
 .carousel-slide-2 {
-  background-image: url('/img/productos/carrusel2.jpeg');
+  background-image: url('https://res.cloudinary.com/du4fvhum1/image/upload/v1770374681/ChatGPT_Image_6_feb_2026_11_43_53_x1ic7x.png');
 }
 
 .carousel-slide-3 {
-  background-image: url('/img/productos/carrusel3.png');
+  background-image: url('https://res.cloudinary.com/du4fvhum1/image/upload/v1769592131/ChatGPT_Image_27_ene_2026_10_40_16_p2t15m.png');
+}
+
+.carousel-slide-4 {
+  background-image: url('https://res.cloudinary.com/du4fvhum1/image/upload/v1767468629/7_by7tk3.png');
 }
 
 /* ============================================

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="fr">
 
 <head>
   <meta charset="utf-8" />
@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" href="/img/logos/favicon.png" />
   <link rel="apple-touch-icon" href="/img/logos/favicon.png" />
 
-  <title>Checkout - LITUM3D</title>
+  <title>Paiement - LITUM3D</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <script src="https://js.stripe.com/v3/"></script>
   <script src="/js/cookie-banner.js"></script>
@@ -19,48 +19,48 @@
 <body>
   <header>
     <div class="header-top">
-      <a href="/" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
+      <a href="/fr" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
       <div class="header-actions">
         <div class="language-selector">
-          <span class="lang-flag">&#x1F1EA;&#x1F1F8;</span>
+          <span class="lang-flag">&#x1F1EB;&#x1F1F7;</span>
           <div class="lang-dropdown">
             <a href="/checkout" title="Español">&#x1F1EA;&#x1F1F8; ES</a>
             <a href="/checkout-de" title="Deutsch">&#x1F1E9;&#x1F1EA; DE</a>
             <a href="/checkout-fr" title="Français">&#x1F1EB;&#x1F1F7; FR</a>
           </div>
         </div>
-        <a href="/cart" class="cart-icon-wrapper" title="Ver carrito">
+        <a href="/cart-fr" class="cart-icon-wrapper" title="Voir le panier">
           🛒
           <span class="cart-badge" id="cart-badge">0</span>
         </a>
       </div>
     </div>
     <nav>
-      <button class="hamburger" id="hamburger-btn" aria-label="Abrir menú">
+      <button class="hamburger" id="hamburger-btn" aria-label="Ouvrir le menu">
         <span></span>
         <span></span>
         <span></span>
       </button>
       <div class="menu" id="nav-menu">
-        <a href="/">Inicio</a>
-        <a href="/gallery">Galería</a>
-        <a href="/about">Sobre</a>
-        <a href="/contact">Contacto</a>
+        <a href="/fr">Accueil</a>
+        <a href="/gallery-fr">Galerie</a>
+        <a href="/about-fr">À propos</a>
+        <a href="/contact-fr">Contact</a>
       </div>
     </nav>
   </header>
 
   <main>
-    <h2>Checkout Seguro</h2>
+    <h2>Paiement sécurisé</h2>
 
     <div class="checkout-layout">
-      <!-- Formulario de Checkout -->
+      <!-- Formulaire de paiement -->
       <div>
         <form id="checkout-form">
-          <h3 style="color: var(--gold); margin-top: 0;">Datos de Envío</h3>
+          <h3 style="color: var(--gold); margin-top: 0;">Informations de livraison</h3>
 
           <label>
-            Nombre Completo *
+            Nom complet *
             <input type="text" name="customer_name" required />
           </label>
           <label>
@@ -68,33 +68,33 @@
             <input type="email" name="customer_email" required />
           </label>
           <label>
-            Teléfono *
+            Téléphone *
             <input type="tel" name="customer_phone" required />
           </label>
           <label>
-            Dirección *
+            Adresse *
             <input type="text" name="customer_address" required />
           </label>
           <label>
-            Ciudad *
+            Ville *
             <input type="text" name="customer_city" required />
           </label>
           <label>
-            Código Postal *
+            Code postal *
             <input type="text" name="customer_zip" required />
           </label>
           <label>
-            País *
+            Pays *
             <select name="customer_country" id="customer_country" required>
-              <option value="ES" selected>España</option>
-              <option value="CH">Suiza</option>
+              <option value="ES" selected>Espagne</option>
+              <option value="CH">Suisse</option>
             </select>
           </label>
 
-          <h3 style="color: var(--gold); margin-top: 2rem;">Datos de Pago</h3>
+          <h3 style="color: var(--gold); margin-top: 2rem;">Détails de paiement</h3>
 
           <label>
-            Método de Pago *
+            Moyen de paiement *
             <div id="payment-element"
               style="padding: 0.9rem; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(224, 173, 97, 0.3); border-radius: 8px; margin-top: 0.6rem;">
             </div>
@@ -102,16 +102,16 @@
           <div id="payment-message" style="margin-top: 0.6rem;"></div>
 
           <button type="submit" style="width: 100%; margin-top: 1.5rem;">
-            Pagar <span id="currency-symbol">€</span><span id="total-amount">0.00</span>
+            Payer <span id="currency-symbol">€</span><span id="total-amount">0.00</span>
           </button>
 
-          <!-- Aviso sobre privacidad de fotos -->
+          <!-- Avis confidentialité photos -->
           <div style="margin-top: 1.5rem; padding: 15px; background-color: rgba(52, 152, 219, 0.1); border-left: 4px solid #3498db; border-radius: 4px; font-size: 0.85em;">
-            <p style="margin: 0 0 8px 0; font-weight: 600; color: #3498db;">🔒 Política de Privacidad de Fotos</p>
+            <p style="margin: 0 0 8px 0; font-weight: 600; color: #3498db;">🔒 Politique de confidentialité des photos</p>
             <p style="margin: 0; line-height: 1.5; color: #ecf0f1;">
-              Tus fotos se usarán exclusivamente para crear tu litofanía y se borrarán automáticamente tras 3-5 días de fabricación. 
-              Si necesitas modificaciones futuras, deberás reenviar las imágenes. 
-              <a href="/privacy-policy" style="color: #3498db; text-decoration: underline;">Más información</a>
+              Vos photos sont utilisées uniquement pour créer votre lithophanie et sont supprimées automatiquement après 3 à 5 jours.
+              Si vous souhaitez des modifications plus tard, vous devrez renvoyer les images.
+              <a href="/privacy-policy" style="color: #3498db; text-decoration: underline;">En savoir plus</a>
             </p>
           </div>
 
@@ -119,10 +119,10 @@
         </form>
       </div>
 
-      <!-- Resumen del Pedido -->
+      <!-- Résumé de la commande -->
       <div>
         <div class="cart-summary">
-          <h3 style="margin-top: 0; color: var(--gold);">Resumen del Pedido</h3>
+          <h3 style="margin-top: 0; color: var(--gold);">Résumé de la commande</h3>
           <div id="order-summary"></div>
         </div>
       </div>
@@ -134,31 +134,31 @@
       <div class="footer-section">
         <h4>✨ LITUM3D</h4>
         <ul>
-          <li>Litofanías premium con tecnología SLA</li>
-          <li>Diseño personalizado y exclusivo</li>
-          <li>Calidad garantizada 100%</li>
+          <li>Lithophanies premium avec technologie SLA</li>
+          <li>Design personnalisé et exclusif</li>
+          <li>Qualité garantie à 100%</li>
         </ul>
       </div>
       <div class="footer-section">
-        <h4>Enlaces Rápidos</h4>
+        <h4>Liens rapides</h4>
         <ul>
-          <li><a href="/">Inicio</a></li>
-          <li><a href="/gallery">Galería Completa</a></li>
-          <li><a href="/about">Sobre Nosotros</a></li>
-          <li><a href="/contact">Contacto</a></li>
+          <li><a href="/fr">Accueil</a></li>
+          <li><a href="/gallery-fr">Galerie</a></li>
+          <li><a href="/about-fr">À propos</a></li>
+          <li><a href="/contact-fr">Contact</a></li>
         </ul>
       </div>
       <div class="footer-section">
-        <h4>Contacto</h4>
+        <h4>Contact</h4>
         <ul>
           <li>📧 contact@litum3d.com</li>
           <li>📞 +34 123 456 789</li>
-          <li>📍 Barcelona, España</li>
-          <li>⏰ Lun-Vie 9:00-18:00</li>
+          <li>📍 Barcelona, Espagne</li>
+          <li>⏰ Lun-Ven 9:00-18:00</li>
         </ul>
       </div>
       <div class="footer-section">
-        <h4>Síguenos</h4>
+        <h4>Suivez-nous</h4>
         <div class="footer-socials">
           <a href="#" title="Instagram">📷</a>
           <a href="#" title="Facebook">f</a>
@@ -168,12 +168,12 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; <span class="year">2025</span> LITUM3D. Todos los derechos reservados.</p>
-      <p>🎨 Litofanías Premium | Impresión 3D de Excelencia</p>
+      <p>&copy; <span class="year">2025</span> LITUM3D. Tous droits réservés.</p>
+      <p>🎨 Lithophanies premium | Impression 3D d’excellence</p>
       <p class="footer-policy-links">
-        <a href="/privacy-policy">Política de Privacidad</a> |
-        <a href="/cookies-policy">Política de Cookies</a> |
-        <a href="/terms-conditions">Términos y Condiciones</a>
+        <a href="/privacy-policy">Politique de confidentialité</a> |
+        <a href="/cookies-policy">Politique de cookies</a> |
+        <a href="/terms-conditions">Conditions générales</a>
       </p>
     </div>
   </footer>

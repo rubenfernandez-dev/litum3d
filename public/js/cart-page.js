@@ -152,10 +152,28 @@ function updateQty(productId, newQty) {
 }
 
 function continueShopping() {
+  const lang = document.documentElement.lang || 'es';
+  if (lang === 'de') {
+    window.location.href = '/gallery-de';
+    return;
+  }
+  if (lang === 'fr') {
+    window.location.href = '/gallery-fr';
+    return;
+  }
   window.location.href = '/gallery';
 }
 
 function goToCheckout() {
+  const lang = document.documentElement.lang || 'es';
+  if (lang === 'de') {
+    window.location.href = '/checkout-de';
+    return;
+  }
+  if (lang === 'fr') {
+    window.location.href = '/checkout-fr';
+    return;
+  }
   window.location.href = '/checkout';
 }
 

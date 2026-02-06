@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="de">
 
 <head>
   <meta charset="UTF-8">
@@ -9,14 +9,10 @@
   <link rel="icon" type="image/png" href="/img/logos/favicon.png" />
   <link rel="apple-touch-icon" href="/img/logos/favicon.png" />
 
-  <title>Pedido Confirmado - LITUM3D</title>
+  <title>Bestellung bestätigt - LITUM3D</title>
   <link rel="stylesheet" href="/css/styles.css">
   <script src="/js/navbar.js"></script>
   <style>
-    body {
-      overflow-x: hidden;
-    }
-
     .success-container {
       display: flex;
       flex-direction: column;
@@ -25,8 +21,6 @@
       min-height: calc(100vh - 120px);
       padding: 40px 20px;
       text-align: center;
-      width: 100%;
-      box-sizing: border-box;
     }
 
     .success-icon {
@@ -62,9 +56,7 @@
       padding: 30px;
       margin: 30px 0;
       max-width: 500px;
-      width: 100%;
       backdrop-filter: blur(10px);
-      box-sizing: border-box;
     }
 
     .order-details-item {
@@ -74,13 +66,6 @@
       padding: 12px 0;
       border-bottom: 1px solid rgba(224, 173, 97, 0.2);
       color: #bbb;
-      gap: 8px;
-    }
-
-    .order-details-item span {
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      max-width: 100%;
     }
 
     .order-details-item:last-child {
@@ -104,10 +89,8 @@
       padding: 20px;
       margin: 30px 0;
       max-width: 500px;
-      width: 100%;
       border-radius: 8px;
       text-align: left;
-      box-sizing: border-box;
     }
 
     .next-steps h3 {
@@ -187,7 +170,7 @@
       }
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 768px) {
       .success-content h1 {
         font-size: 2em;
       }
@@ -224,15 +207,15 @@
 <body>
   <nav class="navbar">
     <div class="nav-container">
-      <a href="/" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
+      <a href="/de" class="logo"><img src="/img/logos/lineal.logo.png" alt="LITUM3D Logo"></a>
       <ul class="nav-links">
-        <li><a href="/">Inicio</a></li>
-        <li><a href="/gallery">Galería</a></li>
-        <li><a href="/about">Nosotros</a></li>
-        <li><a href="/contact">Contacto</a></li>
+        <li><a href="/de">Startseite</a></li>
+        <li><a href="/gallery-de">Galerie</a></li>
+        <li><a href="/about-de">Über uns</a></li>
+        <li><a href="/contact-de">Kontakt</a></li>
       </ul>
       <div class="cart-icon-wrapper">
-        <a href="/cart" class="cart-icon">
+        <a href="/cart-de" class="cart-icon">
           🛒
           <span class="cart-badge" id="cart-badge">0</span>
         </a>
@@ -250,44 +233,43 @@
       </div>
 
       <div class="success-content">
-        <h1>¡Pedido Confirmado!</h1>
-        <p>Tu pago ha sido procesado exitosamente</p>
+        <h1>Bestellung bestätigt!</h1>
+        <p>Deine Zahlung wurde erfolgreich verarbeitet</p>
 
-        <div class="order-number" id="order-number">Cargando...</div>
+        <div class="order-number" id="order-number">Wird geladen...</div>
 
         <div class="order-details">
           <div class="order-details-item">
-            <span>Estado:</span>
-            <span style="color: #4ade80;">Pendiente de Envío</span>
+            <span>Status:</span>
+            <span style="color: #4ade80;">Versandvorbereitung</span>
           </div>
           <div class="order-details-item">
-            <span>Total Pagado:</span>
+            <span>Bezahlt:</span>
             <span id="total-paid">€0.00</span>
           </div>
           <div class="order-details-item">
-            <span>Fecha:</span>
-            <span id="order-date">Hoy</span>
+            <span>Datum:</span>
+            <span id="order-date">Heute</span>
           </div>
         </div>
 
         <div class="next-steps">
-          <h3>Próximos Pasos</h3>
+          <h3>Nächste Schritte</h3>
           <ol>
-            <li>Recibirás un email de confirmación con los detalles completos</li>
-            <li>Nuestro equipo preparará tu pedido para envío</li>
-            <li>Te notificaremos cuando tu paquete esté en tránsito</li>
-            <li>Recibirás un número de seguimiento para monitorear tu entrega</li>
+            <li>Du erhältst eine Bestätigungs-E-Mail mit allen Details</li>
+            <li>Unser Team bereitet deine Bestellung für den Versand vor</li>
+            <li>Wir informieren dich, sobald das Paket unterwegs ist</li>
+            <li>Du bekommst eine Sendungsverfolgungsnummer zur Überwachung der Lieferung</li>
           </ol>
         </div>
 
         <div class="action-buttons">
-          <a href="/" class="btn-primary">Volver al Inicio</a>
-          <a href="/gallery" class="btn-secondary">Continuar Comprando</a>
+          <a href="/de" class="btn-primary">Zur Startseite</a>
+          <a href="/gallery-de" class="btn-secondary">Weiter einkaufen</a>
         </div>
 
         <div class="email-notification">
-          <p>✉️ Se han enviado confirmaciones a tu dirección de email. Por favor, revisa tu bandeja de entrada y spam.
-          </p>
+          <p>✉️ Bestätigungen wurden an deine E-Mail-Adresse gesendet. Bitte prüfe auch den Spam-Ordner.</p>
         </div>
       </div>
     </div>
@@ -297,28 +279,28 @@
     <div class="footer-content">
       <div class="footer-section">
         <h3>LITUM3D</h3>
-        <p>Premium 3D Litofanías</p>
+        <p>Premium 3D-Lithophane</p>
       </div>
       <div class="footer-section">
-        <h3>Enlaces</h3>
+        <h3>Links</h3>
         <ul>
-          <li><a href="/">Inicio</a></li>
-          <li><a href="/gallery">Galería</a></li>
-          <li><a href="/about">Nosotros</a></li>
-          <li><a href="/contact">Contacto</a></li>
+          <li><a href="/de">Startseite</a></li>
+          <li><a href="/gallery-de">Galerie</a></li>
+          <li><a href="/about-de">Über uns</a></li>
+          <li><a href="/contact-de">Kontakt</a></li>
         </ul>
       </div>
       <div class="footer-section">
-        <h3>Soporte</h3>
+        <h3>Support</h3>
         <ul>
           <li><a href="mailto:contact@litum3d.com">contact@litum3d.com</a></li>
           <li><a href="tel:+34600000000">+34 600 000 000</a></li>
-          <li><a href="#">Política de Privacidad</a></li>
-          <li><a href="#">Términos de Servicio</a></li>
+          <li><a href="/privacy-policy">Datenschutz</a></li>
+          <li><a href="/terms-conditions">Nutzungsbedingungen</a></li>
         </ul>
       </div>
       <div class="footer-section">
-        <h3>Síguenos</h3>
+        <h3>Folge uns</h3>
         <div class="social-links">
           <a href="#">Facebook</a>
           <a href="#">Instagram</a>
@@ -328,7 +310,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>&copy; 2024 LITUM3D. Todos los derechos reservados.</p>
+      <p>&copy; 2024 LITUM3D. Alle Rechte vorbehalten.</p>
     </div>
   </footer>
 
@@ -341,12 +323,12 @@
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('orderId') || '---';
 
-    document.getElementById('order-number').textContent = `Pedido #${orderId}`;
+    document.getElementById('order-number').textContent = `Bestellung #${orderId}`;
     document.getElementById('total-paid').textContent = `€${(parseFloat(localStorage.getItem('cart-total') || 0) * 1.21).toFixed(2)}`;
 
     // Format date
     const today = new Date();
-    const dateStr = today.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    const dateStr = today.toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('order-date').textContent = dateStr;
   </script>
 </body>

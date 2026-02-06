@@ -6,6 +6,31 @@ let clientSecret = null;
 let paymentIntentId = null;
 const CURRENCY = { code: 'CHF', symbol: 'CHF' };
 
+function getLang() {
+  return document.documentElement.lang || 'es';
+}
+
+function getCheckoutPath() {
+  const lang = getLang();
+  if (lang === 'de') return '/checkout-de';
+  if (lang === 'fr') return '/checkout-fr';
+  return '/checkout';
+}
+
+function getSuccessPath() {
+  const lang = getLang();
+  if (lang === 'de') return '/success-de';
+  if (lang === 'fr') return '/success-fr';
+  return '/success';
+}
+
+function getCartPath() {
+  const lang = getLang();
+  if (lang === 'de') return '/cart-de';
+  if (lang === 'fr') return '/cart-fr';
+  return '/cart';
+}
+
 async function initializeCheckout() {
   await initializeStripe();
   // Render order summary
@@ -48,7 +73,7 @@ function renderOrderSummary() {
   const summary = document.getElementById('order-summary');
 
   if (cart.length === 0) {
-    window.location.href = '/cart';
+    window.location.href = getCartPath();
     return;
   }
 
@@ -143,7 +168,7 @@ async function handleCheckout(e) {
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/checkout`
+        return_url: `${window.location.origin}${getCheckoutPath()}`
       },
       redirect: 'if_required'
     });
@@ -312,7 +337,7 @@ async function finalizeOrder(piId) {
   clearPendingOrder();
 
   setTimeout(() => {
-    window.location.href = `/success?orderId=${result.orderId}`;
+    window.location.href = `${getSuccessPath()}?orderId=${result.orderId}`;
   }, 1500);
 }
 
