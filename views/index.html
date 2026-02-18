@@ -450,17 +450,17 @@
         <div class="custom-extras">
           <label class="extra-option">
             <input type="checkbox" id="extra-upscale" onchange="onExtraChange()">
-            <span>Upscale de imágenes del cliente (+5 EUR/CHF)</span>
+            <span>Upscale de imágenes del cliente (+5 CHF)</span>
           </label>
           <label class="extra-option">
             <input type="checkbox" id="extra-qr" onchange="onExtraChange()">
-            <span>Mensaje en QR integrado (+5 EUR/CHF)</span>
+            <span>Mensaje en QR integrado (+5 CHF)</span>
           </label>
           <input type="text" id="extra-qr-message" placeholder="Mensaje/URL para el QR" oninput="onExtraChange()"
             disabled>
           <label class="extra-option">
             <input type="checkbox" id="extra-adapter" onchange="onExtraChange()">
-            <span>Incluir adaptador de enchufe USB (+4 EUR/CHF)</span>
+            <span>Incluir adaptador de enchufe USB (+4 CHF)</span>
           </label>
         </div>
         <small class="text-small-gray">Los extras se añaden por artículo.</small>
@@ -571,6 +571,15 @@
   <section class="reviews-section">
     <div class="container">
       <h2>⭐ Lo Que Dicen Nuestros Clientes</h2>
+      
+      <!-- Sugerencia de Fotos -->
+      <div style="background: rgba(224, 173, 97, 0.08); border: 2px solid rgba(224, 173, 97, 0.4); border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem; text-align: center;">
+        <p style="margin: 0; opacity: 0.9;">
+          📸 <strong>Comparte fotos de tu lámpara</strong> encendida y apagada en tu reseña.
+          ¡Las imágenes reales nos ayudan y a otros les encanta verlas!
+        </p>
+      </div>
+      
       <div id="featured-reviews" class="featured-reviews-grid">
         <div style="text-align:center; padding:40px; opacity:0.7; grid-column: 1 / -1;">
           <p>Cargando reseñas...</p>

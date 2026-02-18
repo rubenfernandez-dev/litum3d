@@ -83,13 +83,7 @@
             Código Postal *
             <input type="text" name="customer_zip" required />
           </label>
-          <label>
-            País *
-            <select name="customer_country" id="customer_country" required>
-              <option value="ES" selected>España</option>
-              <option value="CH">Suiza</option>
-            </select>
-          </label>
+          <input type="hidden" name="customer_country" value="CH" />
 
           <h3 style="color: var(--gold); margin-top: 2rem;">Datos de Pago</h3>
 
@@ -102,7 +96,7 @@
           <div id="payment-message" style="margin-top: 0.6rem;"></div>
 
           <button type="submit" style="width: 100%; margin-top: 1.5rem;">
-            Pagar <span id="currency-symbol">€</span><span id="total-amount">0.00</span>
+            Pagar CHF <span id="total-amount">0.00</span>
           </button>
 
           <!-- Aviso sobre privacidad de fotos -->

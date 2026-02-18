@@ -1,10 +1,10 @@
-// Stripe Checkout (Payment Element)
+// Stripe Checkout (Payment Element) - CHF Only
 let stripe;
 let elements;
 let paymentElement;
 let clientSecret = null;
 let paymentIntentId = null;
-const CURRENCY = { code: 'CHF', symbol: 'CHF' };
+const CURRENCY = { code: 'chf', symbol: 'CHF' };
 
 function getLang() {
   return document.documentElement.lang || 'es';
@@ -148,11 +148,9 @@ async function handleCheckout(e) {
   }
 
   // Get form data
-  const countrySel = document.getElementById('customer_country');
-  const country = countrySel ? countrySel.value : 'ES';
   const currency = CURRENCY;
 
-  const customerData = getCustomerData(form, country);
+  const customerData = getCustomerData(form);
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Procesando...';
@@ -163,7 +161,7 @@ async function handleCheckout(e) {
       throw new Error('No se pudo inicializar el método de pago. Recarga la página.');
     }
 
-    savePendingOrder({ cart, customerData, currency: currency.code.toLowerCase() });
+    savePendingOrder({ cart, customerData, currency: 'chf' });
 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
@@ -199,7 +197,7 @@ async function handleCheckout(e) {
   }
 }
 
-function getCustomerData(form, country) {
+function getCustomerData(form) {
   return {
     name: form?.customer_name?.value || '',
     email: form?.customer_email?.value || '',
@@ -207,7 +205,7 @@ function getCustomerData(form, country) {
     address: form?.customer_address?.value || '',
     city: form?.customer_city?.value || '',
     zip: form?.customer_zip?.value || '',
-    country: country || 'ES'
+    country: 'CH'
   };
 }
 
@@ -228,12 +226,10 @@ async function setupPaymentElement() {
     const cart = getCart();
     if (!cart.length) return;
 
-    const countrySel = document.getElementById('customer_country');
-    const country = countrySel ? countrySel.value : 'ES';
     const currency = CURRENCY;
 
     const form = document.getElementById('checkout-form');
-    const customerData = getCustomerData(form, country);
+    const customerData = getCustomerData(form);
 
     const response = await fetch('/api/create-payment-intent', {
       method: 'POST',
@@ -241,7 +237,7 @@ async function setupPaymentElement() {
       body: JSON.stringify({
         cart,
         customerData,
-        currency: currency.code.toLowerCase()
+        currency: 'chf'
       })
     });
 

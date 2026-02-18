@@ -1,32 +1,5 @@
-// Cart Page Management with dynamic currency
-const CURRENCY_MAP = { ES: { code: 'EUR', symbol: '€' }, CH: { code: 'CHF', symbol: 'CHF' } };
-let eurChfRate = 1.00;
-
-function getCartCountry() {
-  const sel = document.getElementById('cart_country');
-  return sel ? sel.value : 'ES';
-}
-
-async function loadFxRateForCart() {
-  try {
-    const resp = await fetch('/api/fx/eur-chf');
-    const data = await resp.json();
-    if (data.ok && Number.isFinite(data.rate) && data.rate > 0) {
-      eurChfRate = parseFloat(data.rate);
-    }
-  } catch {}
-}
-
-function onCartCountryChange() {
-  const country = getCartCountry();
-  document.getElementById('cart_currency_symbol').textContent = CURRENCY_MAP[country]?.symbol || '€';
-  if (country === 'CH') {
-    loadFxRateForCart().finally(renderCartItems);
-  } else {
-    eurChfRate = 1.00;
-    renderCartItems();
-  }
-}
+// Cart Page Management - CHF Only
+const CURRENCY = { code: 'chf', symbol: 'CHF' };
 function renderCartItems() {
   const container = document.getElementById('cart-items-container');
   const summary = document.getElementById('cart-summary');
@@ -57,8 +30,7 @@ function renderCartItems() {
   summary.style.display = 'block';
 
   // Render items
-  const country = getCartCountry();
-  const currency = CURRENCY_MAP[country] || CURRENCY_MAP['ES'];
+  const currency = CURRENCY;
   container.innerHTML = cart.map(item => {
     const extrasText = getExtrasSummary(item);
     return `
@@ -255,10 +227,6 @@ function normalizeCart(cart) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('cart_currency_symbol').textContent = CURRENCY_MAP[getCartCountry()]?.symbol || '€';
-  if (getCartCountry() === 'CH') {
-    loadFxRateForCart().finally(renderCartItems);
-  } else {
-    renderCartItems();
-  }
+  document.getElementById('cart_currency_symbol').textContent = CURRENCY.symbol;
+  renderCartItems();
 });
