@@ -1,4 +1,5 @@
 // Stripe Checkout (Payment Element) - CHF Only
+const SECOND_UNIT_DISCOUNT_RATE = 0.15;
 let stripe;
 let elements;
 let paymentElement;
@@ -80,11 +81,13 @@ function renderOrderSummary() {
   const currency = CURRENCY;
 
   // Totales: usar directamente item.price del carrito (ya incluye extras)
-  let totalGross = 0;
+  let totalBeforeDiscount = 0;
   cart.forEach(item => {
     const qty = parseInt(item.quantity || 1);
-    totalGross += parseFloat(item.price || 0) * qty;
+    totalBeforeDiscount += parseFloat(item.price || 0) * qty;
   });
+  const discount = calculateSecondUnitDiscountCart(cart);
+  const totalGross = totalBeforeDiscount - discount;
   const base = totalGross / 1.21;
   const iva = totalGross - base;
 
@@ -115,11 +118,28 @@ function renderOrderSummary() {
       <span>IVA (21%):</span>
       <span>${currency.symbol} ${iva.toFixed(2)}</span>
     </div>
+    ${discount > 0 ? `
+    <div class="cart-summary-row">
+      <span>Descuento 2ª unidad (15%):</span>
+      <span style="color: #90ee90;">-${currency.symbol} ${discount.toFixed(2)}</span>
+    </div>
+    ` : ''}
     <div class="cart-summary-row total">
       <span>TOTAL:</span>
       <span>${currency.symbol} ${totalGross.toFixed(2)}</span>
     </div>
   `;
+}
+
+function calculateSecondUnitDiscountCart(cart) {
+  if (!Array.isArray(cart)) return 0;
+  return cart.reduce((discount, item) => {
+    const qty = parseInt(item.quantity || 1);
+    const unit = parseFloat(item.price || 0);
+    if (!Number.isFinite(qty) || qty < 2 || !Number.isFinite(unit)) return discount;
+    const discountedUnits = Math.floor(qty / 2);
+    return discount + (unit * SECOND_UNIT_DISCOUNT_RATE * discountedUnits);
+  }, 0);
 }
 
 function updateTotalAmount() {

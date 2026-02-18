@@ -7,6 +7,7 @@ const { pool } = require('../config/db');
 
 const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const SECOND_UNIT_DISCOUNT_RATE = 0.15;
 
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
@@ -24,15 +25,21 @@ let eurChfCache = { rate: null, updatedAt: 0 };
 const FX_CACHE_TTL_MS = parseInt(process.env.FX_CACHE_TTL_MS || '21600000'); // 6h default
 
 function calculateCartTotals(cart) {
-  let totalCurr = 0;
+  let totalBeforeDiscount = 0;
+  let discountCurr = 0;
   for (const item of cart) {
     const qty = parseInt(item.quantity || 1);
     const unit = parseFloat(item.price || 0);
-    totalCurr += unit * qty;
+    totalBeforeDiscount += unit * qty;
+    if (Number.isFinite(qty) && qty >= 2 && Number.isFinite(unit)) {
+      const discountedUnits = Math.floor(qty / 2);
+      discountCurr += unit * SECOND_UNIT_DISCOUNT_RATE * discountedUnits;
+    }
   }
+  const totalCurr = totalBeforeDiscount - discountCurr;
   const subtotalCurr = totalCurr / 1.21;
   const taxCurr = totalCurr - subtotalCurr;
-  return { totalCurr, subtotalCurr, taxCurr };
+  return { totalCurr, subtotalCurr, taxCurr, discountCurr, totalBeforeDiscount };
 }
 
 async function getEurToChfRate() {

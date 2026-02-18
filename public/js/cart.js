@@ -1,5 +1,6 @@
 // Cart Management with localStorage
 const CART_KEY = 'litum3d_cart';
+const SECOND_UNIT_DISCOUNT_RATE = 0.15;
 
 function getCart() {
   try {
@@ -77,8 +78,22 @@ function clearCart() {
   updateCartBadge();
 }
 
+function calculateSecondUnitDiscount(cart) {
+  if (!Array.isArray(cart)) return 0;
+  return cart.reduce((discount, item) => {
+    const qty = parseInt(item.quantity || 1);
+    const unit = parseFloat(item.price || 0);
+    if (!Number.isFinite(qty) || qty < 2 || !Number.isFinite(unit)) return discount;
+    const discountedUnits = Math.floor(qty / 2);
+    return discount + (unit * SECOND_UNIT_DISCOUNT_RATE * discountedUnits);
+  }, 0);
+}
+
 function getCartTotal() {
-  return getCart().reduce((total, item) => total + (item.price * item.quantity), 0);
+  const cart = getCart();
+  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const discount = calculateSecondUnitDiscount(cart);
+  return total - discount;
 }
 
 function getCartCount() {
