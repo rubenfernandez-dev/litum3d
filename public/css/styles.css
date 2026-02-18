@@ -3762,6 +3762,32 @@ footer {
   .leave-review-section {
     padding: 1.5rem;
   }
+
+  .second-unit-offer {
+    padding: 2.5rem 1.25rem;
+    margin: 2rem 1rem;
+  }
+
+  .second-unit-offer .offer-title {
+    font-size: 2.1rem;
+  }
+
+  .second-unit-offer .offer-subtitle {
+    font-size: 1.45rem;
+  }
+
+  .second-unit-offer .offer-description {
+    font-size: 1rem;
+  }
+
+  .second-unit-offer .offer-list {
+    font-size: 0.95rem;
+  }
+
+  .second-unit-offer .offer-cta {
+    font-size: 1rem;
+    padding: 0.8rem 1.4rem;
+  }
 }
 
 /* Botón Ver Todas las Reseñas */
