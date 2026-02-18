@@ -16,6 +16,8 @@ const paymentsRoutes = require('./routes/payments');
 const adminRoutes = require('./routes/admin');
 const uploadsRoutes = require('./routes/uploads');
 const reviewsRoutes = require('./routes/reviews');
+const seoRoutes = require('./routes/seo');
+const seoMiddleware = require('./config/seo-middleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +42,9 @@ app.use(session({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// SEO Middleware
+app.use(seoMiddleware);
+
 // Healthcheck
 app.get('/health', async (req, res) => {
   try {
@@ -61,6 +66,7 @@ app.use(estadosRoutes);
 app.use('/api', paymentsRoutes);
 app.use(uploadsRoutes);
 app.use(reviewsRoutes);
+app.use(seoRoutes);
 app.use('/admin', adminRoutes);
 
 app.use((req, res) => {
