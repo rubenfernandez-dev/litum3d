@@ -51,7 +51,7 @@ async function loadFeaturedProducts() {
           <h3 class="product-name">${escapeHtml(p.nombre)}</h3>
           <p class="product-desc">${escapeHtml(p.descripcion || 'Litofanía premium con acabado profesional')}</p>
           <div class="product-footer">
-            <span class="product-price">€${parseFloat(p.precio).toFixed(2)}</span>
+            <span class="product-price">CHF${parseFloat(p.precio).toFixed(2)}</span>
             <span class="product-stock">${p.stock > 0 ? '✓ Stock' : 'Agotado'}</span>
           </div>
           <button class="product-buy-btn" onclick="openCustomization(${p.id})" ${p.stock > 0 ? '' : 'disabled'}>
@@ -174,7 +174,7 @@ function renderVariantsForm(variantTypes) {
         // Siempre mostrar stock de 100 disponibles
         const stockText = '(100 disponibles)';
         const priceDelta = parseFloat(option.price_delta) || 0;
-        const priceDisplay = priceDelta > 0 ? ` +€${priceDelta.toFixed(2)}` : '';
+        const priceDisplay = priceDelta > 0 ? ` +CHF${priceDelta.toFixed(2)}` : '';
 
         html += `
           <option 
@@ -275,7 +275,7 @@ function renderModelOptions() {
       <input type="radio" name="custom-model" value="${m.id}" ${Number(customizationState.selectedModelId) === Number(m.id) ? 'checked' : ''} onchange="onModelChange(${m.id})">
       <div>
         <strong>${escapeHtml(m.nombre)}</strong><br>
-        <small>Stock: ${m.stock} · ${m.price_delta >= 0 ? '+' : ''}${parseFloat(m.price_delta || 0).toFixed(2)} €</small>
+        <small>Stock: ${m.stock} · ${m.price_delta >= 0 ? '+' : ''}${parseFloat(m.price_delta || 0).toFixed(2)} CHF</small>
       </div>
     </label>
   `).join('');
