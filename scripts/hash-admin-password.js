@@ -4,7 +4,13 @@ const bcrypt = require('bcryptjs');
 
 (async () => {
   try {
-    const newPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const newPassword = process.env.ADMIN_PASSWORD;
+    if (!newPassword) {
+      console.log('❌ Error: La variable ADMIN_PASSWORD no está configurada');
+      console.log('Uso: ADMIN_PASSWORD=tu_contraseña_segura node scripts/hash-admin-password.js');
+      process.exit(1);
+    }
+
     const [rows] = await pool.query('SELECT id, email, contraseña FROM usuarios WHERE es_admin = 1 LIMIT 1');
     if (rows.length === 0) {
       console.log('❌ No existe usuario admin en la tabla usuarios');

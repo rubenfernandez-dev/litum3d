@@ -139,7 +139,7 @@ INSERT INTO estado_pedido (nombre, descripcion) VALUES
 -- Usuario de prueba (contraseña: 123456 - CAMBIA EN PRODUCCIÓN)
 -- En producción, usa bcrypt: npm install bcrypt
 INSERT INTO usuarios (nombre, email, telefono, direccion, contraseña) VALUES
-  ('Admin', 'admin@litum3d.local', '+34123456789', 'Calle Test 1', 'admin123');
+  ('Admin', 'admin@litum3d.local', '+34123456789', 'Calle Test 1', 'DEBE_SER_REEMPLAZADA_EN_PRODUCCION');
 
 -- Productos de prueba
 INSERT INTO productos (nombre, descripcion, precio, stock, imagen) VALUES

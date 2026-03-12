@@ -54,7 +54,7 @@
   - Almacena orden en BD (tablas `pedidos` y `detalle_pedidos`)
   - **Envía 2 emails**:
     - **Cliente**: Confirmación de pedido con detalles
-    - **Admin** (contact@litum3d.com): Notificación nueva orden
+    - **Admin** (admin@tudominio.com): Notificación nueva orden
   - Retorna `orderId` para redirigir a página de éxito
 
 ### 6. **Página de Éxito (`/success`)**
@@ -93,9 +93,9 @@
 - **Configuración en `.env`**:
   - SMTP_HOST: smtp.gmail.com
   - SMTP_PORT: 587
-  - SMTP_USER: ruben@litum3d.com (configurable)
+  - SMTP_USER: admin@tudominio.com (configurable)
   - SMTP_PASS: (necesita password)
-  - ADMIN_EMAIL: contact@litum3d.com
+  - ADMIN_EMAIL: admin@tudominio.com
 
 - **Emails enviados automáticamente tras pago**:
   1. **Cliente**: HTML con orden, items, total, datos de envío
@@ -152,7 +152,7 @@ app.use('/api', paymentsRoutes); // Monta POST /api/pay
 - **Cliente**: Debe recibir en tu_email@example.com
   - Asunto: "Confirmación de Pedido #X - LITUM3D"
   - Contiene: lista de productos, precios, datos de envío
-- **Admin**: contact@litum3d.com
+- **Admin**: admin@tudominio.com
   - Asunto: "Nuevo Pedido Pagado #X - [Nombre Cliente]"
   - Contiene: datos cliente, productos, nota de preparación
 

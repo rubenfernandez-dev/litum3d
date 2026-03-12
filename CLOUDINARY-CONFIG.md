@@ -1,7 +1,7 @@
 # 🔧 Solución: Imágenes en Reseñas - Cloudinary Configuration
 
 ## Problema
-En producción (litum3d.com), las imágenes de las reseñas no se guardan porque **Cloudinary no está configurado**.
+En producción (tudominio.com), las imágenes de las reseñas no se guardan porque **Cloudinary no está configurado**.
 
 Error: `"Must supply api_key"`
 

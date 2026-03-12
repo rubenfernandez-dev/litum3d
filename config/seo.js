@@ -5,13 +5,13 @@
 
 const seoConfig = {
   // Base del sitio
-  baseUrl: process.env.BASE_URL || 'https://litum3d.com',
+  baseUrl: process.env.BASE_URL || 'https://example.com',
   siteName: 'LITUM3D',
   
   // Contacto (para schema)
   contact: {
     phone: '+41772186229',
-    email: 'contact@litum3d.com',
+    email: 'contact@example.com',
     address: 'Berna, Suiza',
     hours: 'Monday-Friday 9:00-18:00'
   },

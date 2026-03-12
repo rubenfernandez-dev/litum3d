@@ -8,7 +8,7 @@
 
 ## 🔴 Problema Original
 
-En **producción (litum3d.com)**:
+En **producción (tudominio.com)**:
 - Las imágenes NO se guardaban en las reseñas
 - Error: `"Error: Must supply api_key"` 
 - POST `/api/admin/reviews` retornaba 400 (Bad Request)
@@ -107,11 +107,11 @@ POST /api/reviews con imágenes
 ## 🚀 Próximos Pasos para Producción
 
 ### Paso 1: Configurar Variables de Entorno
-En el servidor de producción (litum3d.com):
+En el servidor de producción (tudominio.com):
 ```bash
-export CLOUDINARY_CLOUD_NAME=du4fvhum1
-export CLOUDINARY_API_KEY=516248397594524
-export CLOUDINARY_API_SECRET=bZPmR1lWK5Ty_UzT9hqyL7zBIm0
+export CLOUDINARY_CLOUD_NAME=your_cloud_name
+export CLOUDINARY_API_KEY=your_api_key
+export CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 ### Paso 2: Actualizar el Código

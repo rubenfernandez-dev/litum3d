@@ -29,11 +29,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'litum3d-secret-key-change-in-production',
+  secret: process.env.SESSION_SECRET || 'please-configure-session-secret-in-production',
   resave: false,
   saveUninitialized: true,
   cookie: { 
-    secure: false, // Set to true if using HTTPS
+    secure: process.env.NODE_ENV === 'production', // Set to true for HTTPS in production
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }

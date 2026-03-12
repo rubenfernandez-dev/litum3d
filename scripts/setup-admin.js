@@ -24,14 +24,16 @@ async function setupAdmin() {
 
     // 2. Verificar si existe admin
     console.log('🔐 Verificando usuario admin...');
-    const adminEmail = 'admin@litum3d.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
     const [adminCheck] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [adminEmail]);
+
+    const tempPassword = 'CHANGE_ME_' + Math.random().toString(36).substring(2, 15);
 
     if (adminCheck.length > 0) {
       console.log('   ✓ Usuario admin ya existe\n');
       console.log('📊 Datos de acceso:');
       console.log(`   Email: ${adminEmail}`);
-      console.log(`   Contraseña: admin123 (cámbiala en producción)\n`);
+      console.log('   Contraseña: Debe ser configurada en producción\n');
     } else {
       // Crear usuario admin
       console.log('   Creando usuario admin...');
@@ -39,14 +41,13 @@ async function setupAdmin() {
         INSERT INTO usuarios (nombre, email, contraseña, activo, es_admin)
         VALUES (?, ?, ?, TRUE, TRUE)
       `;
-      const passwordHash = await bcrypt.hash('admin123', 10);
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
       const [result] = await pool.query(insertQuery, ['Administrator', adminEmail, passwordHash]);
       
       console.log('   ✓ Usuario admin creado\n');
       console.log('📊 Datos de acceso:');
       console.log(`   Email: ${adminEmail}`);
-      console.log(`   Contraseña: admin123`);
-      console.log('   ⚠️  IMPORTANTE: Cambia la contraseña en producción\n');
+      console.log('   ⚠️  IMPORTANTE: Esta contraseña temporal debe cambiarse inmediatamente en producción\n');
     }
 
     console.log('✅ Panel admin configurado correctamente!\n');

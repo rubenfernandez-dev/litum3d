@@ -15,33 +15,33 @@ POST /api/admin/reviews 400 (Bad Request)
 
 1. **Ve a https://cloudinary.com/console**
 2. **Copia tu Cloud Name** (visible en el dashboard principal)
-   - Ejemplo: `du4fvhum1`
+   - Ejemplo: `your_cloud_name`
 3. **Ve a API Keys** y copia:
-   - **API Key**: Ejemplo `516248397594524`
-   - **API Secret**: Ejemplo `bZPmR1lWK5Ty_UzT9hqyL7zBIm0`
+   - **API Key**: Ejemplo `your_api_key`
+   - **API Secret**: Ejemplo `your_api_secret`
 
 ### Paso 2: Configurar Variables de Entorno en Producción
 
 **Opción A: Variables de Entorno del Sistema (Linux/Mac)**
 ```bash
-export CLOUDINARY_CLOUD_NAME=du4fvhum1
-export CLOUDINARY_API_KEY=516248397594524
-export CLOUDINARY_API_SECRET=bZPmR1lWK5Ty_UzT9hqyL7zBIm0
+export CLOUDINARY_CLOUD_NAME=your_cloud_name
+export CLOUDINARY_API_KEY=your_api_key
+export CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 **Opción B: Archivo .env en el Servidor**
 ```bash
 # SSH al servidor y edita:
-ssh user@litum3d.com
+ssh user@tudominio.com
 cd /path/to/litum3d
 
 # Edita o crea .env:
 nano .env
 
 # Añade estas líneas:
-CLOUDINARY_CLOUD_NAME=du4fvhum1
-CLOUDINARY_API_KEY=516248397594524
-CLOUDINARY_API_SECRET=bZPmR1lWK5Ty_UzT9hqyL7zBIm0
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 **Opción C: En Panel de Control (cPanel/Plesk)**
@@ -72,7 +72,7 @@ node scripts/check-cloudinary.js
 
 Debería mostrar:
 ```
-✅ CLOUDINARY_CLOUD_NAME: du4fvhum1
+✅ CLOUDINARY_CLOUD_NAME: your_cloud_name
 ✅ CLOUDINARY_API_KEY: ***
 ✅ CLOUDINARY_API_SECRET: ***
 ✅ Cloudinary está configurado correctamente!

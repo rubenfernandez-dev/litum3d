@@ -1,7 +1,7 @@
 # 🚨 ACCIÓN REQUERIDA - Configurar Cloudinary en Producción
 
 ## El Problema
-Las imágenes de las reseñas NO se guardan en **https://litum3d.com**
+Las imágenes de las reseñas NO se guardan en **https://tudominio.com**
 
 ## Causa
 Las variables de entorno de Cloudinary NO están configuradas en el servidor
@@ -12,24 +12,24 @@ Las variables de entorno de Cloudinary NO están configuradas en el servidor
 ```
 Ve a: https://cloudinary.com/console
 Copia:
-- Cloud Name: du4fvhum1
-- API Key: 516248397594524
-- API Secret: bZPmR1lWK5Ty_UzT9hqyL7zBIm0
+- Cloud Name: your_cloud_name
+- API Key: your_api_key
+- API Secret: your_api_secret
 ```
 
 ### 2️⃣ Configurar en Servidor
 ```bash
 # SSH a tu servidor
-ssh user@litum3d.com
+ssh user@tudominio.com
 cd /path/to/litum3d
 
 # Editar .env
 nano .env
 
 # Añadir estas 3 líneas:
-CLOUDINARY_CLOUD_NAME=du4fvhum1
-CLOUDINARY_API_KEY=516248397594524
-CLOUDINARY_API_SECRET=bZPmR1lWK5Ty_UzT9hqyL7zBIm0
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 ### 3️⃣ Actualizar Código

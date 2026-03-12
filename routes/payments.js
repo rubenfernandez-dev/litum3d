@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
   auth: {
-    user: process.env.SMTP_USER || 'ruben@litum3d.com',
+    user: process.env.SMTP_USER || 'admin@example.com',
     pass: process.env.SMTP_PASS || ''
   }
 });
@@ -519,8 +519,8 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
 
     // Send admin email (with attachments)
     await transporter.sendMail({
-      from: process.env.SMTP_USER || 'noreply@litum3d.com',
-      to: process.env.ADMIN_EMAIL || 'contact@litum3d.com',
+      from: process.env.SMTP_USER || 'noreply@example.com',
+      to: process.env.ADMIN_EMAIL || 'admin@example.com',
       subject: `Nuevo Pedido Pagado #${orderId} - ${customerData.name}`,
       html: adminEmailHTML,
       attachments
