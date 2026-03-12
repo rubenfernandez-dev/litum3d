@@ -1,6 +1,6 @@
 // Cart Page Management - CHF Only
 const CURRENCY = { code: 'chf', symbol: 'CHF' };
-const SECOND_UNIT_DISCOUNT_RATE = 0.15;
+const PAGE_SECOND_UNIT_DISCOUNT_RATE = 0.15;
 function renderCartItems() {
   const container = document.getElementById('cart-items-container');
   const summary = document.getElementById('cart-summary');
@@ -118,7 +118,7 @@ function calculateSecondUnitDiscountItem(item) {
   const unit = parseFloat(item.price || 0);
   if (!Number.isFinite(qty) || qty < 2 || !Number.isFinite(unit)) return 0;
   const discountedUnits = Math.floor(qty / 2);
-  return unit * SECOND_UNIT_DISCOUNT_RATE * discountedUnits;
+  return unit * PAGE_SECOND_UNIT_DISCOUNT_RATE * discountedUnits;
 }
 
 function calculateSecondUnitDiscountCart(cart) {
