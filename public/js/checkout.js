@@ -1,5 +1,5 @@
 // Stripe Checkout (Payment Element) - CHF Only
-const SECOND_UNIT_DISCOUNT_RATE = 0.15;
+// SECOND_UNIT_DISCOUNT_RATE viene declarada por cart.js, cargado antes en checkout.html/-fr/-de
 let stripe;
 let elements;
 let paymentElement;
