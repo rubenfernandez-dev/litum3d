@@ -103,7 +103,6 @@ function renderReviews(reviews) {
                 <div class="review-content">
                     <div class="review-info">
                         <div class="review-author">${review.nombre}</div>
-                        ${review.email ? `<div class="review-email">${review.email}</div>` : ''}
                         <div class="review-stars">${stars}</div>
                         <div class="review-date">${date}</div>
                     </div>

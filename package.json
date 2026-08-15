@@ -10,7 +10,7 @@
     "db:init": "node scripts/init-db.js",
     "db:check": "node scripts/check-db.js",
     "db:fix": "node scripts/fix-missing-tables.js",
-    "test": "node scripts/check-duplicate-globals.js"
+    "test": "node scripts/check-duplicate-globals.js && node scripts/check-public-reviews-no-email.js"
   },
   "keywords": [],
   "author": "",

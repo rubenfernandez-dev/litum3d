@@ -531,7 +531,6 @@ async function loadFeaturedReviews() {
           <div class="review-content">
             <div class="review-info">
               <div style="font-weight: 600; color: #fff; margin-bottom: 0.3rem;">${review.nombre}</div>
-              <div style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.5rem;">${review.email || ''}</div>
               <div style="color: #ffd700; font-size: 0.9rem; letter-spacing: 0.1rem;">${stars}</div>
             </div>
             <div class="review-text">

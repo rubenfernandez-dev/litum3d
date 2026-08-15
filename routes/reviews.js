@@ -33,33 +33,54 @@ const upload = multer({
 // RUTAS PÚBLICAS
 // ============================================
 
+// Representación pública de una reseña: allowlist explícita de los únicos
+// campos que consume la UI pública (public/js/testimonios.js y public/js/home.js).
+// A propósito NO se copia el objeto de entrada ni se eliminan claves conocidas:
+// cualquier campo interno o futuro (email, estado, fecha_actualizacion, notas de
+// moderación, tokens, etc.) queda excluido por defecto, se llame como se llame,
+// salvo que se añada explícitamente aquí a propósito.
+function toPublicReview(review) {
+  return {
+    nombre: review.nombre,
+    rating: review.rating,
+    comentario: review.comentario,
+    fecha_creacion: review.fecha_creacion,
+    video_url: review.video_url,
+    imagenes: review.imagenes
+  };
+}
+
 // GET /api/reviews - Obtener reseñas aprobadas (para frontend público)
 router.get('/api/reviews', async (req, res) => {
   try {
     const { destacadas } = req.query;
-    
+
+    // Segunda capa de defensa: la consulta pública solo trae las columnas que
+    // necesita la UI pública. `estado`/`destacada` solo se usan para filtrar
+    // (WHERE/AND), no hace falta seleccionarlos.
     let query = `
-      SELECT r.*, 
+      SELECT r.nombre, r.rating, r.comentario, r.fecha_creacion, r.video_url,
         GROUP_CONCAT(ri.cloudinary_url ORDER BY ri.orden) as imagenes
       FROM reviews r
       LEFT JOIN review_images ri ON r.id = ri.review_id
       WHERE r.estado = 'aprobada'
     `;
-    
+
     if (destacadas === 'true') {
       query += ' AND r.destacada = TRUE';
     }
-    
+
     query += ' GROUP BY r.id ORDER BY r.fecha_creacion DESC';
-    
+
     const [reviews] = await pool.query(query);
-    
-    // Convertir string de imágenes a array
-    const reviewsFormatted = reviews.map(review => ({
+
+    // Convertir string de imágenes a array y aplicar la allowlist pública
+    // antes de que la respuesta salga del servidor.
+    const reviewsFormatted = reviews.map(review => toPublicReview({
       ...review,
       imagenes: review.imagenes ? review.imagenes.split(',') : []
     }));
-    
+
     res.json(reviewsFormatted);
   } catch (error) {
     console.error('Error obteniendo reseñas:', error);
@@ -373,3 +394,4 @@ router.delete('/api/admin/reviews/:id', requireAdmin, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.toPublicReview = toPublicReview;
