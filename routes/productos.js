@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { pool } = require('../config/db');
+const requireAuth = require('../middleware/requireAuth');
 
 const router = express.Router();
 
@@ -90,8 +91,8 @@ router.get('/api/productos/:id/modelos', async (req, res) => {
   }
 });
 
-// POST crear producto
-router.post('/api/productos', async (req, res) => {
+// POST crear producto (mutación administrativa: requiere sesión de admin)
+router.post('/api/productos', requireAuth, async (req, res) => {
   try {
     const { nombre, descripcion, precio, stock, imagen, nombre_de, nombre_fr, descripcion_de, descripcion_fr } = req.body || {};
     if (!nombre || !precio) {
@@ -108,8 +109,8 @@ router.post('/api/productos', async (req, res) => {
   }
 });
 
-// PUT actualizar producto (con soporte de traducciones)
-router.put('/api/productos/:id', async (req, res) => {
+// PUT actualizar producto (con soporte de traducciones) (mutación administrativa: requiere sesión de admin)
+router.put('/api/productos/:id', requireAuth, async (req, res) => {
   try {
     const { nombre, descripcion, precio, stock, imagen, nombre_de, nombre_fr, descripcion_de, descripcion_fr } = req.body || {};
     const fields = [];
@@ -134,8 +135,8 @@ router.put('/api/productos/:id', async (req, res) => {
   }
 });
 
-// DELETE desactivar producto
-router.delete('/api/productos/:id', async (req, res) => {
+// DELETE desactivar producto (mutación administrativa: requiere sesión de admin)
+router.delete('/api/productos/:id', requireAuth, async (req, res) => {
   try {
     const [result] = await pool.query('UPDATE productos SET activo = FALSE WHERE id = ?', [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Producto no encontrado' });
