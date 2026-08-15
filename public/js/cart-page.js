@@ -192,6 +192,9 @@ function normalizeCart(cart) {
     const name = item.name ?? item.product_name ?? item.productName ?? legacy?.product_name ?? legacy?.name ?? 'Producto';
     const modelId = item.modelId ?? item.model_id ?? legacy?.model_id ?? null;
     const modelName = item.modelName ?? item.model_name ?? legacy?.model_name ?? null;
+    // Carritos antiguos en localStorage no tienen variantOptionIds: se normaliza
+    // a [] en vez de inventar IDs a partir de priceDelta u otro campo legacy.
+    const variantOptionIds = normalizeVariantOptionIds(item.variantOptionIds ?? legacy?.variantOptionIds ?? []);
     const price = item.price ?? item.product_price ?? item.basePrice ?? item.precio ?? legacy?.product_price ?? legacy?.price ?? 0;
     const quantity = item.quantity ?? item.qty ?? legacy?.quantity ?? 1;
     const notes = item.notes ?? legacy?.notes ?? '';
@@ -216,6 +219,7 @@ function normalizeCart(cart) {
       name,
       modelId,
       modelName,
+      variantOptionIds,
       price: parseFloat(price || 0),
       quantity: parseInt(quantity || 1),
       notes,
@@ -232,7 +236,9 @@ function normalizeCart(cart) {
       item.quantity !== normalizedItem.quantity ||
       item.notes !== normalizedItem.notes ||
       item.images !== normalizedItem.images ||
-      item.extras !== normalizedItem.extras
+      item.extras !== normalizedItem.extras ||
+      !Array.isArray(item.variantOptionIds) ||
+      item.variantOptionIds.length !== normalizedItem.variantOptionIds.length
     ) {
       changed = true;
     }

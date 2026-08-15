@@ -3,6 +3,10 @@
 // ============================================
 
 let allShopProducts = [];
+// Única fuente de precios de extras: GET /api/pricing-config (servidor).
+// null mientras no ha cargado o si la carga falló — nunca hay un fallback
+// hardcodeado 5/5/4 en su lugar.
+let pricingConfig = null;
 let customizationState = {
   product: null,
   models: [],
@@ -11,6 +15,67 @@ let customizationState = {
   selectedModelPriceDelta: 0,
   files: []
 };
+
+/**
+ * Carga la configuración pública de pricing (moneda + precios de extras).
+ * Se llama una vez al cargar la página; si falla, deja pricingConfig=null y
+ * deshabilita los extras en la UI en vez de calcular con un precio
+ * adivinado o desincronizado.
+ */
+async function loadPricingConfig() {
+  try {
+    const res = await fetch('/api/pricing-config');
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'No se pudo cargar la configuración de precios');
+    pricingConfig = data;
+  } catch (err) {
+    console.error('Error cargando /api/pricing-config:', err);
+    pricingConfig = null;
+  }
+  applyPricingConfigToExtrasUI();
+}
+
+/**
+ * Precio (en CHF, para mostrar) de un extra según config servidor. Solo se
+ * usa cuando pricingConfig existe; si no, los checkboxes quedan deshabilitados.
+ */
+function getExtraPrice(key) {
+  return pricingConfig?.extras?.[key]?.amount || 0;
+}
+
+/**
+ * Si la configuración de precios no está disponible, deshabilita los extras
+ * en vez de dejarlos seleccionables con un precio no determinado.
+ */
+function applyPricingConfigToExtrasUI() {
+  const available = !!pricingConfig;
+  ['extra-upscale', 'extra-qr', 'extra-adapter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = !available;
+    if (!available) el.checked = false;
+  });
+  const qrMsgInput = document.getElementById('extra-qr-message');
+  if (qrMsgInput && !available) {
+    qrMsgInput.disabled = true;
+    qrMsgInput.value = '';
+  }
+  if (!available && typeof updateCustomizationPrice === 'function' && customizationState.product) {
+    updateCustomizationPrice();
+  }
+}
+
+/**
+ * Combina el "modelo" (en realidad un product_variant_options.id, ver
+ * loadModelsForProduct) con el resto de opciones de variante seleccionadas
+ * en una única lista de IDs, sin inventar nada y sin huecos falsy.
+ */
+function buildVariantOptionIds(selectedModelOptionId, otherOptionValues) {
+  const ids = [];
+  if (selectedModelOptionId) ids.push(selectedModelOptionId);
+  (otherOptionValues || []).forEach(v => { if (v) ids.push(v); });
+  return ids;
+}
 
 /**
  * Cargar todos los productos desde la API
@@ -137,6 +202,10 @@ async function openCustomization(productId) {
   // Actualizar título del modal
   document.getElementById('custom-modal-title').textContent = `Personalizar: ${product.nombre}`;
 
+  // Refleja si /api/pricing-config está disponible (puede haberse resuelto
+  // ya, o seguir en curso si el modal se abre muy pronto tras cargar la página).
+  applyPricingConfigToExtrasUI();
+
   // Cargar modelos disponibles
   await loadModelsForProduct(product.id);
 
@@ -247,11 +316,13 @@ function updateCustomizationPrice() {
   const basePrice = customizationState.product?.precio || 0;
   const modelDelta = customizationState.selectedModelPriceDelta || 0;
 
-  // Calcular extras
+  // Calcular extras. Precios desde /api/pricing-config (getExtraPrice),
+  // nunca hardcodeados; si no hay config disponible, los checkboxes están
+  // deshabilitados (ver applyPricingConfigToExtrasUI) y esto suma 0.
   let extrasCost = 0;
-  if (document.getElementById('extra-upscale')?.checked) extrasCost += 5;
-  if (document.getElementById('extra-qr')?.checked) extrasCost += 5;
-  if (document.getElementById('extra-adapter')?.checked) extrasCost += 4;
+  if (document.getElementById('extra-upscale')?.checked) extrasCost += getExtraPrice('upscale');
+  if (document.getElementById('extra-qr')?.checked) extrasCost += getExtraPrice('qr');
+  if (document.getElementById('extra-adapter')?.checked) extrasCost += getExtraPrice('adapter');
 
   // Calcular precio con variantes
   let variantsCost = 0;
@@ -350,6 +421,14 @@ async function confirmCustomization() {
     return;
   }
 
+  // No permitir confirmar una personalización con un extra seleccionado si
+  // su precio no se pudo determinar de forma segura (config no disponible).
+  const extrasPreview = getExtrasFromUI();
+  if (!pricingConfig && (extrasPreview.upscale || extrasPreview.qr || extrasPreview.adapter)) {
+    alert('No se pudo determinar el precio de los extras seleccionados. Recarga la página e inténtalo de nuevo.');
+    return;
+  }
+
   try {
     const extras = getExtrasFromUI();
     const variantDelta = getVariantsPriceDelta();
@@ -361,15 +440,24 @@ async function confirmCustomization() {
     formData.append('model_id', customizationState.selectedModelId);
     formData.append('notes', notes);
 
-    // Recopilar variantes seleccionadas
+    // Recopilar variantes seleccionadas (resto de tipos, distintos del "modelo")
     const selectedVariants = {};
+    const otherVariantValues = [];
     document.querySelectorAll('[data-variants-section] select').forEach(select => {
       if (select.value) {
         const label = select.previousElementSibling?.textContent || 'variant';
         selectedVariants[label] = select.value;
+        otherVariantValues.push(select.value);
       }
     });
     formData.append('variants', JSON.stringify(selectedVariants));
+
+    // variantOptionIds: en shop.js el "modelo" (selectedModelId) es en
+    // realidad el ID de una product_variant_options (el tipo cuyo nombre
+    // contiene "model"/"forma"/"shape", ver loadModelsForProduct), NO un
+    // product_models.id real. Por eso viaja en variantOptionIds y NO en
+    // modelId — no se inventa un modelId de product_models que no existe.
+    const variantOptionIds = buildVariantOptionIds(customizationState.selectedModelId, otherVariantValues);
 
     // Extras
     formData.append('extra_upscale', document.getElementById('extra-upscale')?.checked ? '1' : '0');
@@ -404,9 +492,15 @@ async function confirmCustomization() {
       customizationState.product.nombre,
       customizationState.product.precio,
       {
-        modelId: customizationState.selectedModelId,
+        // modelId se deja explícitamente null: en shop.js no existe una
+        // selección real de product_models, solo de product_variant_options
+        // (ver variantOptionIds más arriba). modelName se conserva solo
+        // como etiqueta de presentación.
+        modelId: null,
         modelName: customizationState.selectedModelName,
+        // Legacy pricing field — remove after canonical checkout cutover
         priceDelta: (parseFloat(customizationState.selectedModelPriceDelta || 0) + variantDelta),
+        variantOptionIds,
         images: uploadData.files || [],
         notes: buildNotesWithExtras(notes, extras),
         extras: extras
@@ -430,7 +524,8 @@ function getExtrasFromUI() {
   const adapter = document.getElementById('extra-adapter')?.checked || false;
   const qrMessage = document.getElementById('extra-qr-message')?.value || '';
 
-  const extrasTotal = (upscale ? 5 : 0) + (qr ? 5 : 0) + (adapter ? 4 : 0);
+  // Legacy pricing field — remove after canonical checkout cutover.
+  const extrasTotal = (upscale ? getExtraPrice('upscale') : 0) + (qr ? getExtraPrice('qr') : 0) + (adapter ? getExtraPrice('adapter') : 0);
   return { upscale, qr, qrMessage, adapter, extrasTotal, currency: 'CHF' };
 }
 
@@ -445,13 +540,16 @@ function getVariantsPriceDelta() {
   return variantsCost;
 }
 
+// Texto de presentación para las notas del pedido (personalizacion_notas),
+// no una fuente de cálculo. Los importes se leen de pricingConfig para no
+// mantener una segunda copia manual de 5/5/4 en un string.
 function buildNotesWithExtras(notes, extras) {
   const parts = [];
   if (notes && notes.trim()) parts.push(notes.trim());
   const extrasList = [];
-  if (extras?.upscale) extrasList.push(`Upscale +5 ${extras.currency}`);
-  if (extras?.qr) extrasList.push(`QR +5 ${extras.currency}${extras.qrMessage ? `: ${extras.qrMessage}` : ''}`);
-  if (extras?.adapter) extrasList.push(`Adaptador USB +4 ${extras.currency}`);
+  if (extras?.upscale) extrasList.push(`Upscale +${getExtraPrice('upscale')} ${extras.currency}`);
+  if (extras?.qr) extrasList.push(`QR +${getExtraPrice('qr')} ${extras.currency}${extras.qrMessage ? `: ${extras.qrMessage}` : ''}`);
+  if (extras?.adapter) extrasList.push(`Adaptador USB +${getExtraPrice('adapter')} ${extras.currency}`);
   if (extrasList.length) parts.push(`Extras: ${extrasList.join(' · ')}`);
   return parts.join(' | ');
 }
@@ -520,5 +618,6 @@ function showNotification(message, type = 'info') {
 // Cargar productos al inicializar la página
 document.addEventListener('DOMContentLoaded', () => {
   loadShopProducts();
+  loadPricingConfig();
   document.getElementById('cart-badge').textContent = getCartCount();
 });
