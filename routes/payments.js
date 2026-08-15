@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const { pool } = require('../config/db');
+const pricingConfig = require('../config/pricing');
 
 const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -77,6 +78,23 @@ router.get('/fx/eur-chf', async (req, res) => {
 
 router.get('/stripe-config', (req, res) => {
   return res.json({ ok: true, publicKey: process.env.STRIPE_PUBLIC_KEY || '' });
+});
+
+// GET /api/pricing-config - Configuración pública de pricing (moneda + precios de extras).
+// Fuente única: config/pricing.js. No expone nada de Stripe ni configuración interna.
+// Nota: es informativo para el frontend (previews); el servidor sigue siendo la
+// autoridad real del precio al calcular con services/pricing.js (todavía no conectado).
+router.get('/pricing-config', (req, res) => {
+  const toDisplay = (cents) => ({ cents, amount: cents / 100 });
+  return res.json({
+    ok: true,
+    currency: pricingConfig.currency,
+    extras: {
+      upscale: toDisplay(pricingConfig.extras.upscale),
+      qr: toDisplay(pricingConfig.extras.qr),
+      adapter: toDisplay(pricingConfig.extras.adapter)
+    }
+  });
 });
 
 router.post('/pay', async (req, res) => {
