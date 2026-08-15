@@ -116,11 +116,18 @@ function defaultDataAccess(pool) {
       const [rows] = await pool.query('SELECT * FROM checkout_drafts WHERE access_token_hash = ? LIMIT 1', [accessTokenHash]);
       return rows[0] || null;
     },
-    async updateSnapshot(id, snapshotJson) {
-      await pool.query(
-        'UPDATE checkout_drafts SET snapshot_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [snapshotJson, id]
+    // La condición de estado forma parte de la propia escritura (no de un
+    // SELECT previo): si otra transacción cambió el status entre nuestra
+    // lectura y este UPDATE (p.ej. finalizePaidCheckout marcándolo
+    // converted), affectedRows=0 y el caller debe releer para decidir el
+    // error correcto, en vez de asumir que la condición leída antes sigue
+    // siendo cierta en el momento real de la escritura.
+    async updateSnapshotIfStatusIn(id, snapshotJson, allowedStatuses) {
+      const [result] = await pool.query(
+        'UPDATE checkout_drafts SET snapshot_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status IN (?)',
+        [snapshotJson, id, allowedStatuses]
       );
+      return result.affectedRows;
     },
     async updateStatus(id, status) {
       await pool.query(
@@ -515,13 +522,24 @@ async function verifyAccessToken(accessToken, draftId, options = {}) {
   return crypto.timingSafeEqual(candidate, stored);
 }
 
+// Únicos estados en los que updateCustomerDataByAccessToken puede escribir.
+const CUSTOMER_DATA_WRITABLE_STATUSES = [DRAFT_STATUS.CREATED, DRAFT_STATUS.PAYMENT_PENDING];
+
 /**
  * Actualiza customerData dentro del snapshot de un draft, autenticado por
  * capability token (no por id secuencial). Rechaza tokens desconocidos y
  * drafts converted/expired. B3 permite la actualización en payment_pending;
- * B4 añadirá el bloqueo adicional si el PaymentIntent ya está succeeded
- * (este módulo todavía no habla con Stripe, así que esa comprobación no
- * puede vivir aquí).
+ * B4A añade el bloqueo adicional si el PaymentIntent ya está succeeded
+ * (services/checkout-payment.js#updateCheckoutCustomerData, ya que este
+ * módulo no habla con Stripe).
+ *
+ * La autorización por estado forma parte de la ESCRITURA misma
+ * (updateSnapshotIfStatusIn), no solo de esta lectura previa: si el draft
+ * pasa a converted/expired en el instante entre este SELECT y ese UPDATE
+ * (p.ej. una finalización concurrente ganando la carrera), la escritura
+ * falla igualmente aunque esta comprobación inicial la hubiera dejado
+ * pasar. Esta comprobación inicial es solo un fast-fail barato para el
+ * caso común; la garantía real es la condición en el propio UPDATE.
  */
 async function updateCustomerDataByAccessToken(accessToken, customerData, options = {}) {
   const dataAccess = resolveDataAccess(options);
@@ -547,7 +565,22 @@ async function updateCustomerDataByAccessToken(accessToken, customerData, option
   const snapshot = parseSnapshot(row.snapshot_json);
   snapshot.customerData = normalized;
 
-  await dataAccess.updateSnapshot(row.id, JSON.stringify(snapshot));
+  const affectedRows = await dataAccess.updateSnapshotIfStatusIn(
+    row.id, JSON.stringify(snapshot), CUSTOMER_DATA_WRITABLE_STATUSES
+  );
+
+  if (affectedRows === 0) {
+    // La escritura perdió la carrera contra un cambio de estado
+    // concurrente: se relee el estado real para lanzar el error correcto,
+    // en vez de asumir éxito de una condición que ya no era cierta.
+    const fresh = await dataAccess.findById(row.id);
+    if (!fresh) throw new DraftNotFoundError(`Draft ${row.id} no encontrado`, { draftId: row.id });
+    throw new DraftStateError(
+      `No se puede modificar customerData: el draft está en estado "${fresh.status}"`,
+      { draftId: row.id, currentStatus: fresh.status }
+    );
+  }
+
   const updated = await dataAccess.findById(row.id);
   return rowToDraft(updated);
 }

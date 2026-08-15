@@ -115,11 +115,13 @@ function makeFakeDataAccess() {
       for (const row of rows.values()) if (row.access_token_hash === hash) return row;
       return null;
     },
-    async updateSnapshot(id, snapshotJson) {
+    async updateSnapshotIfStatusIn(id, snapshotJson, allowedStatuses) {
       const row = rows.get(id);
-      if (!row) return;
+      if (!row) return 0;
+      if (!allowedStatuses.includes(row.status)) return 0;
       row.snapshot_json = snapshotJson;
       row.updated_at = new Date();
+      return 1;
     },
     async updateStatus(id, status) {
       const row = rows.get(id);
@@ -570,6 +572,45 @@ async function checkCustomerData() {
 }
 
 // =======================================================================
+// Hardening P0E-B4A #4/#5: la autorización por estado debe formar parte de
+// la propia escritura, no solo de un SELECT previo. Se simula la carrera
+// real: el status cambia a "converted" DESPUÉS de que updateCustomerDataByAccessToken
+// ya leyó el draft (vía findByAccessTokenHash) como payment_pending, pero
+// ANTES de que su UPDATE condicional se ejecute. Sin la escritura atómica,
+// esto habría escrito customerData sobre un draft ya convertido.
+// =======================================================================
+async function checkCustomerDataAtomicWriteRace() {
+  const dataAccess = makeFakeDataAccess();
+  const draft = await createFreshDraft(dataAccess, 'CUST-RACE');
+  await attachPaymentIntent(draft.draft.id, 'pi_race_customer_data', { dataAccess });
+  eq((await getDraftById(draft.draft.id, { dataAccess })).status, DRAFT_STATUS.PAYMENT_PENDING, 'sanity: el draft debe estar payment_pending antes de la carrera');
+
+  let readCount = 0;
+  const racingDataAccess = {
+    ...dataAccess,
+    async findByAccessTokenHash(hash) {
+      readCount++;
+      const row = await dataAccess.findByAccessTokenHash(hash);
+      if (row && readCount === 1) {
+        // Simula una finalización concurrente que convierte el draft justo
+        // después de que esta lectura ya lo vio como payment_pending.
+        await dataAccess.updateStatus(row.id, DRAFT_STATUS.CONVERTED);
+      }
+      return row; // la copia devuelta a la función sigue diciendo payment_pending (stale)
+    }
+  };
+
+  await rejects(
+    () => updateCustomerDataByAccessToken(draft.accessToken, sampleCustomerData(), { dataAccess: racingDataAccess }),
+    DraftStateError,
+    'la escritura condicional debe rechazar el update aunque la lectura previa dijera payment_pending, porque el status real ya cambió a converted antes del UPDATE'
+  );
+
+  const finalDraft = await getDraftById(draft.draft.id, { dataAccess });
+  eq(finalDraft.snapshot.customerData.name, '', 'el customerData NO debe haberse escrito: el draft convertido debe conservar su snapshot original');
+}
+
+// =======================================================================
 // #21 - PaymentIntent association
 // =======================================================================
 async function checkPaymentIntentAssociation() {
@@ -687,6 +728,9 @@ async function main() {
 
   console.log('P0E-B3 - customer data');
   await checkCustomerData();
+
+  console.log('P0E-B4A - customer data: escritura atómica condicionada por estado (carrera)');
+  await checkCustomerDataAtomicWriteRace();
 
   console.log('P0E-B3 - asociación de PaymentIntent');
   await checkPaymentIntentAssociation();
