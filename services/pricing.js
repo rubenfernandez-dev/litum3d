@@ -44,20 +44,22 @@ class PricingValidationError extends Error {
 
 // --- Utilidades de dinero -----------------------------------------------
 
-// Protección de invariante: cualquier importe en rappen que maneje el motor
-// debe ser un entero seguro (Number.isSafeInteger). Rechaza NaN, Infinity y
-// valores fuera del rango entero seguro de JS, tanto si vienen de BD/config
-// como si son el resultado de una suma. No rechaza negativos por sí solo:
-// un delta de modelo/variante puede ser legítimamente negativo.
+// Protección de invariante: cualquier importe en cents/minor units que
+// maneje el motor debe ser un entero seguro (Number.isSafeInteger). Rechaza
+// NaN, Infinity y valores fuera del rango entero seguro de JS, tanto si
+// vienen de BD/config como si son el resultado de una suma. No rechaza
+// negativos por sí solo: un delta de modelo/variante puede ser legítimamente
+// negativo. (Código heredado puede seguir llamando "rappen" a estas unidades
+// en nombres de función sin renombrar; conceptualmente son cents genéricos.)
 function assertSafeIntegerCents(value, context) {
   if (!Number.isSafeInteger(value)) {
-    throw new PricingValidationError(`Importe en rappen no válido (${context}): ${value}`);
+    throw new PricingValidationError(`Importe en cents no válido (${context}): ${value}`);
   }
   return value;
 }
 
 // Convierte un DECIMAL(10,2) de BD (que mysql2 puede devolver como string)
-// a rappen enteros. Único punto de conversión decimal -> entero.
+// a cents/minor units enteros. Único punto de conversión decimal -> entero.
 // Exige explícitamente que el valor de entrada sea string o number antes de
 // intentar convertirlo (evita coerciones sorprendentes de Number() sobre
 // booleans/arrays/objetos), y que el resultado sea un entero seguro.

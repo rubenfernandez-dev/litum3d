@@ -117,10 +117,10 @@ function makeFakePool() {
       return [found ? [{ id: found.id }] : []];
     }
     if (sql.startsWith('INSERT INTO pedidos')) {
-      const [usuario_id, estado_id, total, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_zip, customer_country, notas, stripe_payment_intent_id] = params;
+      const [usuario_id, estado_id, total, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_zip, customer_country, notas, stripe_payment_intent_id, currency] = params;
       checkPedidoUnique(stripe_payment_intent_id);
       const id = state.nextPedidoId++;
-      state.pedidos.set(id, { id, usuario_id, estado_id, total, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_zip, customer_country, notas, stripe_payment_intent_id });
+      state.pedidos.set(id, { id, usuario_id, estado_id, total, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_zip, customer_country, notas, stripe_payment_intent_id, currency });
       return [{ insertId: id }];
     }
     if (sql.startsWith('INSERT INTO detalle_pedidos')) {
@@ -173,7 +173,7 @@ function makeDraftsDataAccessView(fakePool) {
 function buildSnapshot(overrides = {}) {
   return Object.assign({
     schemaVersion: 1,
-    currency: 'chf',
+    currency: 'eur',
     customerData: { name: 'Ana Muster', email: 'ana@example.com', phone: '+41791234567', address: 'Bahnhofstrasse 1', city: 'Zürich', zip: '8001' },
     items: [{
       productId: 8, productName: 'Litofanía Circular',
@@ -199,7 +199,7 @@ function seedValidDraft(fakePool, { status = 'payment_pending', paymentIntentId,
   return { id, status, snapshot };
 }
 
-function buildPaymentIntent({ id, draftId, amount, currency = 'chf', status = 'succeeded' }) {
+function buildPaymentIntent({ id, draftId, amount, currency = 'eur', status = 'succeeded' }) {
   return { id, status, amount, currency, metadata: { checkoutDraftId: String(draftId) } };
 }
 
@@ -220,18 +220,33 @@ async function checkFinalizationHappyPathAndValidation() {
   const piAmount = buildPaymentIntent({ id: 'pi_amt', draftId: draftAmount.id, amount: 1, status: 'succeeded' });
   await rejects(() => finalizePaidCheckout(piAmount, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) }), PaymentIntentValidationError, 'amount incorrecto no debe crear pedido');
 
-  // currency incorrecta.
+  // currency incorrecta (EUR-ONLY-01: la moneda canónica activa es eur, se
+  // fuerza el PI a una moneda distinta -- chf -- para provocar el mismatch).
   const draftCurrency = seedValidDraft(pool, { paymentIntentId: 'pi_cur' });
-  const piCurrency = buildPaymentIntent({ id: 'pi_cur', draftId: draftCurrency.id, amount: draftCurrency.snapshot.totals.totalCents, currency: 'eur', status: 'succeeded' });
-  await rejects(() => finalizePaidCheckout(piCurrency, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) }), PaymentIntentValidationError, 'currency incorrecta no debe crear pedido');
+  const piCurrency = buildPaymentIntent({ id: 'pi_cur', draftId: draftCurrency.id, amount: draftCurrency.snapshot.totals.totalCents, currency: 'chf', status: 'succeeded' });
+  await rejects(() => finalizePaidCheckout(piCurrency, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) }), PaymentIntentValidationError, 'currency incorrecta (chf) no debe crear pedido');
 
   // metadata ausente/incorrecta.
-  const piNoMeta = { id: 'pi_no_meta', status: 'succeeded', amount: 100, currency: 'chf', metadata: {} };
+  const piNoMeta = { id: 'pi_no_meta', status: 'succeeded', amount: 100, currency: 'eur', metadata: {} };
   await rejects(() => finalizePaidCheckout(piNoMeta, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) }), PaymentIntentValidationError, 'metadata.checkoutDraftId ausente no debe crear pedido');
 
   // draft no encontrado.
   const piGhostDraft = buildPaymentIntent({ id: 'pi_ghost', draftId: 999999, amount: 100, status: 'succeeded' });
   await rejects(() => finalizePaidCheckout(piGhostDraft, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) }), DraftNotFoundError, 'draft inexistente debe rechazarse');
+
+  // EUR-ONLY-01: draft "obsoleto" internamente consistente (PI y snapshot
+  // coinciden entre sí en 'chf'), pero 'chf' ya no es la moneda canónica
+  // activa (config/pricing.js dice 'eur'). Debe rechazarse igualmente, con
+  // un error de integridad explícito, no un mismatch silencioso.
+  const staleSnapshot = buildSnapshot({ currency: 'chf' });
+  const draftStaleCurrency = seedValidDraft(pool, { paymentIntentId: 'pi_stale_cur', snapshot: staleSnapshot });
+  const piStaleCurrency = buildPaymentIntent({ id: 'pi_stale_cur', draftId: draftStaleCurrency.id, amount: staleSnapshot.totals.totalCents, currency: 'chf', status: 'succeeded' });
+  await rejects(
+    () => finalizePaidCheckout(piStaleCurrency, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) }),
+    FinalizationIntegrityError,
+    'un draft internamente consistente pero en una moneda ya no canónica (chf) debe rechazarse'
+  );
+  eq(pool._state.pedidos.size, 0, 'el draft con moneda obsoleta no debe haber creado ningún pedido');
 
   eq(pool._state.pedidos.size, 0, 'ninguno de los casos anteriores debe haber creado un pedido');
 
@@ -262,6 +277,7 @@ async function checkFinalizationHappyPathAndValidation() {
   eq(orderRow.customer_country, CHECKOUT_COUNTRY_CODE, 'customer_country debe ser el valor controlado por servidor (CH), no del cliente');
   eq(orderRow.stripe_payment_intent_id, 'pi_ok', 'stripe_payment_intent_id debe guardarse en pedidos');
   eq(orderRow.estado_id, 1, 'estado_id debe seguir siendo 1 (comportamiento actual sin cambios en B4A)');
+  eq(orderRow.currency, 'EUR', 'pedidos.currency debe persistirse en mayúsculas ISO desde snapshot.currency (EUR-ONLY-01)');
 
   const detalle = [...pool._state.detallePedidos.values()].find(d => d.pedido_id === result.orderId);
   ok(detalle, 'debe existir el detalle del pedido');

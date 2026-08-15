@@ -155,7 +155,7 @@ function sampleSelections(overrides = {}) {
 function sampleSnapshot(overrides = {}) {
   return Object.assign({
     schemaVersion: 1,
-    currency: 'chf',
+    currency: 'eur',
     customerData: { name: '', email: '', phone: '', address: '', city: '', zip: '' },
     items: [],
     totals: {}

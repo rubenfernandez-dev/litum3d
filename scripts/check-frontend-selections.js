@@ -64,7 +64,7 @@ function makeFetchStub(responseData, ok = true) {
 
 const PRICING_CONFIG_FIXTURE = {
   ok: true,
-  currency: 'chf',
+  currency: 'eur',
   extras: {
     upscale: { cents: 500, amount: 5 },
     qr: { cents: 500, amount: 5 },
@@ -122,8 +122,8 @@ async function main() {
     check(items.length === 2, 'variantOptionIds distintos del mismo producto NO se fusionan');
 
     cart.clearCart();
-    cart.addToCart(8, 'Producto', 49.95, { extras: { upscale: true, qr: false, adapter: false, qrMessage: '', extrasTotal: 5, currency: 'CHF' } });
-    cart.addToCart(8, 'Producto', 49.95, { extras: { upscale: false, qr: false, adapter: false, qrMessage: '', extrasTotal: 0, currency: 'CHF' } });
+    cart.addToCart(8, 'Producto', 49.95, { extras: { upscale: true, qr: false, adapter: false, qrMessage: '', extrasTotal: 5, currency: 'EUR' } });
+    cart.addToCart(8, 'Producto', 49.95, { extras: { upscale: false, qr: false, adapter: false, qrMessage: '', extrasTotal: 0, currency: 'EUR' } });
     items = cart.getCart();
     check(items.length === 2, 'extras distintos (sin modelo/variantes) del mismo producto NO se fusionan');
 
@@ -259,6 +259,19 @@ async function main() {
     shop.fetch = makeFetchStub(PRICING_CONFIG_FIXTURE);
     await shop.loadPricingConfig();
     check(shop.getExtraPrice('adapter') === 4, 'shop.js: getExtraPrice lee desde pricingConfig tras loadPricingConfig()');
+  }
+
+  // EUR-ONLY-01 (sección 22): ningún script de storefront activo debe
+  // contener "CHF" como etiqueta de precio hardcodeada. Comprobación de
+  // texto fuente, no de ejecución -- si algún día hace falta distinguir
+  // comentario de código activo aquí, seguir el patrón de
+  // scripts/check-migration-no-demo-inserts.js.
+  {
+    const storefrontFiles = ['public/js/home.js', 'public/js/shop.js', 'public/js/cart.js', 'public/js/cart-page.js', 'public/js/checkout.js'];
+    for (const relPath of storefrontFiles) {
+      const src = readScript(relPath);
+      check(!/CHF/.test(src), `${relPath} no contiene "CHF" como etiqueta de precio (EUR-ONLY-01)`);
+    }
   }
 
   console.log(`OK: ${checks} comprobaciones sobre selecciones canónicas en cart.js/cart-page.js/home.js/shop.js.`);

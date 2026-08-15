@@ -55,7 +55,7 @@ function addToCart(productId, productName, productPrice, options = {}) {
     variantOptionIds = [],
     images = [],
     notes = '',
-    extras = { upscale: false, qr: false, qrMessage: '', adapter: false, extrasTotal: 0, currency: 'CHF' }
+    extras = { upscale: false, qr: false, qrMessage: '', adapter: false, extrasTotal: 0, currency: 'EUR' }
   } = options;
 
   const normalizedVariantOptionIds = normalizeVariantOptionIds(variantOptionIds);

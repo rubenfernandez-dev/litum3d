@@ -21,10 +21,6 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// FX rate cache (EUR→CHF)
-let eurChfCache = { rate: null, updatedAt: 0 };
-const FX_CACHE_TTL_MS = parseInt(process.env.FX_CACHE_TTL_MS || '21600000'); // 6h default
-
 function calculateCartTotals(cart) {
   let totalBeforeDiscount = 0;
   let discountCurr = 0;
@@ -42,39 +38,6 @@ function calculateCartTotals(cart) {
   const taxCurr = totalCurr - subtotalCurr;
   return { totalCurr, subtotalCurr, taxCurr, discountCurr, totalBeforeDiscount };
 }
-
-async function getEurToChfRate() {
-  const now = Date.now();
-  if (eurChfCache.rate && (now - eurChfCache.updatedAt) < FX_CACHE_TTL_MS) {
-    return eurChfCache.rate;
-  }
-  try {
-    // Frankfurter (ECB) API
-    const url = 'https://api.frankfurter.app/latest?from=EUR&to=CHF';
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`FX API ${resp.status}`);
-    const data = await resp.json();
-    const rate = parseFloat(data?.rates?.CHF);
-    if (Number.isFinite(rate) && rate > 0) {
-      eurChfCache = { rate, updatedAt: now };
-      return rate;
-    }
-    throw new Error('Invalid FX rate');
-  } catch (err) {
-    const fallback = parseFloat(process.env.EXCHANGE_EUR_CHF || '1.00');
-    return Number.isFinite(fallback) && fallback > 0 ? fallback : 1.00;
-  }
-}
-
-// Public endpoint to read current EUR→CHF rate
-router.get('/fx/eur-chf', async (req, res) => {
-  try {
-    const rate = await getEurToChfRate();
-    return res.json({ ok: true, rate, updatedAt: eurChfCache.updatedAt });
-  } catch (e) {
-    return res.json({ ok: false, error: e.message || 'FX error' });
-  }
-});
 
 router.get('/stripe-config', (req, res) => {
   return res.json({ ok: true, publicKey: process.env.STRIPE_PUBLIC_KEY || '' });
@@ -98,7 +61,10 @@ router.get('/pricing-config', (req, res) => {
 });
 
 router.post('/pay', async (req, res) => {
-  const { paymentMethodId, cart, customerData, currency } = req.body;
+  // `currency` del body se recibe pero se ignora deliberadamente (EUR-ONLY-01):
+  // la moneda del cobro SIEMPRE es la server-side de config/pricing.js, nunca
+  // la que envíe el cliente.
+  const { paymentMethodId, cart, customerData, currency: _clientProvidedCurrencyIgnored } = req.body;
 
   try {
     if (!paymentMethodId || !cart || !customerData) {
@@ -106,8 +72,9 @@ router.post('/pay', async (req, res) => {
     }
 
     // Calculate totals from cart items
-    // Los precios se cobran en CHF. El total = suma de item.price sin conversión.
-    const selectedCurrency = 'chf';
+    // Los precios se cobran en la moneda server-side (config/pricing.js). El
+    // total = suma de item.price sin conversión.
+    const selectedCurrency = pricingConfig.currency;
 
     // Debug: log carrito recibido
     console.log('🧾 Carrito recibido:', cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price })));
@@ -125,7 +92,7 @@ router.post('/pay', async (req, res) => {
     // Create payment intent with Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount, // smallest unit
-      currency: 'chf',
+      currency: pricingConfig.currency,
       payment_method: paymentMethodId,
       confirm: true,
       automatic_payment_methods: {
@@ -172,7 +139,7 @@ router.post('/create-payment-intent', async (req, res) => {
       return res.json({ ok: false, error: 'Carrito vacío' });
     }
 
-    const selectedCurrency = 'chf';
+    const selectedCurrency = pricingConfig.currency;
     const { totalCurr, subtotalCurr, taxCurr } = calculateCartTotals(cart);
 
     console.log(`💶 Crear PI | Moneda: ${selectedCurrency.toUpperCase()} | Total: ${totalCurr.toFixed(2)}`);
@@ -180,7 +147,7 @@ router.post('/create-payment-intent', async (req, res) => {
 
     const amount = Math.round(totalCurr * 100);
 
-    const currencyCode = 'chf';
+    const currencyCode = pricingConfig.currency;
     const paymentMethodTypes = ['paypal', 'twint', 'amazon_pay', 'card'];
 
     const paymentIntent = await stripe.paymentIntents.create({
@@ -216,7 +183,7 @@ router.post('/confirm-payment', async (req, res) => {
       return res.json({ ok: false, error: 'Datos incompletos' });
     }
 
-    const selectedCurrency = 'chf';
+    const selectedCurrency = pricingConfig.currency;
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
     if (!paymentIntent || paymentIntent.status !== 'succeeded') {
@@ -225,7 +192,7 @@ router.post('/confirm-payment', async (req, res) => {
 
     const { totalCurr } = calculateCartTotals(cart);
     const expectedAmount = Math.round(totalCurr * 100);
-    const expectedCurrency = 'chf';
+    const expectedCurrency = pricingConfig.currency;
 
     if (paymentIntent.amount !== expectedAmount || paymentIntent.currency !== expectedCurrency) {
       return res.json({ ok: false, error: 'El total del pago no coincide' });
@@ -271,8 +238,11 @@ async function createOrderFromCart({ cart, customerData, totalCurr, selectedCurr
     await conn.beginTransaction();
 
     // Insert into pedidos
+    // currency: siempre server-side (pricingConfig.currency vía selectedCurrency,
+    // ver routes/payments.js#/pay /create-payment-intent /confirm-payment),
+    // nunca el valor que el cliente pueda haber enviado en el body.
     const [orderResult] = await conn.query(
-      'INSERT INTO pedidos (usuario_id, estado_id, total, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_zip, customer_country, notas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO pedidos (usuario_id, estado_id, total, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_zip, customer_country, notas, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         null,
         1,
@@ -284,7 +254,8 @@ async function createOrderFromCart({ cart, customerData, totalCurr, selectedCurr
         customerData?.city || null,
         customerData?.zip || null,
         customerData?.country || null,
-        `Moneda: ${selectedCurrency.toUpperCase()}`
+        `Moneda: ${selectedCurrency.toUpperCase()}`,
+        selectedCurrency.toUpperCase()
       ]
     );
 
@@ -364,7 +335,7 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
     const logoUrl = process.env.LOGO_URL
       ? process.env.LOGO_URL
       : `${baseUrl.replace(/\/$/, '')}/img/logos/lineal.logo.png`;
-    const symbol = selectedCurrency === 'chf' ? 'CHF' : '€';
+    const symbol = selectedCurrency === 'eur' ? '€' : selectedCurrency.toUpperCase();
     const cartHTML = cart.map(item => {
       const imageLinks = Array.isArray(item.images) && item.images.length
         ? `<div style="margin-top:6px;">${item.images.map(img => {

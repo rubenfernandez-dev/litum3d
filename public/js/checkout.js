@@ -1,11 +1,11 @@
-// Stripe Checkout (Payment Element) - CHF Only
+// Stripe Checkout (Payment Element) - EUR Only
 // SECOND_UNIT_DISCOUNT_RATE viene declarada por cart.js, cargado antes en checkout.html/-fr/-de
 let stripe;
 let elements;
 let paymentElement;
 let clientSecret = null;
 let paymentIntentId = null;
-const CURRENCY = { code: 'chf', symbol: 'CHF' };
+const CURRENCY = { code: 'eur', symbol: '€' };
 
 function getLang() {
   return document.documentElement.lang || 'es';
@@ -181,7 +181,7 @@ async function handleCheckout(e) {
       throw new Error('No se pudo inicializar el método de pago. Recarga la página.');
     }
 
-    savePendingOrder({ cart, customerData, currency: 'chf' });
+    savePendingOrder({ cart, customerData, currency: CURRENCY.code });
 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
@@ -257,7 +257,7 @@ async function setupPaymentElement() {
       body: JSON.stringify({
         cart,
         customerData,
-        currency: 'chf'
+        currency: CURRENCY.code
       })
     });
 

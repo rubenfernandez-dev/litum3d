@@ -36,7 +36,7 @@ async function loadPricingConfig() {
 }
 
 /**
- * Precio (en CHF, para mostrar) de un extra según config servidor. Solo se
+ * Precio (en EUR, para mostrar) de un extra según config servidor. Solo se
  * usa cuando pricingConfig existe; si no, los checkboxes quedan deshabilitados.
  */
 function getExtraPrice(key) {
@@ -136,7 +136,7 @@ function renderShopProducts(products) {
         <h3 class="product-name">${escapeHtml(p.nombre)}</h3>
         <p class="product-desc">${escapeHtml(p.descripcion || 'Litofanía premium personalizada')}</p>
         <div class="product-footer">
-          <span class="product-price">CHF${parseFloat(p.precio).toFixed(2)}</span>
+          <span class="product-price">${parseFloat(p.precio).toFixed(2)} €</span>
           <span class="product-stock">${p.stock > 0 ? '✓ Disponible' : 'Agotado'}</span>
         </div>
         <button class="product-buy-btn" onclick="openCustomization(${p.id})" ${p.stock > 0 ? '' : 'disabled'}>
@@ -241,7 +241,7 @@ async function loadModelsForProduct(productId) {
       modelsContainer.innerHTML = modelVariant.options.map(opt => `
         <label class="custom-model-option">
           <input type="radio" name="model" value="${opt.id}" onchange="selectModel(${opt.id}, '${escapeHtml(opt.nombre)}', ${opt.price_delta || 0})">
-          <span>${escapeHtml(opt.nombre)} ${opt.price_delta ? `(+CHF${parseFloat(opt.price_delta).toFixed(2)})` : ''}</span>
+          <span>${escapeHtml(opt.nombre)} ${opt.price_delta ? `(+${parseFloat(opt.price_delta).toFixed(2)} €)` : ''}</span>
         </label>
       `).join('');
     } else {
@@ -298,7 +298,7 @@ async function loadVariantTypes(productId) {
           <option value="">Selecciona ${variantType.nombre.toLowerCase()}</option>
           ${variantType.options.map(opt => `
             <option value="${opt.id}" data-price="${opt.price_delta || 0}">
-              ${escapeHtml(opt.nombre)} ${opt.price_delta ? `(+CHF${parseFloat(opt.price_delta).toFixed(2)})` : ''}
+              ${escapeHtml(opt.nombre)} ${opt.price_delta ? `(+${parseFloat(opt.price_delta).toFixed(2)} €)` : ''}
             </option>
           `).join('')}
         </select>
@@ -335,7 +335,7 @@ function updateCustomizationPrice() {
 
   const totalPrice = basePrice + modelDelta + extrasCost + variantsCost;
 
-  document.querySelector('[data-variant-price]').textContent = `CHF${parseFloat(totalPrice).toFixed(2)}`;
+  document.querySelector('[data-variant-price]').textContent = `${parseFloat(totalPrice).toFixed(2)} €`;
   document.getElementById('custom-base-price').textContent = parseFloat(basePrice).toFixed(2);
   document.getElementById('custom-total').textContent = parseFloat(totalPrice).toFixed(2);
 }
@@ -526,7 +526,7 @@ function getExtrasFromUI() {
 
   // Legacy pricing field — remove after canonical checkout cutover.
   const extrasTotal = (upscale ? getExtraPrice('upscale') : 0) + (qr ? getExtraPrice('qr') : 0) + (adapter ? getExtraPrice('adapter') : 0);
-  return { upscale, qr, qrMessage, adapter, extrasTotal, currency: 'CHF' };
+  return { upscale, qr, qrMessage, adapter, extrasTotal, currency: 'EUR' };
 }
 
 function getVariantsPriceDelta() {

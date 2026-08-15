@@ -1,5 +1,5 @@
-// Cart Page Management - CHF Only
-const CURRENCY = { code: 'chf', symbol: 'CHF' };
+// Cart Page Management - EUR Only
+const CURRENCY = { code: 'eur', symbol: '€' };
 const PAGE_SECOND_UNIT_DISCOUNT_RATE = 0.15;
 function renderCartItems() {
   const container = document.getElementById('cart-items-container');
@@ -128,7 +128,7 @@ function calculateSecondUnitDiscountCart(cart) {
 
 function getExtrasSummary(item) {
   const extras = item.extras || {};
-  const currency = extras.currency || 'CHF';
+  const currency = extras.currency || 'EUR';
   const parts = [
     extras.upscale ? `Upscale +5 ${currency}` : null,
     extras.qr ? `QR +5 ${currency}${extras.qrMessage ? `: ${escapeHtml(extras.qrMessage)}` : ''}` : null,
@@ -210,7 +210,12 @@ function normalizeCart(cart) {
       qrMessage: rawExtras.qrMessage ?? rawExtras.qr_message ?? rawExtras.extra_qr_message ?? '',
       adapter: !!(rawExtras.adapter ?? rawExtras.extra_adapter),
       extrasTotal: rawExtras.extrasTotal ?? rawExtras.extras_total ?? 0,
-      currency: rawExtras.currency || 'CHF'
+      // EUR-ONLY-01: la moneda activa del storefront es SIEMPRE EUR. Se
+      // normaliza incondicionalmente aquí (nunca se confía en un valor de
+      // moneda heredado que un carrito antiguo en localStorage pudiera
+      // tener guardado) -- los importes numéricos no se tocan, solo esta
+      // etiqueta de UI.
+      currency: 'EUR'
     };
 
     const normalizedItem = {

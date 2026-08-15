@@ -30,7 +30,7 @@ async function loadPricingConfig() {
   applyPricingConfigToExtrasUI();
 }
 
-// Precio (en CHF, para mostrar) de un extra según config servidor. Solo se
+// Precio (en EUR, para mostrar) de un extra según config servidor. Solo se
 // invoca cuando pricingConfig existe; si no existe, los checkboxes de extras
 // quedan deshabilitados por applyPricingConfigToExtrasUI().
 function getExtraPrice(key) {
@@ -114,7 +114,7 @@ async function loadFeaturedProducts() {
           <h3 class="product-name">${escapeHtml(p.nombre)}</h3>
           <p class="product-desc">${escapeHtml(p.descripcion || 'Litofanía premium con acabado profesional')}</p>
           <div class="product-footer">
-            <span class="product-price">CHF${parseFloat(p.precio).toFixed(2)}</span>
+            <span class="product-price">${parseFloat(p.precio).toFixed(2)} €</span>
             <span class="product-stock">${p.stock > 0 ? '✓ Stock' : 'Agotado'}</span>
           </div>
           <button class="product-buy-btn" onclick="openCustomization(${p.id})" ${p.stock > 0 ? '' : 'disabled'}>
@@ -169,7 +169,7 @@ async function openCustomization(productId) {
       qrMessage: '',
       adapter: false,
       extrasTotal: 0,
-      currency: 'CHF'
+      currency: 'EUR'
     }
   };
 
@@ -241,7 +241,7 @@ function renderVariantsForm(variantTypes) {
         // Siempre mostrar stock de 100 disponibles
         const stockText = '(100 disponibles)';
         const priceDelta = parseFloat(option.price_delta) || 0;
-        const priceDisplay = priceDelta > 0 ? ` +CHF${priceDelta.toFixed(2)}` : '';
+        const priceDisplay = priceDelta > 0 ? ` +${priceDelta.toFixed(2)} €` : '';
 
         html += `
           <option 
@@ -342,7 +342,7 @@ function renderModelOptions() {
       <input type="radio" name="custom-model" value="${m.id}" ${Number(customizationState.selectedModelId) === Number(m.id) ? 'checked' : ''} onchange="onModelChange(${m.id})">
       <div>
         <strong>${escapeHtml(m.nombre)}</strong><br>
-        <small>Stock: ${m.stock} · ${m.price_delta >= 0 ? '+' : ''}${parseFloat(m.price_delta || 0).toFixed(2)} CHF</small>
+        <small>Stock: ${m.stock} · ${m.price_delta >= 0 ? '+' : ''}${parseFloat(m.price_delta || 0).toFixed(2)} €</small>
       </div>
     </label>
   `).join('');
@@ -406,7 +406,7 @@ function closeCustomization() {
     variantPriceDelta: 0,
     selectedVariants: {},
     files: [],
-    extras: { upscale: false, qr: false, qrMessage: '', adapter: false, extrasTotal: 0, currency: 'CHF' }
+    extras: { upscale: false, qr: false, qrMessage: '', adapter: false, extrasTotal: 0, currency: 'EUR' }
   };
   const modal = document.getElementById('customization-modal');
   if (modal) {
@@ -426,7 +426,7 @@ function onExtraChange() {
   // Precios desde /api/pricing-config (getExtraPrice), nunca hardcodeados.
   const extrasTotal = (upscale ? getExtraPrice('upscale') : 0) + (qr ? getExtraPrice('qr') : 0) + (adapter ? getExtraPrice('adapter') : 0);
 
-  customizationState.extras = { upscale, qr, qrMessage, adapter, extrasTotal, currency: 'CHF' };
+  customizationState.extras = { upscale, qr, qrMessage, adapter, extrasTotal, currency: 'EUR' };
   updateCustomTotal();
 }
 

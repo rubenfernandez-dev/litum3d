@@ -134,7 +134,7 @@ const seoConfig = {
       fr: { name: 'Lampe de Table Personnalisée Lithophanie', description: 'Illuminez les Souvenirs: Lithophanie Personnalisée pour Bureau' },
       de: { name: 'Personalisierte Tischlampe Lithophanie', description: 'Erleuchten Sie Erinnerungen: Personalisierte Lithophanie für Tisch' },
       price: 49.99,
-      currency: 'CHF',
+      currency: 'EUR',
       image: 'https://litum3d.com/img/productos/mesa1.png'
     },
     {
@@ -144,7 +144,7 @@ const seoConfig = {
       fr: { name: 'Lampes au Plafond Personnalisées', description: 'Illuminez les Souvenirs: Lithophanie Personnalisée pour Plafond' },
       de: { name: 'Personalisierte Deckenleuchten', description: 'Erleuchten Sie Erinnerungen: Personalisierte Lithophanie für Decke' },
       price: 139.99,
-      currency: 'CHF',
+      currency: 'EUR',
       image: 'https://litum3d.com/img/productos/techo1.jpg'
     },
     {
@@ -154,7 +154,7 @@ const seoConfig = {
       fr: { name: 'Lithophanies Murales Personnalisées', description: 'Lithophanies Personnalisées pour Mur' },
       de: { name: 'Personalisierte Wandlithophanien', description: 'Personalisierte Lithophanien für Wand' },
       price: 59.99,
-      currency: 'CHF',
+      currency: 'EUR',
       image: 'https://litum3d.com/img/productos/pared1.jpg'
     }
   ]

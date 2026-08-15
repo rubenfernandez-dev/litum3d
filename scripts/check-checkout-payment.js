@@ -209,8 +209,8 @@ async function checkSnapshot() {
   );
 
   eq(snapshot.schemaVersion, 1, 'snapshot.schemaVersion debe ser 1 (viene de priceCartFromSelections)');
-  eq(snapshot.currency, 'chf', 'snapshot.currency debe venir del motor de pricing');
-  // 2 x 50.00 CHF = 10000 rappen de subtotal, menos el descuento de 2ª
+  eq(snapshot.currency, 'eur', 'snapshot.currency debe venir del motor de pricing (config/pricing.js)');
+  // 2 x 50.00 EUR = 10000 cents de subtotal, menos el descuento de 2ª
   // unidad (15% sobre 1 unidad descontable) = 10000 - 750 = 9250.
   eq(snapshot.totals.totalCents, 9250, 'la información económica debe coincidir EXACTAMENTE con el motor de pricing, incluido el descuento de 2ª unidad');
   eq(snapshot.items[0].images[0], 'https://example.com/a.jpg', 'images debe conservarse tal cual devuelve el motor de pricing');
@@ -239,7 +239,7 @@ async function checkSnapshot() {
     { idempotencyKey, accessToken, selections: sampleSelections() },
     sharedOptions
   );
-  eq(first.snapshot.totals.totalCents, 5000, 'primer intento: 50 CHF -> 5000 rappen');
+  eq(first.snapshot.totals.totalCents, 5000, 'primer intento: 50 EUR -> 5000 cents');
 
   PRODUCTS[8].precio = '60.00'; // el "catálogo" cambia entre el primer intento y el retry
 
@@ -367,10 +367,14 @@ async function checkPaymentIntent() {
     'amount mismatch entre PI y snapshot debe rechazarse'
   );
 
+  // EUR-ONLY-01: draftForMismatch.snapshot.currency es 'eur' (real, desde
+  // config/pricing.js). Se fuerza el draft falso a 'chf' -- una moneda
+  // distinta, nunca la activa -- para provocar el mismatch real.
+  eq(draftForMismatch.snapshot.currency, 'eur', 'precondición: el snapshot real usa la moneda canónica eur');
   const fakeDraftWithBadCurrency = {
     id: draftForMismatch.draftId,
     stripePaymentIntentId: draftForMismatch.paymentIntentId,
-    snapshot: { ...draftForMismatch.snapshot, currency: 'eur' }
+    snapshot: { ...draftForMismatch.snapshot, currency: 'chf' }
   };
   await rejects(
     () => Promise.resolve(validatePaymentIntentForDraft(
@@ -379,7 +383,18 @@ async function checkPaymentIntent() {
       { requireSucceeded: false }
     )),
     PaymentIntentValidationError,
-    'currency mismatch entre PI y snapshot debe rechazarse'
+    'currency mismatch (chf vs eur) entre PI y snapshot debe rechazarse'
+  );
+
+  // Caso simétrico explícito (sección 20 del ticket EUR-ONLY-01): PI con
+  // currency='eur' contra un snapshot igualmente 'eur' debe ser VÁLIDO.
+  ok(
+    validatePaymentIntentForDraft(
+      { id: draftForMismatch.paymentIntentId, status: 'requires_payment_method', amount: draftForMismatch.snapshot.totals.totalCents, currency: 'eur', metadata: { checkoutDraftId: String(draftForMismatch.draftId) } },
+      { id: draftForMismatch.draftId, stripePaymentIntentId: draftForMismatch.paymentIntentId, snapshot: draftForMismatch.snapshot },
+      { requireSucceeded: false }
+    ) === true,
+    'PI con currency="eur" contra snapshot currency="eur" es válido'
   );
 
   await rejects(

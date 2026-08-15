@@ -15,6 +15,7 @@
 */
 
 const { pool: defaultPool } = require('../config/db');
+const pricingConfig = require('../config/pricing');
 const checkoutDrafts = require('./checkout-drafts');
 const { DRAFT_STATUS } = checkoutDrafts;
 const { validatePaymentIntentForDraft, PaymentIntentValidationError } = require('./checkout-payment');
@@ -47,14 +48,14 @@ class FinalizationIntegrityError extends Error {
   }
 }
 
-// --- Conversión rappen -> DECIMAL(10,2) ---------------------------------------
+// --- Conversión cents/minor units -> DECIMAL(10,2) ----------------------------
 
 // Límite real confirmado contra MySQL 8 en P0E-B4-PREFLIGHT: DECIMAL(10,2)
-// admite como máximo 99999999.99, es decir 9999999999 rappen.
+// admite como máximo 99999999.99, es decir 9999999999 cents.
 const DECIMAL_10_2_MAX_CENTS = 9999999999;
 
 /**
- * Valida que un importe en rappen cabe en DECIMAL(10,2) ANTES de intentar
+ * Valida que un importe en cents cabe en DECIMAL(10,2) ANTES de intentar
  * el INSERT. No depende del ERROR 1264 de MySQL como primera línea de
  * defensa (aunque MySQL lo rechazaría igualmente en modo estricto).
  */
@@ -67,7 +68,7 @@ function assertFitsDecimal10_2(cents, context = 'importe') {
   }
   if (cents > DECIMAL_10_2_MAX_CENTS) {
     throw new CentsRangeError(
-      `${context}: ${cents} rappen excede el máximo de DECIMAL(10,2) (${DECIMAL_10_2_MAX_CENTS})`,
+      `${context}: ${cents} cents excede el máximo de DECIMAL(10,2) (${DECIMAL_10_2_MAX_CENTS})`,
       { context, cents }
     );
   }
@@ -75,10 +76,11 @@ function assertFitsDecimal10_2(cents, context = 'importe') {
 }
 
 /**
- * Convierte rappen (entero) a un string decimal apto para un INSERT/UPDATE
+ * Convierte cents (entero) a un string decimal apto para un INSERT/UPDATE
  * sobre una columna DECIMAL(10,2). Aritmética puramente entera + padding de
  * string: nunca usa (cents/100).toFixed(2), que pasaría por división en
- * coma flotante.
+ * coma flotante. (El nombre de la función se mantiene sin cambios: es
+ * genérico y ya no menciona "rappen".)
  */
 function centsToDecimalString(cents) {
   if (!Number.isSafeInteger(cents)) {
@@ -236,6 +238,21 @@ async function finalizePaidCheckout(paymentIntent, options = {}) {
       { requireSucceeded: true }
     );
 
+    // EUR-ONLY-01: validatePaymentIntentForDraft ya garantiza que
+    // paymentIntent.currency === snapshot.currency, pero no que esa moneda
+    // sea la ACTIVA hoy -- un draft muy antiguo (creado bajo una config de
+    // moneda previa, p.ej. antes del cutover EUR-only) podría en teoría
+    // seguir siendo consistente internamente sin ser la moneda canónica
+    // vigente. Se rechaza explícitamente en vez de persistir un pedido con
+    // una moneda distinta de la que config/pricing.js declara hoy.
+    if (lockedSnapshot.currency !== pricingConfig.currency) {
+      await conn.rollback();
+      throw new FinalizationIntegrityError(
+        `snapshot.currency ("${lockedSnapshot.currency}") no coincide con la moneda canónica activa ("${pricingConfig.currency}")`,
+        { draftId: draft.id, paymentIntentId: paymentIntent.id }
+      );
+    }
+
     // 20. Idempotencia definitiva: se intenta el INSERT directamente; la
     // garantía real es pedidos.stripe_payment_intent_id UNIQUE, no el
     // SELECT del "fast path" de arriba (que solo cubre el caso donde ya se
@@ -244,8 +261,8 @@ async function finalizePaidCheckout(paymentIntent, options = {}) {
       const [orderResult] = await conn.query(
         `INSERT INTO pedidos
            (usuario_id, estado_id, total, customer_name, customer_email, customer_phone,
-            customer_address, customer_city, customer_zip, customer_country, notas, stripe_payment_intent_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            customer_address, customer_city, customer_zip, customer_country, notas, stripe_payment_intent_id, currency)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           null,
           INITIAL_ORDER_ESTADO_ID,
@@ -258,7 +275,10 @@ async function finalizePaidCheckout(paymentIntent, options = {}) {
           lockedSnapshot.customerData?.zip || null,
           CHECKOUT_COUNTRY_CODE,
           `Checkout draft #${draft.id}`,
-          paymentIntent.id
+          paymentIntent.id,
+          // ISO 4217 en mayúsculas para persistencia (Stripe/config exigen
+          // minúscula; aquí se deriva, nunca se hardcodea una segunda vez).
+          lockedSnapshot.currency.toUpperCase()
         ]
       );
       orderId = orderResult.insertId;

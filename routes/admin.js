@@ -221,12 +221,13 @@ router.get('/dashboard', requireAuth, async (req, res) => {
 router.get('/api/dashboard', requireAuth, async (req, res) => {
     try {
         const query = `
-            SELECT 
+            SELECT
                 p.id,
                 p.usuario_id,
                 p.estado_id,
                 ep.nombre as estado_nombre,
                 p.total,
+                p.currency,
                 p.created_at,
                 COALESCE(p.customer_name, u.nombre, 'Cliente Anónimo') as customer_name
             FROM pedidos p
@@ -319,7 +320,7 @@ router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
 
         // Cabecera del pedido
         const [orders] = await pool.query(`
-                 SELECT p.id, p.total, p.created_at, ep.nombre AS estado_nombre,
+                 SELECT p.id, p.total, p.currency, p.created_at, ep.nombre AS estado_nombre,
                      COALESCE(p.customer_name, u.nombre, 'Cliente Anónimo') AS customer_name,
                      COALESCE(p.customer_email, u.email) AS email
             FROM pedidos p

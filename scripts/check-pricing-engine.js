@@ -75,10 +75,12 @@ async function main() {
   // --- Precio base -------------------------------------------------
   {
     const result = await price([{ productId: 8, quantity: 1 }]);
-    check(result.items[0].basePriceCents === 4995, 'Precio base: 49.95 CHF -> 4995 rappen');
+    check(result.items[0].basePriceCents === 4995, 'Precio base: 49.95 EUR -> 4995 cents');
     check(result.items[0].unitPriceCents === 4995, 'Precio base: sin modelo/variantes/extras, unitPrice = basePrice');
     check(result.items[0].lineDiscountCents === 0, 'Cantidad 1: sin descuento');
     check(result.totals.totalCents === 4995, 'Total con una sola línea base');
+    // EUR-ONLY-01: currency siempre viene de config/pricing.js, nunca hardcodeada aquí.
+    check(result.currency === 'eur', 'El motor de pricing produce currency="eur" (fuente: config/pricing.js)');
   }
 
   // --- Modelo --------------------------------------------------------
