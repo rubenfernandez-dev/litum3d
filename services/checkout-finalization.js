@@ -21,6 +21,7 @@ const pricingConfig = require('../config/pricing');
 const checkoutDrafts = require('./checkout-drafts');
 const { DRAFT_STATUS } = checkoutDrafts;
 const { validatePaymentIntentForDraft, PaymentIntentValidationError } = require('./checkout-payment');
+const { extractPersistableImageRuta } = require('./uploads-storage');
 
 // Server-controlled temporary checkout country.
 // Revisit with international shipping/tax implementation.
@@ -128,9 +129,18 @@ function buildVariantesSeleccionadasJson(variantSelections) {
   return JSON.stringify({ schemaVersion: 1, variantSelections });
 }
 
+// DEFENSIVA / LEGACY (P0-FOTOS-01, hardening post-review): en el camino
+// normal, un snapshot NUEVO ya solo contiene la key interna limpia
+// "custom/<file>" -- services/checkout-payment.js#canonicalizeSelectionsImages
+// resuelve y limpia la capability URL del cliente ANTES de fingerprint/
+// snapshot, no aquí. Esta función se conserva como red de seguridad para
+// snapshots creados antes de esa canonicalización (desarrollo de este mismo
+// ticket) y como no-op inocuo en cualquier otro caso -- ver
+// services/uploads-storage.js#extractPersistableImageRuta. finalizePaidCheckout
+// NUNCA debería depender de que esta función "limpie" nada en producción.
 function extractImageRuta(img) {
-  if (typeof img === 'string') return img;
-  if (img && typeof img === 'object' && typeof img.url === 'string') return img.url;
+  if (typeof img === 'string') return extractPersistableImageRuta(img);
+  if (img && typeof img === 'object' && typeof img.url === 'string') return extractPersistableImageRuta(img.url);
   return null;
 }
 

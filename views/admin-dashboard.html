@@ -935,7 +935,7 @@
                         }
                         let imagesInfo = '';
                         if (it.imagenes && it.imagenes.length > 0) {
-                            const imgLinks = it.imagenes.map(img => `<a href="${img.ruta}" target="_blank" style="color:#64c8ff; text-decoration:none; margin-right:6px;">📎 Ver</a>`).join('');
+                            const imgLinks = it.imagenes.map(img => `<a href="${img.viewUrl}" target="_blank" style="color:#64c8ff; text-decoration:none; margin-right:6px;">📎 Ver</a>`).join('');
                             imagesInfo = `<div style="font-size:12px; margin-top:4px;">Imágenes: ${imgLinks}</div>`;
                         }
                         return `

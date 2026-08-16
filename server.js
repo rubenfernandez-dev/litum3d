@@ -49,7 +49,14 @@ app.use(session({
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// uploads/custom (fotos de personalización de clientes) NUNCA se sirve como
+// static público (P0-FOTOS-01): no existe ningún otro contenido legítimo
+// bajo uploads/ que necesite estarlo (catálogo/logos viven en public/img,
+// servidos arriba; uploads/temp es staging interno de multer para reseñas,
+// nunca referenciado por URL). El único acceso de lectura es
+// GET /api/uploads/custom/preview/:filename (capability token, cliente) o
+// GET /admin/pedidos/:orderId/imagenes/:imageId (sesión admin) -- ver
+// routes/uploads.js y routes/admin.js.
 
 // SEO Middleware
 app.use(seoMiddleware);

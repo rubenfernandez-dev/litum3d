@@ -6,6 +6,7 @@ const path = require('path');
 const { pool } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const requireAuth = require('../middleware/requireAuth');
+const uploadsStorage = require('../services/uploads-storage');
 
 // POST /admin/variantes - Crear nueva opción de variante (base o forma)
 router.post('/variantes', requireAuth, async (req, res) => {
@@ -347,19 +348,87 @@ router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
             ORDER BY dp.id ASC
         `, [id]);
 
-        // Obtener imágenes por cada línea
+        // Obtener imágenes por cada línea. P0-FOTOS-01: el frontend admin
+        // NUNCA recibe la `ruta` interna (ni la antigua URL pública ni la
+        // nueva key) -- solo un viewUrl hacia la ruta autenticada de abajo,
+        // que valida sesión admin + pertenencia al pedido en cada petición.
         for (const item of items) {
             const [images] = await pool.query(
-                'SELECT id, ruta FROM detalle_pedido_imagenes WHERE detalle_pedido_id = ?',
+                'SELECT id FROM detalle_pedido_imagenes WHERE detalle_pedido_id = ?',
                 [item.id]
             );
-            item.imagenes = images;
+            item.imagenes = images.map(img => ({ id: img.id, viewUrl: `/admin/pedidos/${id}/imagenes/${img.id}` }));
         }
 
         res.json({ order: orders[0], items });
     } catch (error) {
         console.error('❌ Error al obtener detalle del pedido:', error.message);
         res.status(500).json({ error: 'Error al obtener detalle' });
+    }
+});
+
+// GET /admin/pedidos/:orderId/imagenes/:imageId - Sirve una fotografía de
+// personalización del cliente (P0-FOTOS-01). Única vía oficial para las
+// fotos subidas en la web: sesión admin válida (requireAuth) + la imagen
+// debe pertenecer REALMENTE a ese pedido (JOIN, no solo "el imageId
+// existe"). NUNCA acepta un path arbitrario -- ver
+// services/uploads-storage.js#resolveAdminImageReference/resolveCustomUploadPath.
+router.get('/pedidos/:orderId/imagenes/:imageId', requireAuth, async (req, res) => {
+    try {
+        const { orderId, imageId } = req.params;
+
+        const [rows] = await pool.query(
+            `SELECT dpi.ruta
+             FROM detalle_pedido_imagenes dpi
+             JOIN detalle_pedidos dp ON dpi.detalle_pedido_id = dp.id
+             WHERE dpi.id = ? AND dp.pedido_id = ?
+             LIMIT 1`,
+            [imageId, orderId]
+        );
+        if (rows.length === 0) {
+            // No distingue "imagen inexistente" de "existe pero es de otro
+            // pedido": ambos son simplemente "no autorizado para esta
+            // combinación pedido+imagen" (sección 15/30).
+            return res.status(404).end();
+        }
+
+        const resolved = uploadsStorage.resolveAdminImageReference(rows[0].ruta);
+        if (!resolved.ok) {
+            if (resolved.reason === 'external') {
+                // Referencia legacy con forma de URL externa: nunca se hace
+                // fetch server-side de ella (sección 29, SSRF). Como el
+                // caller ya es un admin autenticado sobre SU pedido, un
+                // mensaje explícito es más útil que un 404 genérico.
+                return res.status(422).json({ error: 'Referencia de imagen legacy no soportada (URL externa)' });
+            }
+            return res.status(404).end();
+        }
+
+        const resolvedPath = await uploadsStorage.resolveCustomUploadPath(resolved.filename);
+        if (!resolvedPath) {
+            return res.status(404).end();
+        }
+        const contentType = uploadsStorage.contentTypeForFilename(resolved.filename);
+        if (!contentType) {
+            return res.status(404).end();
+        }
+
+        res.set({
+            'Content-Type': contentType,
+            'Content-Disposition': 'inline',
+            'Cache-Control': 'private, no-store',
+            'X-Content-Type-Options': 'nosniff'
+        });
+        // resolvedPath ya es absoluto y validado (ver routes/uploads.js para
+        // la misma nota): no se combina con {root}.
+        res.sendFile(resolvedPath, (err) => {
+            if (err && !res.headersSent) {
+                res.status(404).end();
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error al servir imagen de pedido:', error.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Error al obtener la imagen' });
     }
 });
 

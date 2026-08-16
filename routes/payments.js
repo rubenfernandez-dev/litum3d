@@ -31,12 +31,12 @@ const express = require('express');
 const Stripe = require('stripe');
 const nodemailer = require('nodemailer');
 const path = require('path');
-const fs = require('fs');
 const pricingConfig = require('../config/pricing');
 const defaultCheckoutPayment = require('../services/checkout-payment');
 const defaultCheckoutFinalization = require('../services/checkout-finalization');
 const checkoutDrafts = require('../services/checkout-drafts');
 const { PricingValidationError } = require('../services/pricing');
+const uploadsStorage = require('../services/uploads-storage');
 
 const defaultStripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
@@ -113,6 +113,13 @@ function mapDomainErrorToHttp(err) {
       return { status: 409, code: 'payment_not_succeeded', message: 'El pago todavía no se ha completado' };
     }
     return { status: 422, code: 'payment_integrity_mismatch', message: 'El pago no coincide con el checkout esperado' };
+  }
+  // P0-FOTOS-01 hardening: referencia de imagen inválida/falsificada
+  // (token incorrecto, URL externa, internal key autoasignada, archivo
+  // inexistente...) detectada ANTES de tocar pricing/draft/Stripe -- 400,
+  // igual que el resto de rechazos de selections malformadas.
+  if (err && err.name === 'ImageReferenceValidationError') {
+    return { status: 400, code: 'image_reference_invalid', message: 'Una de las imágenes de la selección no es válida' };
   }
   if (err && err.name === 'FinalizationIntegrityError') {
     return { status: 422, code: 'finalization_integrity_error', message: 'Estado de checkout inconsistente' };
@@ -455,24 +462,22 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
       ? process.env.LOGO_URL
       : `${baseUrl.replace(/\/$/, '')}/img/logos/lineal.logo.png`;
     const symbol = selectedCurrency === 'eur' ? '€' : selectedCurrency.toUpperCase();
+    // P0-FOTOS-01: cartHTML (compartido por el email de cliente Y el de
+    // admin) YA NO construye ningún enlace directo a la foto. item.images[].url
+    // es ahora una referencia privada (capability token de un solo archivo,
+    // ver services/uploads-storage.js) que dejaría de servir nada en cuanto
+    // caducara/rotara, y publicarla en un email (bandeja que puede
+    // reenviarse, indexarse, quedar en un backup) es exactamente la
+    // exposición que este ticket cierra. El admin ve las fotos desde el
+    // panel autenticado (enlace más abajo, en adminEmailHTML); el cliente ya
+    // tiene sus propias fotos en su dispositivo.
     const cartHTML = cart.map(item => {
-      const imageLinks = Array.isArray(item.images) && item.images.length
-        ? `<div style="margin-top:6px;">${item.images.map(img => {
-            const raw = typeof img === 'string' ? img : (img.url || img.filename || '');
-            if (!raw) return '';
-            const url = raw.startsWith('http') ? raw : `${baseUrl.replace(/\/$/, '')}${raw.startsWith('/') ? '' : '/'}${raw}`;
-            return `<a href="${escapeHtml(url)}" style="color:#e0ad61; text-decoration:underline; font-size:12px;" target="_blank">Ver imagen</a>`;
-          }).filter(Boolean).join(' · ')}
-          </div>`
-        : '';
-
       return `
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">
           ${escapeHtml(item.name)}${item.modelName ? ' · ' + escapeHtml(item.modelName) : ''}
           ${item.notes ? `<br><small style="color:#666;">Notas: ${escapeHtml(item.notes)}</small>` : ''}
-          ${Array.isArray(item.images) && item.images.length ? `<br><small style="color:#666;">Imágenes: ${item.images.length}</small></small>` : ''}
-          ${imageLinks}
+          ${Array.isArray(item.images) && item.images.length ? `<br><small style="color:#666;">Imágenes: ${item.images.length}</small>` : ''}
         </td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${symbol}${item.price.toFixed(2)}</td>
@@ -554,9 +559,21 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
 
     // Email to admin
     const debugLines = cart.map(i => `${escapeHtml(i.name)} x${i.quantity} = ${(i.price * i.quantity).toFixed(2)}`).join(' | ');
+    const hasAnyImages = cart.some(item => Array.isArray(item.images) && item.images.length > 0);
+    // P0-FOTOS-01: el email de admin YA NO enlaza directamente a ninguna
+    // foto (ver cartHTML arriba). En su lugar, enlaza al panel Admin
+    // (requiere login) -- sin sesión, sin acceso. La vía oficial sigue
+    // siendo: correo avisa -> Admin autenticado -> pedido -> fotos. Las
+    // imágenes también siguen adjuntas directamente a este correo (ver
+    // bloque de attachments más abajo, sin cambios de comportamiento: ya
+    // leía el archivo real del disco, nunca dependió de la URL pública).
+    const adminPanelNotice = hasAnyImages
+      ? `<p style="margin-top: 16px;"><a href="${baseUrl}/admin" style="color:#1a1a2e; font-weight:700;">Ver imágenes del pedido en el panel Admin →</a></p>`
+      : '';
     const adminEmailHTML = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #1a1a2e;">¡Nuevo Pedido Pagado! #${orderId}</h2>
+        ${adminPanelNotice}
 
         <h3 style="color: #e0ad61;">Cliente</h3>
         <p>
@@ -606,20 +623,27 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
       html: customerEmailHTML
     });
 
-    // Build attachments for admin (uploaded images)
+    // Build attachments for admin (uploaded images). P0-FOTOS-01: se
+    // resuelve el nombre físico con la MISMA validación segura que el resto
+    // del sistema (uploadsStorage.resolveCustomUploadPath -- basename +
+    // charset + contención de raíz + resolución de symlinks), en vez de
+    // construir el path a mano desde un valor que en última instancia viene
+    // del snapshot del cliente. img.filename (metadata, nunca autoridad de
+    // filesystem) es la fuente preferida; si faltara, se deriva del propio
+    // img.url/img (compatibilidad con snapshots ya existentes).
     const attachments = [];
     for (const item of cart) {
       const images = Array.isArray(item.images) ? item.images : [];
       for (const img of images) {
-        const raw = typeof img === 'string' ? img : (img.url || img.filename || '');
-        if (!raw) continue;
-        const localPath = raw.startsWith('/uploads/')
-          ? path.join(__dirname, '..', raw)
-          : path.join(__dirname, '..', 'uploads', 'custom', raw);
-        if (fs.existsSync(localPath)) {
+        const candidate = (img && typeof img === 'object' && typeof img.filename === 'string')
+          ? img.filename
+          : (typeof img === 'string' ? img : (img && img.url) || '');
+        if (!candidate) continue;
+        const resolvedPath = await uploadsStorage.resolveCustomUploadPath(path.basename(String(candidate).split('?')[0]));
+        if (resolvedPath) {
           attachments.push({
-            filename: path.basename(localPath),
-            path: localPath
+            filename: path.basename(resolvedPath),
+            path: resolvedPath
           });
         }
       }

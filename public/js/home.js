@@ -437,7 +437,7 @@ async function confirmCustomization() {
   // Validar consentimiento de fotos si hay archivos subidos
   const photoConsentCheckbox = document.getElementById('photo-consent');
   if (customizationState.files.length > 0 && photoConsentCheckbox && !photoConsentCheckbox.checked) {
-    alert('⚠️ Debes aceptar el tratamiento de tus fotos para continuar.\n\nTus fotos se usarán solo para crear tu litofanía y se borrarán automáticamente tras la fabricación.');
+    alert('⚠️ Debes aceptar el tratamiento de tus fotos para continuar.\n\nLas fotos se utilizan para personalizar y gestionar tu pedido.');
     photoConsentCheckbox.focus();
     return;
   }
