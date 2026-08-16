@@ -24,6 +24,15 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(morgan('dev'));
+
+// Stripe webhook (P0E-B5): DEBE montarse con el body RAW, ANTES de
+// express.json() global -- stripe.webhooks.constructEvent necesita el
+// Buffer exacto que Stripe firmó, no un objeto ya parseado (ver
+// routes/payments.js#createStripeWebhookRouter). Al responder aquí primero,
+// express.json() de abajo nunca llega a tocar esta ruta; el resto de /api
+// (paymentsRoutes, montado más abajo) sigue recibiendo JSON normal.
+app.use('/api/stripe/webhook', paymentsRoutes.createStripeWebhookRouter());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

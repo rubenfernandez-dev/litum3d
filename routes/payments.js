@@ -299,13 +299,125 @@ function buildHandlers({
     }
   }
 
+  // POST /api/stripe/webhook (P0E-B5)
+  // Único consumidor de finalizePaidCheckout() que NO depende de que el
+  // navegador vuelva a llamar a /api/confirm-payment: Stripe reconcilia
+  // pedidos aunque el cliente cierre la pestaña, pierda conexión o nunca
+  // vuelva del redirect 3DS. Reutiliza EXACTAMENTE la misma
+  // checkoutFinalization.finalizePaidCheckout() + sendConfirmationEmailAdapter
+  // que POST /confirm-payment -- toda la idempotencia (pedidos.stripe_payment_intent_id
+  // UNIQUE + revalidación bajo lock) y toda la validación económica
+  // (amount/currency/metadata/status contra el snapshot persistido) ya vive
+  // ahí; este handler NO duplica ninguna de esas comprobaciones.
+  //
+  // Requiere req.body como Buffer RAW (ver createStripeWebhookRouter/server.js):
+  // stripe.webhooks.constructEvent necesita el byte-a-byte exacto que Stripe
+  // firmó, nunca un objeto ya parseado por express.json().
+  async function stripeWebhookHandler(req, res) {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!stripe) {
+      console.error('[routes/payments] POST /stripe/webhook: Stripe no configurado (falta STRIPE_SECRET_KEY)');
+      return res.status(400).json({ received: false });
+    }
+    if (!webhookSecret) {
+      // Fail-closed explícito (sección 3): sin secret no hay forma de
+      // verificar la firma, así que nunca se procesa el evento como si
+      // viniera de Stripe. No hay fallback inseguro.
+      console.error('[routes/payments] POST /stripe/webhook: STRIPE_WEBHOOK_SECRET no configurado -- rechazando evento sin verificar');
+      return res.status(400).json({ received: false });
+    }
+    const signature = req.headers['stripe-signature'];
+    if (!signature) {
+      return res.status(400).json({ received: false });
+    }
+
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
+    } catch (err) {
+      // Firma ausente/inválida, payload manipulado o secret incorrecto:
+      // nunca se procesa el evento. Nunca se expone el motivo detallado ni
+      // la firma/secret en la respuesta.
+      console.error('[routes/payments] POST /stripe/webhook: firma inválida -', err.message);
+      return res.status(400).json({ received: false });
+    }
+
+    try {
+      if (event.type === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object;
+        const checkoutDraftId = paymentIntent?.metadata?.checkoutDraftId;
+
+        if (!checkoutDraftId) {
+          // PI válidamente firmado pero ajeno al checkout canónico de
+          // LITUM3D (sección 15): nunca se convierte en pedido. Se
+          // reconoce con 200 para que Stripe no reintente indefinidamente
+          // un evento que nunca podrá "resolverse" de otra forma.
+          console.warn(`[routes/payments] webhook event.id=${event.id} type=${event.type} paymentIntentId=${paymentIntent?.id}: sin metadata.checkoutDraftId, PI ajeno -- ignorado`);
+          return res.status(200).json({ received: true });
+        }
+
+        try {
+          const result = await checkoutFinalization.finalizePaidCheckout(paymentIntent, {
+            sendConfirmationEmail: sendConfirmationEmailAdapter
+          });
+          console.log(`[routes/payments] webhook event.id=${event.id} type=${event.type} paymentIntentId=${paymentIntent.id} checkoutDraftId=${checkoutDraftId} orderId=${result.orderId} created=${result.created}`);
+          return res.status(200).json({ received: true });
+        } catch (finalizeErr) {
+          if (isDefinitiveIntegrityError(finalizeErr)) {
+            // Anomalía permanente (amount/currency/metadata mismatch, draft
+            // inexistente, overflow DECIMAL...): reintentar el MISMO evento
+            // nunca la resolverá, así que se reconoce con 200 para detener
+            // los reintentos de Stripe, pero se deja un log ERROR severo
+            // para investigación manual (sección 12).
+            console.error(`[routes/payments] webhook ANOMALÍA DE INTEGRIDAD DEFINITIVA event.id=${event.id} paymentIntentId=${paymentIntent.id} checkoutDraftId=${checkoutDraftId}: ${finalizeErr.name} - ${finalizeErr.message}`);
+            return res.status(200).json({ received: true });
+          }
+          // Fallo transitorio (DB caída/timeout/error inesperado antes de
+          // commit): 5xx para que Stripe reintente el evento más tarde.
+          console.error(`[routes/payments] webhook fallo transitorio event.id=${event.id} paymentIntentId=${paymentIntent.id}: ${finalizeErr.name || 'Error'} - ${finalizeErr.message}`);
+          return res.status(500).json({ received: false });
+        }
+      }
+
+      if (event.type === 'payment_intent.payment_failed' || event.type === 'payment_intent.canceled') {
+        // Nunca crea pedido, nunca marca converted, nunca envía email de
+        // confirmación (sección 9). Solo contexto técnico mínimo en logs.
+        const paymentIntent = event.data.object;
+        console.log(`[routes/payments] webhook event.id=${event.id} type=${event.type} paymentIntentId=${paymentIntent?.id} checkoutDraftId=${paymentIntent?.metadata?.checkoutDraftId || 'n/a'}: sin acción (no crea pedido)`);
+        return res.status(200).json({ received: true });
+      }
+
+      // Evento válidamente firmado pero no manejado (sección 10): 200 sin
+      // hacer nada, para no provocar reintentos innecesarios de Stripe.
+      return res.status(200).json({ received: true });
+    } catch (err) {
+      console.error(`[routes/payments] webhook error inesperado event.id=${event.id}: ${err.name || 'Error'} - ${err.message}`);
+      return res.status(500).json({ received: false });
+    }
+  }
+
   return {
     stripeConfigHandler,
     pricingConfigHandler,
     createPaymentIntentHandler,
     updateCustomerDataHandler,
-    confirmPaymentHandler
+    confirmPaymentHandler,
+    stripeWebhookHandler
   };
+}
+
+// Errores de integridad definitivos (sección 12): reintentar el MISMO
+// evento de Stripe nunca los resolverá porque el estado esperado (importe,
+// moneda, metadata, existencia del draft) es permanentemente incompatible.
+// Duck-typing por err.name (no instanceof), igual que mapDomainErrorToHttp:
+// checkoutFinalization/checkoutPayment pueden ser dobles inyectados en
+// tests que no comparten la referencia de clase real.
+function isDefinitiveIntegrityError(err) {
+  const name = err && err.name;
+  return name === 'PaymentIntentValidationError'
+    || name === 'FinalizationIntegrityError'
+    || name === 'CentsRangeError'
+    || name === 'DraftNotFoundError';
 }
 
 function createPaymentsRouter(deps = {}) {
@@ -318,6 +430,19 @@ function createPaymentsRouter(deps = {}) {
   router.patch('/checkout-draft/customer-data', handlers.updateCustomerDataHandler);
   router.post('/confirm-payment', handlers.confirmPaymentHandler);
 
+  return router;
+}
+
+// Router dedicado para el webhook de Stripe (P0E-B5). Se monta en server.js
+// en una ruta EXACTA (/api/stripe/webhook) ANTES de express.json() global,
+// con express.raw({type:'application/json'}) propio: así req.body llega
+// como Buffer sin parsear (requisito de stripe.webhooks.constructEvent) sin
+// afectar al resto de rutas de /api, que siguen usando JSON normal vía
+// paymentsRoutes (montado después de express.json(), sin tocar ese orden).
+function createStripeWebhookRouter(deps = {}) {
+  const router = express.Router();
+  const handlers = buildHandlers(deps);
+  router.post('/', express.raw({ type: 'application/json' }), handlers.stripeWebhookHandler);
   return router;
 }
 
@@ -532,6 +657,8 @@ function escapeHtml(text) {
 const router = createPaymentsRouter();
 module.exports = router;
 module.exports.createPaymentsRouter = createPaymentsRouter;
+module.exports.createStripeWebhookRouter = createStripeWebhookRouter;
+module.exports.isDefinitiveIntegrityError = isDefinitiveIntegrityError;
 module.exports.buildHandlers = buildHandlers;
 module.exports.mapDomainErrorToHttp = mapDomainErrorToHttp;
 module.exports.assertStrictAllowlist = assertStrictAllowlist;
