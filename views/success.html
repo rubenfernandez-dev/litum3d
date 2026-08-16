@@ -261,10 +261,6 @@
             <span style="color: #4ade80;">Pendiente de Envío</span>
           </div>
           <div class="order-details-item">
-            <span>Total Pagado:</span>
-            <span id="total-paid">€0.00</span>
-          </div>
-          <div class="order-details-item">
             <span>Fecha:</span>
             <span id="order-date">Hoy</span>
           </div>
@@ -333,22 +329,7 @@
   </footer>
 
   <script src="/js/cart.js"></script>
-  <script>
-    // Update cart badge on page load
-    document.getElementById('cart-badge').textContent = getCartCount();
-
-    // Get order ID from URL
-    const params = new URLSearchParams(window.location.search);
-    const orderId = params.get('orderId') || '---';
-
-    document.getElementById('order-number').textContent = `Pedido #${orderId}`;
-    document.getElementById('total-paid').textContent = `€${(parseFloat(localStorage.getItem('cart-total') || 0) * 1.21).toFixed(2)}`;
-
-    // Format date
-    const today = new Date();
-    const dateStr = today.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-    document.getElementById('order-date').textContent = dateStr;
-  </script>
+  <script src="/js/success.js"></script>
 </body>
 
 </html>

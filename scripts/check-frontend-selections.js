@@ -146,6 +146,17 @@ async function main() {
     );
   }
 
+  // F (P0E-B4B, sección 6/hardening) - addToCart SIEMPRE guarda
+  // selectionSchemaVersion:1 en todo item creado por el código actual, con
+  // o sin personalización real.
+  {
+    const cart = loadCartSandbox();
+    cart.addToCart(8, 'Producto', 49.95, {});
+    cart.addToCart(9, 'Otro', 19.95, { variantOptionIds: [7], modelId: 3 });
+    const items = cart.getCart();
+    check(items.every(i => i.selectionSchemaVersion === 1), 'F: addToCart guarda selectionSchemaVersion:1 en todo item nuevo, tenga o no personalización');
+  }
+
   // cart-page.js normalizeCart: compatibilidad con carritos antiguos en localStorage
   {
     const cart = loadCartSandbox();
@@ -160,6 +171,25 @@ async function main() {
     const oldCartWithDelta = [{ id: 8, name: 'X', price: 55, priceDelta: 7, quantity: 1 }];
     const result2 = cart.normalizeCart(oldCartWithDelta);
     check(result2.cart[0].variantOptionIds.length === 0, 'normalizeCart no inventa variantOptionIds a partir de priceDelta u otro campo legacy');
+  }
+
+  // E (P0E-B4B, sección 6/hardening) - normalizeCart NUNCA añade
+  // selectionSchemaVersion a un item legacy que no lo tenía, ni siquiera
+  // cuando le rellena variantOptionIds:[] en la misma pasada. Un item que ya
+  // lo tenía (carrito nuevo) lo conserva intacto.
+  {
+    const cart = loadCartSandbox();
+    const legacyItem = { id: 8, name: 'Producto viejo', price: 49.95, quantity: 1 }; // sin selectionSchemaVersion ni variantOptionIds
+    const { cart: normalizedLegacy } = cart.normalizeCart([legacyItem]);
+    check(
+      Array.isArray(normalizedLegacy[0].variantOptionIds) && normalizedLegacy[0].variantOptionIds.length === 0,
+      'E: normalizeCart sigue rellenando variantOptionIds:[] para no romper la UI'
+    );
+    check(!('selectionSchemaVersion' in normalizedLegacy[0]), 'E (CRÍTICO): normalizeCart NO añade selectionSchemaVersion a un item legacy, ni siquiera al rellenarle variantOptionIds:[]');
+
+    const newItem = { id: 9, name: 'Producto nuevo', price: 19.95, quantity: 1, selectionSchemaVersion: 1, variantOptionIds: [7] };
+    const { cart: normalizedNew } = cart.normalizeCart([newItem]);
+    check(normalizedNew[0].selectionSchemaVersion === 1, 'E: normalizeCart conserva selectionSchemaVersion:1 en un item que ya lo tenía');
   }
 
   // ================= home.js =================

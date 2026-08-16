@@ -1,17 +1,19 @@
 /*
-  LITUM3D - Finalización idempotente de checkout pagado (P0E-B4A).
+  LITUM3D - Finalización idempotente de checkout pagado (P0E-B4A, conectada
+  al checkout público en P0E-B4B).
 
-  AÚN AISLADO: ningún endpoint HTTP real (/api/confirm-payment, /api/pay) ni
-  webhook llaman todavía a finalizePaidCheckout(). Está diseñada para que
-  ambos la reutilicen en B4B sin duplicar esta lógica.
+  routes/payments.js#POST /api/confirm-payment llama a finalizePaidCheckout()
+  tras retrieve() del PaymentIntent en Stripe. Un futuro webhook (fuera de
+  alcance de B4B) reutilizará la misma función sin duplicar esta lógica.
 
   finalizePaidCheckout(paymentIntent) construye el pedido EXCLUSIVAMENTE
   desde el snapshot ya persistido en el checkout_draft asociado: nunca
   vuelve a consultar precios del catálogo ni recalcula nada económico. El
   pedido debe reflejar exactamente lo que Stripe cobró en su momento.
 
-  La función legacy createOrderFromCart() (routes/payments.js) permanece
-  intacta: sigue siendo la que usan /api/pay y /api/confirm-payment hoy.
+  La función legacy createOrderFromCart() (routes/payments.js, basada en
+  item.price del cliente) se eliminó en P0E-B4B: finalizePaidCheckout() es
+  ahora la ÚNICA vía de creación de pedidos pagados en el checkout público.
 */
 
 const { pool: defaultPool } = require('../config/db');
@@ -114,8 +116,8 @@ function parseSnapshotJson(value) {
 }
 
 // variantes_seleccionadas: formato legacy detectado en producción era
-// {baseId, shapeId} (routes/payments.js#createOrderFromCart, aún vigente,
-// sin tocar en B4A). El único consumidor real localizado es
+// {baseId, shapeId} (routes/payments.js#createOrderFromCart, eliminada en
+// P0E-B4B). El único consumidor real localizado es
 // routes/pedidos.js, que hace JSON.parse(...) y lo reenvía sin asumir
 // ninguna forma concreta (no desestructura baseId/shapeId); no hay ninguna
 // vista/frontend admin que lea `.baseId`/`.shapeId` de ese JSON. Por eso

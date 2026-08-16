@@ -244,10 +244,6 @@
             <span style="color: #4ade80;">En préparation d’expédition</span>
           </div>
           <div class="order-details-item">
-            <span>Total payé :</span>
-            <span id="total-paid">€0.00</span>
-          </div>
-          <div class="order-details-item">
             <span>Date :</span>
             <span id="order-date">Aujourd’hui</span>
           </div>
@@ -315,22 +311,7 @@
   </footer>
 
   <script src="/js/cart.js"></script>
-  <script>
-    // Update cart badge on page load
-    document.getElementById('cart-badge').textContent = getCartCount();
-
-    // Get order ID from URL
-    const params = new URLSearchParams(window.location.search);
-    const orderId = params.get('orderId') || '---';
-
-    document.getElementById('order-number').textContent = `Commande #${orderId}`;
-    document.getElementById('total-paid').textContent = `€${(parseFloat(localStorage.getItem('cart-total') || 0) * 1.21).toFixed(2)}`;
-
-    // Format date
-    const today = new Date();
-    const dateStr = today.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
-    document.getElementById('order-date').textContent = dateStr;
-  </script>
+  <script src="/js/success.js"></script>
 </body>
 
 </html>

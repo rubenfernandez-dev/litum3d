@@ -76,6 +76,12 @@ function addToCart(productId, productName, productPrice, options = {}) {
   } else {
     cart.push({
       id: productId,
+      // Marca de provenance del frontend (P0E-B4B): distingue un item creado
+      // por ESTE addToCart() de uno pre-B2 al que cart-page.js#normalizeCart
+      // pudo añadirle después un variantOptionIds:[] sin que eso implique
+      // ninguna selección real. Metadato de carrito/frontend, no económico:
+      // nunca viaja al pricing engine (ver checkout.js#buildCanonicalSelectionsFromCart).
+      selectionSchemaVersion: 1,
       modelId,
       modelName,
       variantOptionIds: normalizedVariantOptionIds,

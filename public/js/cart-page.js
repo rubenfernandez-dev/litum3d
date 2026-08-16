@@ -218,6 +218,13 @@ function normalizeCart(cart) {
       currency: 'EUR'
     };
 
+    // selectionSchemaVersion (P0E-B4B) NUNCA se añade ni se toca aquí: viaja
+    // sin más gracias al spread de arriba si el item ya la tenía (carrito
+    // nuevo), y se queda ausente si no la tenía (carrito pre-B2), aunque
+    // esta misma función le rellene variantOptionIds:[] más abajo. Promover
+    // silenciosamente un carrito legacy al contrato canónico -- solo porque
+    // ahora tiene un array vacío -- es exactamente lo que checkout.js debe
+    // poder distinguir y rechazar.
     const normalizedItem = {
       ...item,
       id,

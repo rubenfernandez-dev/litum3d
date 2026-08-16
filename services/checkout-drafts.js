@@ -8,9 +8,8 @@
     - un idempotency_key proporcionado por el cliente;
     - un fingerprint de selecciones calculado siempre por el servidor.
 
-  Todavía SIN consumidores reales: ninguna ruta HTTP, checkout.js ni Stripe
-  llaman a este módulo en este momento. Es infraestructura aislada, igual
-  que services/pricing.js lo fue en P0E-B1.
+  Conectado al checkout público desde P0E-B4B vía services/checkout-payment.js
+  y services/checkout-finalization.js (routes/payments.js + public/js/checkout.js).
 */
 
 const crypto = require('crypto');

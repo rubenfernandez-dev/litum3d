@@ -1,9 +1,11 @@
 /*
-  LITUM3D - Orquestación de checkout canónico + Stripe (P0E-B4A).
+  LITUM3D - Orquestación de checkout canónico + Stripe (P0E-B4A, conectada al
+  checkout público en P0E-B4B).
 
-  AÚN AISLADO: ninguna ruta HTTP real, public/js/checkout.js ni el flujo de
-  pago actual (/api/pay, /api/create-payment-intent, /api/confirm-payment)
-  llaman a este módulo. Es infraestructura preparada para el cutover de B4B.
+  routes/payments.js (POST /api/create-payment-intent, PATCH
+  /api/checkout-draft/customer-data) y public/js/checkout.js son ahora los
+  consumidores reales de este módulo. El flujo legacy (/api/pay,
+  calculateCartTotals, createOrderFromCart) se eliminó en el cutover.
 
   Responsabilidades:
     - construir el snapshot canónico histórico a partir de selecciones,

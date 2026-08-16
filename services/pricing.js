@@ -13,8 +13,10 @@
   en vez de ignorarla en silencio, para detectar cuanto antes cualquier sitio
   que todavía envíe el contrato antiguo durante la migración.
 
-  Todavía NO está conectado a ninguna ruta (routes/payments.js sigue usando
-  su propio calculateCartTotals). Esta pieza es infraestructura aislada.
+  Conectado al checkout público desde P0E-B4B vía services/checkout-payment.js
+  (POST /api/create-payment-intent): es la única autoridad de precio del
+  checkout real. calculateCartTotals (routes/payments.js, basado en
+  item.price del cliente) se eliminó en ese mismo ticket.
 
   IMPORTANTE: no muta nada en BD. Es de solo lectura.
 */

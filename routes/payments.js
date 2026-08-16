@@ -1,14 +1,44 @@
+/*
+  LITUM3D - Checkout público (P0E-B4B: cutover al flujo canónico seguro).
+
+  A partir de este ticket, ninguna ruta pública puede cobrar un importe
+  basado en datos económicos enviados por el navegador (item.price,
+  basePrice, priceDelta, extrasTotal, subtotal, total, amount, currency).
+  La única autoridad económica es:
+
+    selecciones -> priceCartFromSelections() -> snapshot persistido -> PaymentIntent
+
+  (services/pricing.js -> services/checkout-payment.js -> services/checkout-drafts.js).
+
+  Rutas públicas:
+    GET   /api/stripe-config             - clave pública de Stripe.
+    GET   /api/pricing-config            - moneda + precios de extras (informativo).
+    POST  /api/create-payment-intent     - prepara/reutiliza un checkout_draft + PaymentIntent.
+    PATCH /api/checkout-draft/customer-data - actualiza customerData del draft.
+    POST  /api/confirm-payment           - finaliza un PaymentIntent succeeded en un pedido.
+
+  /api/pay (creaba un PaymentIntent con amount derivado de item.price del
+  cliente) se ha eliminado: cero consumidores reales (auditado, ver informe
+  P0E-B4B). calculateCartTotals/createOrderFromCart (legacy, basados en
+  cart.item.price del cliente) se han eliminado con ella.
+
+  Factory createPaymentsRouter({...}) permite inyectar los servicios
+  (checkoutPayment/checkoutFinalization/stripe) en tests, sin tocar Stripe ni
+  BD reales -- mismo patrón de inyección que services/checkout-payment.js.
+*/
+
 const express = require('express');
 const Stripe = require('stripe');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
-const { pool } = require('../config/db');
 const pricingConfig = require('../config/pricing');
+const defaultCheckoutPayment = require('../services/checkout-payment');
+const defaultCheckoutFinalization = require('../services/checkout-finalization');
+const checkoutDrafts = require('../services/checkout-drafts');
+const { PricingValidationError } = require('../services/pricing');
 
-const router = express.Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const SECOND_UNIT_DISCOUNT_RATE = 0.15;
+const defaultStripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
@@ -21,313 +51,277 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-function calculateCartTotals(cart) {
-  let totalBeforeDiscount = 0;
-  let discountCurr = 0;
-  for (const item of cart) {
-    const qty = parseInt(item.quantity || 1);
-    const unit = parseFloat(item.price || 0);
-    totalBeforeDiscount += unit * qty;
-    if (Number.isFinite(qty) && qty >= 2 && Number.isFinite(unit)) {
-      const discountedUnits = Math.floor(qty / 2);
-      discountCurr += unit * SECOND_UNIT_DISCOUNT_RATE * discountedUnits;
-    }
+// --- Validación de body HTTP (allowlist estricta) -----------------------------
+
+class RequestValidationError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = 'RequestValidationError';
+    Object.assign(this, details);
   }
-  const totalCurr = totalBeforeDiscount - discountCurr;
-  const subtotalCurr = totalCurr / 1.21;
-  const taxCurr = totalCurr - subtotalCurr;
-  return { totalCurr, subtotalCurr, taxCurr, discountCurr, totalBeforeDiscount };
 }
 
-router.get('/stripe-config', (req, res) => {
-  return res.json({ ok: true, publicKey: process.env.STRIPE_PUBLIC_KEY || '' });
-});
-
-// GET /api/pricing-config - Configuración pública de pricing (moneda + precios de extras).
-// Fuente única: config/pricing.js. No expone nada de Stripe ni configuración interna.
-// Nota: es informativo para el frontend (previews); el servidor sigue siendo la
-// autoridad real del precio al calcular con services/pricing.js (todavía no conectado).
-router.get('/pricing-config', (req, res) => {
-  const toDisplay = (cents) => ({ cents, amount: cents / 100 });
-  return res.json({
-    ok: true,
-    currency: pricingConfig.currency,
-    extras: {
-      upscale: toDisplay(pricingConfig.extras.upscale),
-      qr: toDisplay(pricingConfig.extras.qr),
-      adapter: toDisplay(pricingConfig.extras.adapter)
-    }
-  });
-});
-
-router.post('/pay', async (req, res) => {
-  // `currency` del body se recibe pero se ignora deliberadamente (EUR-ONLY-01):
-  // la moneda del cobro SIEMPRE es la server-side de config/pricing.js, nunca
-  // la que envíe el cliente.
-  const { paymentMethodId, cart, customerData, currency: _clientProvidedCurrencyIgnored } = req.body;
-
-  try {
-    if (!paymentMethodId || !cart || !customerData) {
-      return res.json({ ok: false, error: 'Datos incompletos' });
-    }
-
-    // Calculate totals from cart items
-    // Los precios se cobran en la moneda server-side (config/pricing.js). El
-    // total = suma de item.price sin conversión.
-    const selectedCurrency = pricingConfig.currency;
-
-    // Debug: log carrito recibido
-    console.log('🧾 Carrito recibido:', cart.map(i => ({ id: i.id, name: i.name, qty: i.quantity, price: i.price })));
-
-    const { totalCurr, subtotalCurr, taxCurr } = calculateCartTotals(cart);
-    // Debug: log totales
-    console.log(`💶 Moneda seleccionada: ${selectedCurrency.toUpperCase()} | Total calculado: ${totalCurr.toFixed(2)}`);
-
-    // Desglose informativo para emails/factura (sin afectar al cobro)
-    console.log(`📊 Desglose (informativo): Base=${subtotalCurr.toFixed(2)} IVA=${taxCurr.toFixed(2)} TOTAL=${totalCurr.toFixed(2)}`);
-
-    // Determine currency
-    const amount = Math.round(totalCurr * 100);
-
-    // Create payment intent with Stripe
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount, // smallest unit
-      currency: pricingConfig.currency,
-      payment_method: paymentMethodId,
-      confirm: true,
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: 'never'
-      },
-      description: `Pedido LITUM3D - ${customerData.name}`,
-      receipt_email: customerData.email,
-      metadata: {
-        customer_name: customerData.name,
-        customer_email: customerData.email,
-        customer_phone: customerData.phone,
-        currency: selectedCurrency
-      }
-    });
-
-    if (paymentIntent.status !== 'succeeded') {
-      return res.json({ ok: false, error: 'Pago rechazado. Intenta de nuevo.' });
-    }
-
-    const { orderId } = await createOrderFromCart({
-      cart,
-      customerData,
-      totalCurr,
-      selectedCurrency,
-      paymentIntentId: paymentIntent.id,
-      paymentMethodType: paymentIntent.payment_method_types?.[0]
-    });
-
-    console.log(`✓ Proceso completado para pedido #${orderId}`);
-    res.json({ ok: true, orderId });
-
-  } catch (err) {
-    console.error('Payment error:', err);
-    res.json({ ok: false, error: err.message || 'Error al procesar el pago' });
+// Rechaza cualquier campo no esperado en vez de ignorarlo en silencio (mismo
+// principio que services/pricing.js#assertAllowedKeys): un campo económico
+// "de más" (price/total/currency/...) en el body debe ser un 400 explícito,
+// nunca un dato que el servidor decida ignorar silenciosamente sin que el
+// cliente lo sepa.
+function assertStrictAllowlist(body, allowedKeys, label = 'body') {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new RequestValidationError(`${label} debe ser un objeto JSON`);
   }
-});
-
-router.post('/create-payment-intent', async (req, res) => {
-  const { cart, customerData } = req.body;
-
-  try {
-    if (!cart || !Array.isArray(cart) || cart.length === 0) {
-      return res.json({ ok: false, error: 'Carrito vacío' });
+  const allowed = new Set(allowedKeys);
+  for (const key of Object.keys(body)) {
+    if (!allowed.has(key)) {
+      throw new RequestValidationError(`Campo no permitido en ${label}: "${key}"`, { field: key });
     }
+  }
+}
 
-    const selectedCurrency = pricingConfig.currency;
-    const { totalCurr, subtotalCurr, taxCurr } = calculateCartTotals(cart);
+// --- Mapeo de errores de dominio -> HTTP (sección 27) -------------------------
+// Nunca expone SQL/stack traces/access tokens/hashes en la respuesta. El
+// mensaje detallado (si contiene valores internos) se registra en el log del
+// servidor; la respuesta HTTP usa un mensaje corto y seguro por tipo.
 
-    console.log(`💶 Crear PI | Moneda: ${selectedCurrency.toUpperCase()} | Total: ${totalCurr.toFixed(2)}`);
-    console.log(`📊 Desglose (informativo): Base=${subtotalCurr.toFixed(2)} IVA=${taxCurr.toFixed(2)} TOTAL=${totalCurr.toFixed(2)}`);
+function mapDomainErrorToHttp(err) {
+  if (err instanceof RequestValidationError) {
+    return { status: 400, code: 'validation_error', message: err.message };
+  }
+  if (err instanceof PricingValidationError) {
+    return { status: 400, code: 'pricing_validation_error', message: err.message };
+  }
+  if (err instanceof checkoutDrafts.DraftValidationError) {
+    return { status: 400, code: 'draft_validation_error', message: err.message };
+  }
+  if (err instanceof checkoutDrafts.DraftIdempotencyConflictError) {
+    return { status: 409, code: 'idempotency_conflict', message: 'La idempotencyKey ya se usó con una selección distinta' };
+  }
+  if (err instanceof checkoutDrafts.DraftAccessDeniedError) {
+    return { status: 403, code: 'access_denied', message: 'Acceso no autorizado' };
+  }
+  if (err instanceof checkoutDrafts.DraftPaymentIntentConflictError) {
+    return { status: 409, code: 'payment_intent_conflict', message: 'Conflicto de PaymentIntent asociado al draft' };
+  }
+  if (err instanceof checkoutDrafts.DraftStateError) {
+    return { status: 409, code: 'state_conflict', message: err.message };
+  }
+  if (err instanceof checkoutDrafts.DraftNotFoundError) {
+    return { status: 404, code: 'draft_not_found', message: 'Checkout no encontrado' };
+  }
+  if (err && err.name === 'PaymentIntentValidationError') {
+    if (err.reason === 'not_succeeded') {
+      return { status: 409, code: 'payment_not_succeeded', message: 'El pago todavía no se ha completado' };
+    }
+    return { status: 422, code: 'payment_integrity_mismatch', message: 'El pago no coincide con el checkout esperado' };
+  }
+  if (err && err.name === 'FinalizationIntegrityError') {
+    return { status: 422, code: 'finalization_integrity_error', message: 'Estado de checkout inconsistente' };
+  }
+  if (err && err.name === 'CentsRangeError') {
+    return { status: 500, code: 'internal_amount_error', message: 'Error interno al procesar el importe' };
+  }
+  if (err && err.name === 'CheckoutPaymentError') {
+    return { status: 500, code: 'checkout_unavailable', message: 'El checkout no está disponible en este momento' };
+  }
+  // SDK de Stripe: errores de conexión/timeout se marcan como transitorios
+  // (502); el resto de StripeError (p.ej. tarjeta rechazada) ya se refleja
+  // como un PaymentIntent no succeeded, no como una excepción aquí.
+  if (err && typeof err.type === 'string' && err.type.startsWith('Stripe')) {
+    if (err.type === 'StripeConnectionError' || err.type === 'StripeAPIError') {
+      return { status: 502, code: 'stripe_transient_error', message: 'Error temporal al comunicar con el proveedor de pago' };
+    }
+    return { status: 502, code: 'stripe_error', message: 'Error al comunicar con el proveedor de pago' };
+  }
+  return { status: 500, code: 'internal_error', message: 'Error interno' };
+}
 
-    const amount = Math.round(totalCurr * 100);
+function sendDomainError(res, err, logContext) {
+  const mapped = mapDomainErrorToHttp(err);
+  console.error(`[routes/payments] ${logContext}:`, err.name || 'Error', '-', err.message);
+  return res.status(mapped.status).json({ ok: false, error: mapped.message, code: mapped.code });
+}
 
-    const currencyCode = pricingConfig.currency;
-    const paymentMethodTypes = ['paypal', 'twint', 'amazon_pay', 'card'];
+// --- DTO público del breakdown (sección 3) -------------------------------------
+// Allowlist explícita: NUNCA reenvía access_token_hash, selections_fingerprint,
+// customerData ni ningún id/columna interna que el checkout no necesite.
+function toPublicItemDto(item) {
+  return {
+    productId: item.productId,
+    productName: item.productName,
+    quantity: item.quantity,
+    modelName: item.modelName,
+    variantSelections: (item.variantSelections || []).map(v => ({
+      variantTypeName: v.variantTypeName,
+      optionName: v.optionName,
+      priceDeltaCents: v.priceDeltaCents
+    })),
+    extras: item.extras,
+    unitPriceCents: item.unitPriceCents
+  };
+}
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: currencyCode,
-      payment_method_types: paymentMethodTypes,
-      description: `Pedido LITUM3D - ${customerData?.name || 'Cliente'}`,
-      receipt_email: customerData?.email || undefined,
-      metadata: {
-        customer_name: customerData?.name || '',
-        customer_email: customerData?.email || '',
-        customer_phone: customerData?.phone || '',
-        currency: selectedCurrency
-      }
-    });
+function toPublicPrepareDto({ draftId, reused, clientSecret, paymentIntentId, paymentIntentStatus, snapshot }) {
+  return {
+    ok: true,
+    draftId,
+    reused,
+    clientSecret,
+    paymentIntentId,
+    paymentIntentStatus,
+    currency: snapshot.currency,
+    totals: snapshot.totals,
+    items: snapshot.items.map(toPublicItemDto)
+  };
+}
 
+// --- Adapter de email real (sección 6) -----------------------------------------
+// finalizePaidCheckout() nunca ve cart/pendingOrder/localStorage: solo recibe
+// {orderId, snapshot, paymentIntent} después del commit. Este adapter traduce
+// ESE snapshot al shape que ya espera sendConfirmationEmails (sin rediseñar
+// templates ni tocar su HTML).
+function snapshotItemToEmailCartItem(item) {
+  return {
+    name: item.productName,
+    modelName: item.modelName,
+    notes: item.notes,
+    images: item.images,
+    quantity: item.quantity,
+    // Solo para DISPLAY en email (nunca se persiste ni se usa como
+    // autoridad económica): conversión simple cents/100 es aceptable aquí.
+    price: item.unitPriceCents / 100
+  };
+}
+
+function makeSendConfirmationEmailAdapter(sendConfirmationEmailsFn) {
+  return async function sendConfirmationEmailAdapter({ orderId, snapshot, paymentIntent }) {
+    const cartLikeItems = snapshot.items.map(snapshotItemToEmailCartItem);
+    const totalDecimal = snapshot.totals.totalCents / 100;
+    await sendConfirmationEmailsFn(orderId, snapshot.customerData, cartLikeItems, totalDecimal, snapshot.currency);
+  };
+}
+
+// --- Router ---------------------------------------------------------------------
+
+// Construye los handlers Express como funciones nombradas independientes del
+// router, para poder probarlos directamente en tests con req/res falsos, sin
+// depender de las internals de express.Router ni de un servidor HTTP real.
+function buildHandlers({
+  checkoutPayment = defaultCheckoutPayment,
+  checkoutFinalization = defaultCheckoutFinalization,
+  stripe = defaultStripe,
+  sendConfirmationEmailsFn = sendConfirmationEmails
+} = {}) {
+  const sendConfirmationEmailAdapter = makeSendConfirmationEmailAdapter(sendConfirmationEmailsFn);
+
+  function stripeConfigHandler(req, res) {
+    return res.json({ ok: true, publicKey: process.env.STRIPE_PUBLIC_KEY || '' });
+  }
+
+  // GET /api/pricing-config - Configuración pública de pricing (moneda + precios de extras).
+  // Fuente única: config/pricing.js. Informativo para el frontend (previews);
+  // la autoridad real sigue siendo services/pricing.js vía /create-payment-intent.
+  function pricingConfigHandler(req, res) {
+    const toDisplay = (cents) => ({ cents, amount: cents / 100 });
     return res.json({
       ok: true,
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id
-    });
-  } catch (err) {
-    console.error('Create PI error:', err);
-    return res.json({ ok: false, error: err.message || 'Error al iniciar pago' });
-  }
-});
-
-router.post('/confirm-payment', async (req, res) => {
-  const { paymentIntentId, cart, customerData } = req.body;
-
-  try {
-    if (!paymentIntentId || !cart || !customerData) {
-      return res.json({ ok: false, error: 'Datos incompletos' });
-    }
-
-    const selectedCurrency = pricingConfig.currency;
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    if (!paymentIntent || paymentIntent.status !== 'succeeded') {
-      return res.json({ ok: false, error: 'Pago no confirmado' });
-    }
-
-    const { totalCurr } = calculateCartTotals(cart);
-    const expectedAmount = Math.round(totalCurr * 100);
-    const expectedCurrency = pricingConfig.currency;
-
-    if (paymentIntent.amount !== expectedAmount || paymentIntent.currency !== expectedCurrency) {
-      return res.json({ ok: false, error: 'El total del pago no coincide' });
-    }
-
-    const finalCustomerData = {
-      name: customerData?.name || paymentIntent.metadata?.customer_name || null,
-      email: customerData?.email || paymentIntent.metadata?.customer_email || paymentIntent.receipt_email || null,
-      phone: customerData?.phone || paymentIntent.metadata?.customer_phone || null,
-      address: customerData?.address || null,
-      city: customerData?.city || null,
-      zip: customerData?.zip || null,
-      country: customerData?.country || null
-    };
-
-    const { orderId } = await createOrderFromCart({
-      cart,
-      customerData: finalCustomerData,
-      totalCurr,
-      selectedCurrency,
-      paymentIntentId: paymentIntent.id,
-      paymentMethodType: paymentIntent.payment_method_types?.[0]
-    });
-
-    return res.json({ ok: true, orderId });
-  } catch (err) {
-    console.error('Confirm payment error:', err);
-    return res.json({ ok: false, error: err.message || 'Error al confirmar pago' });
-  }
-});
-
-async function createOrderFromCart({ cart, customerData, totalCurr, selectedCurrency, paymentIntentId, paymentMethodType }) {
-  const conn = await pool.getConnection();
-  try {
-    const [existing] = await conn.query(
-      'SELECT id FROM pedidos WHERE notas LIKE ?',
-      [`%Stripe ID: ${paymentIntentId}%`]
-    );
-    if (existing.length) {
-      return { orderId: existing[0].id, alreadyProcessed: true };
-    }
-
-    await conn.beginTransaction();
-
-    // Insert into pedidos
-    // currency: siempre server-side (pricingConfig.currency vía selectedCurrency,
-    // ver routes/payments.js#/pay /create-payment-intent /confirm-payment),
-    // nunca el valor que el cliente pueda haber enviado en el body.
-    const [orderResult] = await conn.query(
-      'INSERT INTO pedidos (usuario_id, estado_id, total, customer_name, customer_email, customer_phone, customer_address, customer_city, customer_zip, customer_country, notas, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [
-        null,
-        1,
-        totalCurr,
-        customerData?.name || null,
-        customerData?.email || null,
-        customerData?.phone || null,
-        customerData?.address || null,
-        customerData?.city || null,
-        customerData?.zip || null,
-        customerData?.country || null,
-        `Moneda: ${selectedCurrency.toUpperCase()}`,
-        selectedCurrency.toUpperCase()
-      ]
-    );
-
-    const orderId = orderResult.insertId;
-
-    // Insert items into detalle_pedidos
-    for (const item of cart) {
-      const rawModelId = item.modelId ?? item.model_id ?? item.modelID ?? null;
-      let safeModelId = null;
-      if (rawModelId !== undefined && rawModelId !== null && rawModelId !== '') {
-        const parsed = parseInt(rawModelId, 10);
-        if (!Number.isNaN(parsed)) {
-          const [modelRows] = await conn.query(
-            'SELECT id FROM product_models WHERE id = ? LIMIT 1',
-            [parsed]
-          );
-          if (modelRows.length) safeModelId = parsed;
-        }
+      currency: pricingConfig.currency,
+      extras: {
+        upscale: toDisplay(pricingConfig.extras.upscale),
+        qr: toDisplay(pricingConfig.extras.qr),
+        adapter: toDisplay(pricingConfig.extras.adapter)
       }
+    });
+  }
 
-      // Guardar variantes seleccionadas si existen (baseId, shapeId)
-      let variantesSeleccionadas = null;
-      if (item.baseId || item.shapeId) {
-        variantesSeleccionadas = JSON.stringify({ baseId: item.baseId || null, shapeId: item.shapeId || null });
-      }
-      const [detailResult] = await conn.query(
-        'INSERT INTO detalle_pedidos (pedido_id, producto_id, modelo_id, cantidad, precio_unitario, personalizacion_notas, variantes_seleccionadas) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [orderId, item.id, safeModelId, item.quantity, item.price, item.notes || null, variantesSeleccionadas]
+  // POST /api/create-payment-intent
+  // Body allowlist ESTRICTO: { idempotencyKey, accessToken, selections }.
+  // Ningún otro campo (price/total/currency/...) es válido; se rechaza con 400.
+  async function createPaymentIntentHandler(req, res) {
+    try {
+      assertStrictAllowlist(req.body, ['idempotencyKey', 'accessToken', 'selections'], 'body');
+      const { idempotencyKey, accessToken, selections } = req.body;
+
+      const result = await checkoutPayment.prepareCanonicalCheckout(
+        { idempotencyKey, accessToken, selections },
+        { stripe }
       );
 
-      const detalleId = detailResult.insertId;
-      if (Array.isArray(item.images)) {
-        const imagesToStore = item.images.slice(0, 3);
-        for (const img of imagesToStore) {
-          const ruta = typeof img === 'string' ? img : (img.url || img.filename || null);
-          if (ruta) {
-            await conn.query(
-              'INSERT INTO detalle_pedido_imagenes (detalle_pedido_id, ruta) VALUES (?, ?)',
-              [detalleId, ruta]
-            );
-          }
-        }
-      }
+      return res.json(toPublicPrepareDto(result));
+    } catch (err) {
+      return sendDomainError(res, err, 'POST /create-payment-intent');
     }
-
-    // Store payment intent ID for reference
-    const methodTag = paymentMethodType ? ` | Método: ${paymentMethodType}` : '';
-    await conn.query(
-      'UPDATE pedidos SET notas = CONCAT(IFNULL(notas, \'\'), ?, " | Stripe ID: ", ?) WHERE id = ?',
-      [methodTag, paymentIntentId, orderId]
-    );
-
-    await conn.commit();
-
-    console.log(`📦 Pedido #${orderId} creado en BD`);
-    console.log(`📧 Intentando enviar emails...`);
-
-    // Send confirmation emails
-    await sendConfirmationEmails(orderId, customerData, cart, totalCurr, selectedCurrency);
-
-    return { orderId, alreadyProcessed: false };
-  } catch (err) {
-    try {
-      await conn.rollback();
-    } catch (e) {
-      // ignore rollback errors
-    }
-    throw err;
-  } finally {
-    conn.release();
   }
+
+  // PATCH /api/checkout-draft/customer-data
+  // accessToken SIEMPRE en el body (nunca en URL/query string). Aplica todas
+  // las protecciones B4A: capability token, guard atómico de estado,
+  // converted/expired rechazado, PI succeeded observado -> rechazo.
+  async function updateCustomerDataHandler(req, res) {
+    try {
+      assertStrictAllowlist(req.body, ['accessToken', 'customerData'], 'body');
+      const { accessToken, customerData } = req.body;
+      if (typeof accessToken !== 'string' || accessToken.length === 0) {
+        throw new RequestValidationError('accessToken debe ser un string no vacío');
+      }
+
+      await checkoutPayment.updateCheckoutCustomerData({ accessToken, customerData }, { stripe });
+
+      return res.json({ ok: true });
+    } catch (err) {
+      return sendDomainError(res, err, 'PATCH /checkout-draft/customer-data');
+    }
+  }
+
+  // POST /api/confirm-payment
+  // Body allowlist ESTRICTO: SOLO { paymentIntentId }. cart/customerData/
+  // totals/currency enviados por el cliente ya no se aceptan en absoluto --
+  // toda la autoridad económica viene del draft asociado al PaymentIntent.
+  async function confirmPaymentHandler(req, res) {
+    try {
+      assertStrictAllowlist(req.body, ['paymentIntentId'], 'body');
+      const { paymentIntentId } = req.body;
+      if (typeof paymentIntentId !== 'string' || !/^pi_[a-zA-Z0-9_]+$/.test(paymentIntentId)) {
+        throw new RequestValidationError('paymentIntentId inválido');
+      }
+
+      if (!stripe) {
+        throw Object.assign(new Error('Stripe no configurado'), { name: 'CheckoutPaymentError' });
+      }
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      const result = await checkoutFinalization.finalizePaidCheckout(paymentIntent, {
+        sendConfirmationEmail: sendConfirmationEmailAdapter
+      });
+
+      return res.json({ ok: true, orderId: result.orderId, created: result.created });
+    } catch (err) {
+      return sendDomainError(res, err, 'POST /confirm-payment');
+    }
+  }
+
+  return {
+    stripeConfigHandler,
+    pricingConfigHandler,
+    createPaymentIntentHandler,
+    updateCustomerDataHandler,
+    confirmPaymentHandler
+  };
 }
+
+function createPaymentsRouter(deps = {}) {
+  const router = express.Router();
+  const handlers = buildHandlers(deps);
+
+  router.get('/stripe-config', handlers.stripeConfigHandler);
+  router.get('/pricing-config', handlers.pricingConfigHandler);
+  router.post('/create-payment-intent', handlers.createPaymentIntentHandler);
+  router.patch('/checkout-draft/customer-data', handlers.updateCustomerDataHandler);
+  router.post('/confirm-payment', handlers.confirmPaymentHandler);
+
+  return router;
+}
+
+// --- Email real (sin cambios de diseño respecto al sistema legacy) ------------
 
 async function sendConfirmationEmails(orderId, customerData, cart, total, selectedCurrency) {
   try {
@@ -535,4 +529,13 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
+const router = createPaymentsRouter();
 module.exports = router;
+module.exports.createPaymentsRouter = createPaymentsRouter;
+module.exports.buildHandlers = buildHandlers;
+module.exports.mapDomainErrorToHttp = mapDomainErrorToHttp;
+module.exports.assertStrictAllowlist = assertStrictAllowlist;
+module.exports.RequestValidationError = RequestValidationError;
+module.exports.toPublicPrepareDto = toPublicPrepareDto;
+module.exports.toPublicItemDto = toPublicItemDto;
+module.exports.snapshotItemToEmailCartItem = snapshotItemToEmailCartItem;
