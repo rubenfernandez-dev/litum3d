@@ -6,6 +6,7 @@
 const express = require('express');
 const { pool } = require('../config/db');
 const requireAuth = require('../middleware/requireAuth');
+const { csrfProtection } = require('../middleware/csrf');
 
 const router = express.Router();
 
@@ -108,7 +109,7 @@ router.get('/api/variant-types/:variantTypeId/options', async (req, res) => {
  * Admin only
  * /api/productos/:productId/variant-types
  */
-router.post('/api/productos/:productId/variant-types', requireAuth, async (req, res) => {
+router.post('/api/productos/:productId/variant-types', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { productId } = req.params;
     const { nombre, descripcion, is_required, display_order } = req.body;
@@ -140,7 +141,7 @@ router.post('/api/productos/:productId/variant-types', requireAuth, async (req, 
  * Admin only
  * /api/variant-types/:variantTypeId/options
  */
-router.post('/api/variant-types/:variantTypeId/options', requireAuth, async (req, res) => {
+router.post('/api/variant-types/:variantTypeId/options', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { variantTypeId } = req.params;
     const { nombre, descripcion, price_delta, stock, imagen, sku, display_order } = req.body;
@@ -249,7 +250,7 @@ router.post('/api/productos/:productId/calculate-variant-price', async (req, res
  * Admin only
  * /api/variant-types/:variantTypeId
  */
-router.put('/api/variant-types/:variantTypeId', requireAuth, async (req, res) => {
+router.put('/api/variant-types/:variantTypeId', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { variantTypeId } = req.params;
     const { nombre, descripcion, is_required, display_order } = req.body;
@@ -288,7 +289,7 @@ router.put('/api/variant-types/:variantTypeId', requireAuth, async (req, res) =>
  * Admin only
  * /api/variant-options/:optionId
  */
-router.put('/api/variant-options/:optionId', requireAuth, async (req, res) => {
+router.put('/api/variant-options/:optionId', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { optionId } = req.params;
     const { nombre, descripcion, price_delta, stock, imagen, sku, display_order } = req.body;
@@ -330,7 +331,7 @@ router.put('/api/variant-options/:optionId', requireAuth, async (req, res) => {
  * Admin only
  * /api/variant-types/:variantTypeId
  */
-router.delete('/api/variant-types/:variantTypeId', requireAuth, async (req, res) => {
+router.delete('/api/variant-types/:variantTypeId', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { variantTypeId } = req.params;
     
@@ -355,7 +356,7 @@ router.delete('/api/variant-types/:variantTypeId', requireAuth, async (req, res)
  * Admin only
  * /api/variant-options/:optionId
  */
-router.delete('/api/variant-options/:optionId', requireAuth, async (req, res) => {
+router.delete('/api/variant-options/:optionId', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { optionId } = req.params;
     

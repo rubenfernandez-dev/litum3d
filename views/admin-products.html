@@ -418,6 +418,7 @@
         </div>
     </div>
 
+    <script src="/js/admin-fetch.js"></script>
     <script>
         // Abrir modal de nuevo producto
         function openNewProductModal() {
@@ -583,7 +584,7 @@
                 const url = id ? `/api/productos/${id}` : '/api/productos';
                 const method = id ? 'PUT' : 'POST';
 
-                const res = await fetch(url, {
+                const res = await adminFetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
@@ -636,7 +637,7 @@
             const ok = confirm('¿Seguro que deseas eliminar este producto?');
             if (!ok) return;
             try {
-                const res = await fetch(`/api/productos/${id}`, { method: 'DELETE' });
+                const res = await adminFetch(`/api/productos/${id}`, { method: 'DELETE' });
                 if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
                     throw new Error(data.error || 'No se pudo eliminar');
@@ -672,7 +673,7 @@
             // Enviar al backend (endpoint a definir, ejemplo: /admin/variantes)
             try {
                 console.log('📤 Enviando variante:', { tipo: currentVariantType, nombre, price_delta, stock, product_id });
-                const res = await fetch('/admin/variantes', {
+                const res = await adminFetch('/admin/variantes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

@@ -1,10 +1,17 @@
 const express = require('express');
 const { pool } = require('../config/db');
+const requireAuth = require('../middleware/requireAuth');
+const { csrfProtection } = require('../middleware/csrf');
 
 const router = express.Router();
 
+// P0-SECURITY-01 (sección 11): legacy CRUD sin consumidor real en el
+// frontend (el flujo de pedidos real vive en routes/admin.js, autenticado).
+// Expone datos de pedidos/clientes -- se protege igual que routes/admin.js,
+// nunca "anónima por diseño".
+
 // GET todos los pedidos con detalles
-router.get('/api/pedidos', async (req, res) => {
+router.get('/api/pedidos', requireAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT p.*, e.nombre as estado_nombre, u.nombre as usuario_nombre 
@@ -21,7 +28,7 @@ router.get('/api/pedidos', async (req, res) => {
 });
 
 // GET pedido por ID con detalles
-router.get('/api/pedidos/:id', async (req, res) => {
+router.get('/api/pedidos/:id', requireAuth, async (req, res) => {
   try {
     const [pedido] = await pool.query(`
       SELECT p.*, e.nombre as estado_nombre, u.nombre as usuario_nombre 
@@ -60,7 +67,7 @@ router.get('/api/pedidos/:id', async (req, res) => {
 });
 
 // POST crear pedido
-router.post('/api/pedidos', async (req, res) => {
+router.post('/api/pedidos', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { usuario_id, detalles, notas } = req.body || {};
     if (!usuario_id || !detalles || !detalles.length) {
@@ -97,7 +104,7 @@ router.post('/api/pedidos', async (req, res) => {
 });
 
 // PUT actualizar estado del pedido
-router.put('/api/pedidos/:id/estado', async (req, res) => {
+router.put('/api/pedidos/:id/estado', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { estado_id } = req.body || {};
     if (!estado_id) {

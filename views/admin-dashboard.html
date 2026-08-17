@@ -739,6 +739,7 @@
         </div>
     </div>
 
+    <script src="/js/admin-fetch.js"></script>
     <script>
         let orders = [];
         let currentEditingOrderId = null;
@@ -1025,7 +1026,7 @@
             if (!currentEditingOrderId) return;
 
             try {
-                const response = await fetch(`/admin/pedidos/${currentEditingOrderId}/estado`, {
+                const response = await adminFetch(`/admin/pedidos/${currentEditingOrderId}/estado`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1052,9 +1053,12 @@
         }
 
         function logout() {
-            fetch('/admin/logout', { method: 'POST' })
+            adminFetch('/admin/logout', { method: 'POST' })
                 .then(() => window.location.href = '/')
-                .catch(e => console.error('Error:', e));
+                .catch(e => {
+                    console.error('Error:', e);
+                    window.location.href = '/';
+                });
         }
 
         // Cerrar modal al hacer click fuera

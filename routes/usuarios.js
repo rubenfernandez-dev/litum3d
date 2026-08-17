@@ -1,10 +1,19 @@
 const express = require('express');
 const { pool } = require('../config/db');
+const requireAuth = require('../middleware/requireAuth');
+const { csrfProtection } = require('../middleware/csrf');
 
 const router = express.Router();
 
+// P0-SECURITY-01 (sección 11): ninguna ruta de este archivo es "anónima por
+// diseño" -- expone PII de clientes (email/teléfono/dirección) y permite
+// mutarla. No hay ningún consumidor real en el frontend (auditado: público/js
+// y views/ no llaman a /api/usuarios), así que protegerla no puede romper
+// ningún flujo existente, pero se cierra igualmente porque un endpoint sin
+// auth que lista/edita/borra usuarios es un riesgo por sí mismo.
+
 // GET todos los usuarios (sin contraseña)
-router.get('/api/usuarios', async (req, res) => {
+router.get('/api/usuarios', requireAuth, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT id, nombre, email, telefono, direccion, activo, created_at FROM usuarios WHERE activo = TRUE');
     res.json(rows);
@@ -15,7 +24,7 @@ router.get('/api/usuarios', async (req, res) => {
 });
 
 // GET usuario por ID
-router.get('/api/usuarios/:id', async (req, res) => {
+router.get('/api/usuarios/:id', requireAuth, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT id, nombre, email, telefono, direccion, activo FROM usuarios WHERE id = ? AND activo = TRUE', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -27,7 +36,7 @@ router.get('/api/usuarios/:id', async (req, res) => {
 });
 
 // POST crear usuario
-router.post('/api/usuarios', async (req, res) => {
+router.post('/api/usuarios', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { nombre, email, telefono, direccion, contraseña } = req.body || {};
     if (!nombre || !email || !contraseña) {
@@ -49,7 +58,7 @@ router.post('/api/usuarios', async (req, res) => {
 });
 
 // PUT actualizar usuario
-router.put('/api/usuarios/:id', async (req, res) => {
+router.put('/api/usuarios/:id', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { nombre, email, telefono, direccion } = req.body || {};
     if (!nombre && !email && !telefono && !direccion) {
@@ -72,7 +81,7 @@ router.put('/api/usuarios/:id', async (req, res) => {
 });
 
 // DELETE desactivar usuario (soft delete)
-router.delete('/api/usuarios/:id', async (req, res) => {
+router.delete('/api/usuarios/:id', requireAuth, csrfProtection, async (req, res) => {
   try {
     const [result] = await pool.query('UPDATE usuarios SET activo = FALSE WHERE id = ?', [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Usuario no encontrado' });

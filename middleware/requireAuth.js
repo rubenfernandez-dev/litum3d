@@ -3,17 +3,12 @@
 // routes/productos.js y routes/variantes.js lo importan desde aquí en vez de
 // depender unas de otras solo para reutilizar este middleware.
 const requireAuth = (req, res, next) => {
-  console.log('🔐 Auth check:', {
-    hasSession: !!req.session,
-    sessionId: req.sessionID,
-    adminId: req.session?.adminId,
-    cookies: req.headers.cookie
-  });
+  // Nunca loguear cookies/sessionID/tokens aquí (sección 41): esto se
+  // ejecuta en TODAS las mutaciones administrativas, así que cualquier log
+  // verboso aquí sería el sitio más fácil para filtrar una sesión completa.
   if (!req.session || !req.session.adminId) {
-    console.log('❌ Auth failed: No session or adminId');
     return res.status(401).json({ error: 'No autorizado' });
   }
-  console.log('✓ Auth passed for admin', req.session.adminId);
   next();
 };
 

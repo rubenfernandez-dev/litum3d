@@ -152,6 +152,7 @@
     <div id="message" class="msg"></div>
   </div>
 
+  <script src="/js/admin-fetch.js"></script>
   <script>
     async function saveChanges() {
       const currentPassword = document.getElementById('currentPassword').value;
@@ -174,7 +175,7 @@
       }
 
       try {
-        const res = await fetch('/admin/account', {
+        const res = await adminFetch('/admin/account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ currentPassword, newEmail, newPassword })

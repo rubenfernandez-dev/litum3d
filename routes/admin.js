@@ -7,9 +7,13 @@ const { pool } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const requireAuth = require('../middleware/requireAuth');
 const uploadsStorage = require('../services/uploads-storage');
+const { csrfProtection, generateCsrfToken } = require('../middleware/csrf');
+const { loginLimiter } = require('../middleware/rateLimiters');
+const { requireSameOrigin } = require('../middleware/sameOrigin');
+const { verifyAdminPassword } = require('../services/adminAuth');
 
 // POST /admin/variantes - Crear nueva opción de variante (base o forma)
-router.post('/variantes', requireAuth, async (req, res) => {
+router.post('/variantes', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { tipo, nombre, price_delta = 0, stock = 100, product_id } = req.body;
         console.log('📝 Guardando variante:', { tipo, nombre, price_delta, stock, product_id });
@@ -80,10 +84,20 @@ router.get('/login', async (req, res) => {
 });
 
 // POST /admin/login - Procesar login
-router.post('/login', async (req, res) => {
+// Same-origin (hardening final, sección 12-14): primer filtro, antes incluso
+// del rate limiter -- una petición que no puede demostrar same-origin (vía
+// Origin, o Referer si Origin está ausente) se rechaza sin gastar cuota de
+// rate limit ni tocar la BD.
+// Rate limit (sección 21): pocos intentos/IP en la ventana para dificultar
+// brute force sin bloquear a un admin real que se equivoca alguna vez
+// (skipSuccessfulRequests: los logins correctos no cuentan).
+// CSRF (sección 17, decisión A/B): este endpoint NO exige token CSRF porque
+// todavía no existe sesión admin de la que depender -- la defensa aquí es
+// same-origin + sameSite=lax (server.js) + rate limit + mensaje de error
+// genérico. Same-origin NO sustituye al rate limit, ni al revés (sección 15).
+router.post('/login', requireSameOrigin, loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
-        console.log('📝 Intento de login:', { email, password: password ? '***' : 'vacío' });
 
         if (!email || !password) {
             return res.status(400).json({ error: 'Email y contraseña requeridos' });
@@ -91,53 +105,74 @@ router.post('/login', async (req, res) => {
 
         // Buscar usuario admin
         const query = 'SELECT id, email, nombre, contraseña FROM usuarios WHERE email = ? AND es_admin = 1 LIMIT 1';
-        console.log('🔍 Buscando usuario admin con email:', email);
         const [rows] = await pool.query(query, [email]);
-        console.log('✓ Resultado de búsqueda:', rows.length > 0 ? 'Usuario encontrado' : 'Usuario NO encontrado');
 
+        // Mensaje idéntico tanto si el email no existe como si la contraseña
+        // es incorrecta (sección 9): nunca se revela cuál de las dos falló.
         if (rows.length === 0) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
         const admin = rows[0];
-        console.log('👤 Admin encontrado:', admin.nombre);
-        console.log('🔐 Verificando contraseña (bcrypt)...');
-        let isValid = false;
-        try {
-            // Intentar comparar como hash
-            isValid = await bcrypt.compare(password, admin.contraseña);
-        } catch (e) {
-            isValid = false;
-        }
-        // Fallback: si no es hash, comparar texto plano (para migración)
-        if (!isValid) {
-            isValid = admin.contraseña === password;
+        // Hardening final (sección 1): SOLO se acepta un hash bcrypt real.
+        // Ningún fallback a texto plano -- un registro que no es un hash
+        // bcrypt válido nunca autentica, se trate como se trate su contenido.
+        const { valid: isValid, requiresMigration } = await verifyAdminPassword(password, admin.contraseña);
+        if (requiresMigration) {
+            // Log técnico genérico: nunca el valor del campo, nunca el hash,
+            // nunca la contraseña recibida. Ver scripts/check-admin-password-hashes.js
+            // para el chequeo pre-deploy que detecta esto sin intentar loguear.
+            console.warn(`[routes/admin] login: el credential record del admin id=${admin.id} no tiene formato de hash bcrypt válido -- requiere migración/reset seguro antes de poder autenticar`);
         }
         if (!isValid) {
-            console.log('❌ Contraseña incorrecta');
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
-        // Crear sesión
-        console.log('✓ Contraseña correcta, creando sesión...');
-        req.session.adminId = admin.id;
-        req.session.adminEmail = admin.email;
-        req.session.adminName = admin.nombre;
-
-        // Forzar guardado de sesión
-        req.session.save((err) => {
-            if (err) {
-                console.error('❌ Error guardando sesión:', err);
-                return res.status(500).json({ error: 'Error al guardar sesión' });
+        // Session fixation (sección 8): regenerar el ID de sesión ANTES de
+        // establecer identidad -- así una sesión anónima previa (o una fijada
+        // por un atacante antes del login) nunca queda autenticada.
+        req.session.regenerate((regenErr) => {
+            if (regenErr) {
+                console.error('[routes/admin] login: error regenerando sesión -', regenErr.message);
+                return res.status(500).json({ error: 'Error al iniciar sesión' });
             }
-            console.log('✅ Login exitoso para:', admin.email, 'Session ID:', req.sessionID);
-            res.json({ success: true, message: 'Login exitoso' });
+
+            req.session.adminId = admin.id;
+            req.session.adminEmail = admin.email;
+            req.session.adminName = admin.nombre;
+            req.session.csrfToken = generateCsrfToken();
+
+            // Guardado explícito (sección 48) antes de responder: evita la
+            // carrera de responder con éxito mientras el store todavía no
+            // terminó de persistir la sesión nueva.
+            req.session.save((saveErr) => {
+                if (saveErr) {
+                    console.error('[routes/admin] login: error guardando sesión -', saveErr.message);
+                    return res.status(500).json({ error: 'Error al guardar sesión' });
+                }
+                res.json({ success: true, message: 'Login exitoso' });
+            });
         });
     } catch (error) {
-        console.error('❌ Error en login:', error.message);
-        console.error('Stack:', error.stack);
+        console.error('[routes/admin] login: error -', error.message);
         res.status(500).json({ error: 'Error al procesar login' });
     }
+});
+
+// GET /admin/api/csrf-token - Entrega el token CSRF de la sesión admin activa
+// (sección 15/46). El frontend lo pide tras login/recarga y lo reenvía en
+// X-CSRF-Token en cada mutación (ver public/js/admin-fetch.js).
+router.get('/api/csrf-token', requireAuth, (req, res) => {
+    if (!req.session.csrfToken) {
+        req.session.csrfToken = generateCsrfToken();
+    }
+    req.session.save((err) => {
+        if (err) {
+            console.error('[routes/admin] csrf-token: error guardando sesión -', err.message);
+            return res.status(500).json({ error: 'Error interno' });
+        }
+        res.json({ csrfToken: req.session.csrfToken });
+    });
 });
 
 // GET /admin/account - Página para cambiar email/contraseña
@@ -153,7 +188,7 @@ router.get('/account', requireAuth, async (req, res) => {
 });
 
 // POST /admin/account - Actualizar credenciales del admin
-router.post('/account', requireAuth, async (req, res) => {
+router.post('/account', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { currentPassword, newEmail, newPassword } = req.body;
 
@@ -167,13 +202,11 @@ router.post('/account', requireAuth, async (req, res) => {
         }
         const admin = rows[0];
 
-        // Verificar contraseña actual
-        let valid = false;
-        try {
-            valid = await bcrypt.compare(currentPassword, admin.contraseña);
-        } catch (e) { valid = false; }
-        if (!valid) {
-            valid = admin.contraseña === currentPassword; // fallback
+        // Verificar contraseña actual (hardening final, sección 1): mismo
+        // camino que el login -- solo bcrypt real, nunca fallback a texto plano.
+        const { valid, requiresMigration } = await verifyAdminPassword(currentPassword, admin.contraseña);
+        if (requiresMigration) {
+            console.warn(`[routes/admin] account: el credential record del admin id=${admin.id} no tiene formato de hash bcrypt válido -- requiere migración/reset seguro`);
         }
         if (!valid) {
             return res.status(401).json({ error: 'Contraseña actual incorrecta' });
@@ -250,7 +283,7 @@ router.get('/api/dashboard', requireAuth, async (req, res) => {
 });
 
 // PUT /admin/pedidos/:id/estado - Actualizar estado
-router.put('/pedidos/:id/estado', requireAuth, async (req, res) => {
+router.put('/pedidos/:id/estado', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { id } = req.params;
         const { estado, comentario } = req.body;
@@ -459,12 +492,20 @@ router.get('/pedidos/:id/historial', requireAuth, async (req, res) => {
     }
 });
 
-// POST /admin/logout - Cerrar sesión
-router.post('/logout', (req, res) => {
+// POST /admin/logout - Cerrar sesión (sección 10/18/47)
+// requireAuth+CSRF: cerrar sesión es una mutación de estado autenticado, así
+// que exige lo mismo que cualquier otra -- nadie puede desloguear a un admin
+// simplemente haciéndole cargar una imagen/link externo desde otro origen.
+router.post('/logout', requireAuth, csrfProtection, (req, res) => {
+    const cookieOptions = { httpOnly: true, sameSite: 'lax', secure: req.session.cookie.secure, path: '/' };
     req.session.destroy((err) => {
         if (err) {
             return res.status(500).json({ error: 'Error al cerrar sesión' });
         }
+        // Limpieza explícita de la cookie en el navegador (sección 10): destroy()
+        // ya invalida la sesión server-side, pero clearCookie fuerza además su
+        // expiración en el cliente con las mismas opciones con las que se emitió.
+        res.clearCookie('connect.sid', cookieOptions);
         res.json({ success: true });
     });
 });
@@ -545,7 +586,7 @@ async function sendStatusChangeEmail(orderId, customerEmail, customerName, newSt
 }
 
 // POST /admin/migrate/historial - Crear tabla historial_estado_pedido (solo para desarrollo)
-router.post('/migrate/historial', requireAuth, async (req, res) => {
+router.post('/migrate/historial', requireAuth, csrfProtection, async (req, res) => {
     try {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS historial_estado_pedido (
@@ -599,7 +640,7 @@ router.get('/productos', requireAuth, async (req, res) => {
 });
 
 // POST /admin/productos - Crear nuevo producto
-router.post('/productos', requireAuth, async (req, res) => {
+router.post('/productos', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { nombre, descripcion, precio, stock, imagen } = req.body;
 
@@ -620,7 +661,7 @@ router.post('/productos', requireAuth, async (req, res) => {
 });
 
 // PUT /admin/productos/:id - Actualizar producto
-router.put('/productos/:id', requireAuth, async (req, res) => {
+router.put('/productos/:id', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { id } = req.params;
         const { nombre, descripcion, precio, stock, imagen } = req.body;
@@ -642,7 +683,7 @@ router.put('/productos/:id', requireAuth, async (req, res) => {
 });
 
 // DELETE /admin/productos/:id - Eliminar producto
-router.delete('/productos/:id', requireAuth, async (req, res) => {
+router.delete('/productos/:id', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { id } = req.params;
         await pool.query('DELETE FROM productos WHERE id = ?', [id]);
@@ -672,7 +713,7 @@ router.get('/productos/:id/modelos', requireAuth, async (req, res) => {
 });
 
 // POST /admin/productos/:id/modelos - Crear modelo
-router.post('/productos/:id/modelos', requireAuth, async (req, res) => {
+router.post('/productos/:id/modelos', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { id } = req.params;
         const { nombre, sku, price_delta, stock, imagen, is_default } = req.body || {};
@@ -706,7 +747,7 @@ router.post('/productos/:id/modelos', requireAuth, async (req, res) => {
 });
 
 // PUT /admin/productos/:productId/modelos/:modelId - Actualizar modelo
-router.put('/productos/:productId/modelos/:modelId', requireAuth, async (req, res) => {
+router.put('/productos/:productId/modelos/:modelId', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { productId, modelId } = req.params;
         const { nombre, sku, price_delta, stock, imagen, is_default, activo } = req.body || {};
@@ -750,7 +791,7 @@ router.put('/productos/:productId/modelos/:modelId', requireAuth, async (req, re
 });
 
 // DELETE /admin/productos/:productId/modelos/:modelId - Desactivar modelo
-router.delete('/productos/:productId/modelos/:modelId', requireAuth, async (req, res) => {
+router.delete('/productos/:productId/modelos/:modelId', requireAuth, csrfProtection, async (req, res) => {
     try {
         const { productId, modelId } = req.params;
         const [result] = await pool.query(

@@ -1,11 +1,13 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
 const { pool } = require('../config/db');
+const requireAuth = require('../middleware/requireAuth');
+const { csrfProtection } = require('../middleware/csrf');
 
 const router = express.Router();
 
-// GET contactos
-router.get('/api/contactos', async (req, res) => {
+// GET contactos (P0-SECURITY-01, sección 11: PII de clientes -- solo admin)
+router.get('/api/contactos', requireAuth, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM contacto ORDER BY created_at DESC');
     res.json(rows);
@@ -16,7 +18,7 @@ router.get('/api/contactos', async (req, res) => {
 });
 
 // GET contacto por ID
-router.get('/api/contactos/:id', async (req, res) => {
+router.get('/api/contactos/:id', requireAuth, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM contacto WHERE id = ?', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Contacto no encontrado' });
@@ -78,7 +80,7 @@ router.post('/api/contact', async (req, res) => {
 });
 
 // PUT marcar contacto como respondido
-router.put('/api/contactos/:id/respondido', async (req, res) => {
+router.put('/api/contactos/:id/respondido', requireAuth, csrfProtection, async (req, res) => {
   try {
     const [result] = await pool.query('UPDATE contacto SET respondido = TRUE WHERE id = ?', [req.params.id]);
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Contacto no encontrado' });

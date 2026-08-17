@@ -8,7 +8,7 @@ async function loadReviews(estado = '') {
     try {
         const url = estado ? `/api/admin/reviews?estado=${estado}` : '/api/admin/reviews';
         console.log('📥 Cargando reseñas desde:', url);
-        const response = await fetch(url);
+        const response = await adminFetch(url);
         
         if (!response.ok) {
             throw new Error(`Error HTTP ${response.status} al cargar reseñas`);
@@ -144,7 +144,7 @@ function renderReviews() {
 // Aprobar reseña
 async function approveReview(id) {
     try {
-        const response = await fetch(`/api/admin/reviews/${id}`, {
+        const response = await adminFetch(`/api/admin/reviews/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ estado: 'aprobada' })
@@ -164,7 +164,7 @@ async function rejectReview(id) {
     if (!confirm('¿Rechazar esta reseña? No será visible públicamente.')) return;
     
     try {
-        const response = await fetch(`/api/admin/reviews/${id}`, {
+        const response = await adminFetch(`/api/admin/reviews/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ estado: 'rechazada' })
@@ -182,7 +182,7 @@ async function rejectReview(id) {
 // Toggle destacada
 async function toggleDestacada(id, destacada) {
     try {
-        const response = await fetch(`/api/admin/reviews/${id}`, {
+        const response = await adminFetch(`/api/admin/reviews/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ destacada })
@@ -202,7 +202,7 @@ async function deleteReview(id) {
     if (!confirm('¿Eliminar esta reseña permanentemente? Esta acción no se puede deshacer.')) return;
     
     try {
-        const response = await fetch(`/api/admin/reviews/${id}`, {
+        const response = await adminFetch(`/api/admin/reviews/${id}`, {
             method: 'DELETE'
         });
         
@@ -264,7 +264,7 @@ async function submitNewReview(e) {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Subiendo...';
         
-        const response = await fetch('/api/admin/reviews', {
+        const response = await adminFetch('/api/admin/reviews', {
             method: 'POST',
             body: formData
         });

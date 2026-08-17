@@ -4,6 +4,8 @@ const multer = require('multer');
 const { pool } = require('../config/db');
 const cloudinary = require('../config/cloudinary');
 const fs = require('fs').promises;
+const requireAuth = require('../middleware/requireAuth');
+const { csrfProtection } = require('../middleware/csrf');
 
 // Verificar si Cloudinary está disponible
 const isCloudinaryAvailable = () => {
@@ -181,16 +183,11 @@ router.post('/api/reviews', upload.array('fotos', 10), async (req, res) => {
 // RUTAS ADMIN (requieren autenticación)
 // ============================================
 
-// Middleware para verificar que el usuario es admin
-function requireAdmin(req, res, next) {
-  if (!req.session || !req.session.adminId) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-  next();
-}
-
 // GET /api/admin/reviews - Obtener todas las reseñas (admin)
-router.get('/api/admin/reviews', requireAdmin, async (req, res) => {
+// requireAuth: mismo middleware canónico que routes/admin.js/productos.js/
+// variantes.js (antes había una copia local `requireAdmin` con la misma
+// lógica, redundante y fuera del alcance de check-catalog-auth.js).
+router.get('/api/admin/reviews', requireAuth, async (req, res) => {
   try {
     const { estado } = req.query;
     
@@ -227,7 +224,7 @@ router.get('/api/admin/reviews', requireAdmin, async (req, res) => {
 });
 
 // POST /api/admin/reviews - Crear reseña desde admin
-router.post('/api/admin/reviews', requireAdmin, upload.array('fotos', 10), async (req, res) => {
+router.post('/api/admin/reviews', requireAuth, csrfProtection, upload.array('fotos', 10), async (req, res) => {
   const conn = await pool.getConnection();
   
   try {
@@ -317,7 +314,7 @@ router.post('/api/admin/reviews', requireAdmin, upload.array('fotos', 10), async
 });
 
 // PATCH /api/admin/reviews/:id - Actualizar estado de reseña
-router.patch('/api/admin/reviews/:id', requireAdmin, async (req, res) => {
+router.patch('/api/admin/reviews/:id', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { id } = req.params;
     const { estado, destacada } = req.body;
@@ -354,7 +351,7 @@ router.patch('/api/admin/reviews/:id', requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/admin/reviews/:id - Eliminar reseña
-router.delete('/api/admin/reviews/:id', requireAdmin, async (req, res) => {
+router.delete('/api/admin/reviews/:id', requireAuth, csrfProtection, async (req, res) => {
   const conn = await pool.getConnection();
   
   try {

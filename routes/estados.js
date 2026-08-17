@@ -1,9 +1,11 @@
 const express = require('express');
 const { pool } = require('../config/db');
+const requireAuth = require('../middleware/requireAuth');
+const { csrfProtection } = require('../middleware/csrf');
 
 const router = express.Router();
 
-// GET todos los estados
+// GET todos los estados (lectura pública: la usa el checkout/personalizador)
 router.get('/api/estados', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM estado_pedido ORDER BY id');
@@ -15,7 +17,7 @@ router.get('/api/estados', async (req, res) => {
 });
 
 // POST crear nuevo estado (admin)
-router.post('/api/estados', async (req, res) => {
+router.post('/api/estados', requireAuth, csrfProtection, async (req, res) => {
   try {
     const { nombre, descripcion } = req.body || {};
     if (!nombre) {

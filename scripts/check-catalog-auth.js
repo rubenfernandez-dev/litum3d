@@ -16,31 +16,34 @@ const assert = require('assert');
 const productos = require('../routes/productos');
 const variantes = require('../routes/variantes');
 const requireAuth = require('../middleware/requireAuth');
+const { csrfProtection } = require('../middleware/csrf');
 
-// Mapa de rutas esperadas: método + path -> debe exigir sesión de admin (true) o ser pública (false).
+// Mapa de rutas esperadas: método + path -> debe exigir sesión de admin
+// (protectedRoute) y, si la exige, si además debe llevar CSRF (P0-SECURITY-01,
+// sección 14: toda mutación autenticada por sesión Admin debe llevarlo).
 const EXPECTED = [
   // routes/productos.js
   { router: productos, name: 'productos', method: 'get', path: '/api/productos', protectedRoute: false },
   { router: productos, name: 'productos', method: 'get', path: '/api/productos/:id', protectedRoute: false },
   { router: productos, name: 'productos', method: 'get', path: '/api/productos/:id/modelos', protectedRoute: false },
-  { router: productos, name: 'productos', method: 'post', path: '/api/productos', protectedRoute: true },
-  { router: productos, name: 'productos', method: 'put', path: '/api/productos/:id', protectedRoute: true },
-  { router: productos, name: 'productos', method: 'delete', path: '/api/productos/:id', protectedRoute: true },
+  { router: productos, name: 'productos', method: 'post', path: '/api/productos', protectedRoute: true, csrf: true },
+  { router: productos, name: 'productos', method: 'put', path: '/api/productos/:id', protectedRoute: true, csrf: true },
+  { router: productos, name: 'productos', method: 'delete', path: '/api/productos/:id', protectedRoute: true, csrf: true },
   { router: productos, name: 'productos', method: 'get', path: '/api/galeria-estatica', protectedRoute: false },
 
   // routes/variantes.js
   { router: variantes, name: 'variantes', method: 'get', path: '/api/productos/:productId/variant-types', protectedRoute: false },
   { router: variantes, name: 'variantes', method: 'get', path: '/api/variant-types/:variantTypeId', protectedRoute: false },
   { router: variantes, name: 'variantes', method: 'get', path: '/api/variant-types/:variantTypeId/options', protectedRoute: false },
-  { router: variantes, name: 'variantes', method: 'post', path: '/api/productos/:productId/variant-types', protectedRoute: true },
-  { router: variantes, name: 'variantes', method: 'post', path: '/api/variant-types/:variantTypeId/options', protectedRoute: true },
+  { router: variantes, name: 'variantes', method: 'post', path: '/api/productos/:productId/variant-types', protectedRoute: true, csrf: true },
+  { router: variantes, name: 'variantes', method: 'post', path: '/api/variant-types/:variantTypeId/options', protectedRoute: true, csrf: true },
   // Cálculo de precio: es un POST, pero solo lee y calcula, no muta nada. Debe seguir público
   // (lo usa el personalizador de shop.js/home.js/product-variants.js sin sesión).
   { router: variantes, name: 'variantes', method: 'post', path: '/api/productos/:productId/calculate-variant-price', protectedRoute: false },
-  { router: variantes, name: 'variantes', method: 'put', path: '/api/variant-types/:variantTypeId', protectedRoute: true },
-  { router: variantes, name: 'variantes', method: 'put', path: '/api/variant-options/:optionId', protectedRoute: true },
-  { router: variantes, name: 'variantes', method: 'delete', path: '/api/variant-types/:variantTypeId', protectedRoute: true },
-  { router: variantes, name: 'variantes', method: 'delete', path: '/api/variant-options/:optionId', protectedRoute: true }
+  { router: variantes, name: 'variantes', method: 'put', path: '/api/variant-types/:variantTypeId', protectedRoute: true, csrf: true },
+  { router: variantes, name: 'variantes', method: 'put', path: '/api/variant-options/:optionId', protectedRoute: true, csrf: true },
+  { router: variantes, name: 'variantes', method: 'delete', path: '/api/variant-types/:variantTypeId', protectedRoute: true, csrf: true },
+  { router: variantes, name: 'variantes', method: 'delete', path: '/api/variant-options/:optionId', protectedRoute: true, csrf: true }
 ];
 
 function findRouteLayer(router, method, path) {
@@ -55,6 +58,10 @@ function routeHasRequireAuth(layer) {
   return layer.route.stack.some(l => l.handle === requireAuth);
 }
 
+function routeHasCsrf(layer) {
+  return layer.route.stack.some(l => l.handle === csrfProtection);
+}
+
 function checkRouteWiring() {
   let checked = 0;
   for (const spec of EXPECTED) {
@@ -66,6 +73,13 @@ function checkRouteWiring() {
       assert.ok(hasAuth, `FALTA requireAuth en mutación administrativa: ${spec.method.toUpperCase()} ${spec.path} (${spec.name}.js)`);
     } else {
       assert.ok(!hasAuth, `Lectura pública quedó protegida por error: ${spec.method.toUpperCase()} ${spec.path} (${spec.name}.js) — rompería la tienda/personalizador`);
+    }
+
+    const hasCsrf = routeHasCsrf(layer);
+    if (spec.csrf) {
+      assert.ok(hasCsrf, `FALTA csrfProtection en mutación autenticada: ${spec.method.toUpperCase()} ${spec.path} (${spec.name}.js) — P0-SECURITY-01 sección 14`);
+    } else {
+      assert.ok(!hasCsrf, `csrfProtection en una ruta que no debería llevarlo: ${spec.method.toUpperCase()} ${spec.path} (${spec.name}.js)`);
     }
     checked++;
   }
@@ -122,7 +136,7 @@ function checkRequireAuthBehavior() {
 function main() {
   const checked = checkRouteWiring();
   checkRequireAuthBehavior();
-  console.log(`OK: ${checked} rutas de productos/variantes auditadas — mutaciones protegidas con requireAuth, lecturas públicas intactas.`);
+  console.log(`OK: ${checked} rutas de productos/variantes auditadas — mutaciones protegidas con requireAuth+CSRF, lecturas públicas intactas.`);
 }
 
 main();

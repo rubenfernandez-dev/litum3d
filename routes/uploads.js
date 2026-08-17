@@ -20,6 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const uploadsStorage = require('../services/uploads-storage');
+const { uploadLimiter } = require('../middleware/rateLimiters');
 
 const router = express.Router();
 
@@ -45,7 +46,11 @@ const upload = multer({
   }
 }).array('images', uploadsStorage.MAX_UPLOAD_FILES);
 
-router.post('/api/uploads/custom', (req, res) => {
+// Rate limit (sección 22): endpoint anónimo, sin capability/sesión previa que
+// lo proteja -- 20 requests/15min por IP (hasta 3 imágenes/10MB cada una)
+// deja margen a un cliente normal configurando varios productos sin
+// bloquearlo, mientras acota el abuso de almacenamiento en disco.
+router.post('/api/uploads/custom', uploadLimiter, (req, res) => {
   upload(req, res, async (err) => {
     if (err instanceof multer.MulterError) {
       return res.status(400).json({ ok: false, error: err.message });

@@ -10,8 +10,9 @@
     "db:init": "node scripts/init-db.js",
     "db:check": "node scripts/check-db.js",
     "db:fix": "node scripts/fix-missing-tables.js",
-    "test": "node scripts/check-duplicate-globals.js && node scripts/check-public-reviews-no-email.js && node scripts/check-catalog-auth.js && node scripts/check-pricing-engine.js && node scripts/check-frontend-selections.js && node scripts/check-checkout-drafts.js && node scripts/check-checkout-payment.js && node scripts/check-checkout-finalization.js && node scripts/check-checkout-finalization-mysql-guard.js && node scripts/check-migration-no-demo-inserts.js && node scripts/check-admin-currency-display.js && node scripts/check-checkout-routes.js && node scripts/check-checkout-frontend.js && node scripts/check-success-page.js && node scripts/check-no-insecure-payment-intent-creation.js && node scripts/check-stripe-webhook.js && node scripts/check-uploads-privacy.js",
-    "test:mysql-integration": "node scripts/check-checkout-finalization-mysql.js"
+    "test": "node scripts/check-duplicate-globals.js && node scripts/check-public-reviews-no-email.js && node scripts/check-catalog-auth.js && node scripts/check-pricing-engine.js && node scripts/check-frontend-selections.js && node scripts/check-checkout-drafts.js && node scripts/check-checkout-payment.js && node scripts/check-checkout-finalization.js && node scripts/check-checkout-finalization-mysql-guard.js && node scripts/check-migration-no-demo-inserts.js && node scripts/check-admin-currency-display.js && node scripts/check-checkout-routes.js && node scripts/check-checkout-frontend.js && node scripts/check-success-page.js && node scripts/check-no-insecure-payment-intent-creation.js && node scripts/check-stripe-webhook.js && node scripts/check-uploads-privacy.js && node scripts/check-session-security.js && node scripts/check-csrf.js && node scripts/check-rate-limiting.js && node scripts/check-admin-auth-coverage.js && node scripts/check-admin-password.js && node scripts/check-session-store.js && node scripts/check-session-store-mysql-guard.js && node scripts/check-login-origin.js",
+    "test:mysql-integration": "node scripts/check-checkout-finalization-mysql.js && node scripts/check-session-store-mysql.js",
+    "predeploy:admin-password-check": "node scripts/check-admin-password-hashes.js"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +22,8 @@
     "cloudinary": "^2.9.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "express-mysql-session": "^3.0.3",
+    "express-rate-limit": "^8.6.2",
     "express-session": "^1.18.2",
     "morgan": "^1.10.1",
     "multer": "^1.4.5-lts.1",
