@@ -631,6 +631,17 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
     // del snapshot del cliente. img.filename (metadata, nunca autoridad de
     // filesystem) es la fuente preferida; si faltara, se deriva del propio
     // img.url/img (compatibilidad con snapshots ya existentes).
+    //
+    // P1 Admin Pedidos/Fotos/Retención: este adjunto se lee y se envía AQUÍ,
+    // en el momento del pago -- es una COPIA independiente que Nodemailer
+    // entrega al buzón de ADMIN_EMAIL. Cuando más tarde
+    // services/order-photo-retention.js borra el archivo físico en
+    // uploads/custom/ (al marcar el pedido como "Entregado"), ese borrado
+    // NUNCA puede alcanzar ni revertir un email que ya salió del servidor:
+    // el adjunto sigue existiendo en el buzón del administrador (y en
+    // cualquier backup/relay SMTP intermedio) exactamente igual que antes
+    // del borrado. Ver scripts/check-admin-order-photos-retention.js para
+    // la prueba de regresión que documenta esta independencia temporal.
     const attachments = [];
     for (const item of cart) {
       const images = Array.isArray(item.images) ? item.images : [];

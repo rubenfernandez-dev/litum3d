@@ -7,6 +7,7 @@ const { pool } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const requireAuth = require('../middleware/requireAuth');
 const uploadsStorage = require('../services/uploads-storage');
+const orderPhotoRetention = require('../services/order-photo-retention');
 const { csrfProtection, generateCsrfToken } = require('../middleware/csrf');
 const { loginLimiter } = require('../middleware/rateLimiters');
 const { requireSameOrigin } = require('../middleware/sameOrigin');
@@ -263,7 +264,7 @@ router.get('/api/dashboard', requireAuth, async (req, res) => {
                 p.total,
                 p.currency,
                 p.created_at,
-                COALESCE(p.customer_name, u.nombre, 'Cliente Anónimo') as customer_name
+                COALESCE(p.customer_name, u.nombre, 'Sin nombre') as customer_name
             FROM pedidos p
             JOIN estado_pedido ep ON p.estado_id = ep.id
             LEFT JOIN usuarios u ON p.usuario_id = u.id
@@ -340,7 +341,23 @@ router.put('/pedidos/:id/estado', requireAuth, csrfProtection, async (req, res) 
             }
         }
 
-        res.json({ success: true, message: 'Estado actualizado', orderId: id, newStatus: estado });
+        // P1 Admin Pedidos/Fotos/Retención: borrado de fotos del cliente
+        // ÚNICAMENTE cuando el estado OBJETIVO (nombre real, ya validado
+        // contra estado_pedido arriba) es "Entregado" -- nunca en ningún
+        // otro estado. El pedido YA quedó confirmado como Entregado (o ya
+        // lo estaba) antes de este paso: filesystem y MySQL no comparten
+        // transacción, así que el cambio de estado nunca depende de que el
+        // borrado de fotos tenga éxito. Se dispara también si el pedido YA
+        // estaba Entregado (fuera del `if` de arriba a propósito): permite
+        // reintentar de forma segura un cleanup previamente fallido
+        // volviendo a guardar el mismo estado, sin reprocesar las imágenes
+        // ya marcadas DELETED (ver services/order-photo-retention.js).
+        let photoCleanup = null;
+        if (estado === 'Entregado') {
+            photoCleanup = await orderPhotoRetention.deleteOrderCustomerUploads(id, { pool });
+        }
+
+        res.json({ success: true, message: 'Estado actualizado', orderId: id, newStatus: estado, photoCleanup });
     } catch (error) {
         console.error('❌ Error al actualizar estado:', error);
         res.status(500).json({ error: 'Error al actualizar estado' });
@@ -355,7 +372,7 @@ router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
         // Cabecera del pedido
         const [orders] = await pool.query(`
                  SELECT p.id, p.total, p.currency, p.created_at, ep.nombre AS estado_nombre,
-                     COALESCE(p.customer_name, u.nombre, 'Cliente Anónimo') AS customer_name,
+                     COALESCE(p.customer_name, u.nombre, 'Sin nombre') AS customer_name,
                      COALESCE(p.customer_email, u.email) AS email
             FROM pedidos p
             JOIN estado_pedido ep ON p.estado_id = ep.id
@@ -383,14 +400,25 @@ router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
 
         // Obtener imágenes por cada línea. P0-FOTOS-01: el frontend admin
         // NUNCA recibe la `ruta` interna (ni la antigua URL pública ni la
-        // nueva key) -- solo un viewUrl hacia la ruta autenticada de abajo,
-        // que valida sesión admin + pertenencia al pedido en cada petición.
+        // nueva key) -- solo {id, deleted, viewUrl}. Para una imagen ya
+        // borrada por P1 Admin Pedidos/Fotos/Retención (ruta ===
+        // DELETED_IMAGE_SENTINEL tras marcar "Entregado"), viewUrl es
+        // SIEMPRE null: la ruta autenticada de abajo respondería 404 igual
+        // (resolveAdminImageReference rechaza el sentinel), pero no tiene
+        // sentido ofrecer un enlace que se sabe roto de antemano.
         for (const item of items) {
             const [images] = await pool.query(
-                'SELECT id FROM detalle_pedido_imagenes WHERE detalle_pedido_id = ?',
+                'SELECT id, ruta FROM detalle_pedido_imagenes WHERE detalle_pedido_id = ?',
                 [item.id]
             );
-            item.imagenes = images.map(img => ({ id: img.id, viewUrl: `/admin/pedidos/${id}/imagenes/${img.id}` }));
+            item.imagenes = images.map(img => {
+                const deleted = orderPhotoRetention.isDeletedImageRuta(img.ruta);
+                return {
+                    id: img.id,
+                    deleted,
+                    viewUrl: deleted ? null : `/admin/pedidos/${id}/imagenes/${img.id}`
+                };
+            });
         }
 
         res.json({ order: orders[0], items });

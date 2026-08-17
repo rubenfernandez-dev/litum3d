@@ -370,9 +370,9 @@ function makeFakeAdminPool({ orders, items, images }) {
         const pedidoId = Number(params[0]);
         return [items.filter(it => it.pedido_id === pedidoId).map(({ pedido_id, ...rest }) => rest)];
       }
-      if (sql.startsWith('SELECT id FROM detalle_pedido_imagenes WHERE detalle_pedido_id')) {
+      if (sql.startsWith('SELECT id, ruta FROM detalle_pedido_imagenes WHERE detalle_pedido_id')) {
         const detalleId = Number(params[0]);
-        return [images.filter(img => img.detalle_pedido_id === detalleId).map(img => ({ id: img.id }))];
+        return [images.filter(img => img.detalle_pedido_id === detalleId).map(img => ({ id: img.id, ruta: img.ruta }))];
       }
       if (sql.includes('SELECT dpi.ruta') && sql.includes('JOIN detalle_pedidos dp ON dpi.detalle_pedido_id')) {
         const [imageId, orderId] = params.map(Number);
