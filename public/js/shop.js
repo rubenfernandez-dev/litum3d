@@ -199,6 +199,15 @@ async function openCustomization(productId) {
     files: []
   };
 
+  // Los checkboxes/mensaje de extras son estáticos (a diferencia de
+  // #custom-models, que loadModelsForProduct() regenera por completo para
+  // cada producto): sin este reset quedaban marcados/rellenos del producto
+  // anterior, tanto en pantalla como en lo que confirmCustomization()
+  // enviaría al carrito (getExtrasFromUI() los lee directamente del DOM).
+  // Va ANTES de updateCustomizationPrice() para que el precio inicial ya
+  // refleje el estado limpio.
+  resetCustomizationExtrasUI();
+
   // Precio inicial (sin modelo/extras adicionales todavía): antes de esta
   // llamada, el modal mostraba el placeholder estático "€0.00" del HTML
   // hasta la primera interacción (selectModel/onExtraChange), porque
@@ -566,6 +575,29 @@ function buildNotesWithExtras(notes, extras) {
 }
 
 /**
+ * Reinicia los controles de extras del modal (Upscale/QR/mensaje/Adapter).
+ * Única función de reset, reutilizada por closeCustomization() (deja el
+ * modal limpio al cerrar) y openCustomization() (garantiza un estado
+ * limpio para el producto que se abre, aunque el cierre anterior no haya
+ * pasado por closeCustomization() -- p.ej. navegación con el botón atrás).
+ * No hay customizationState.extras: getExtrasFromUI() los lee siempre del
+ * DOM, así que resetear el DOM es resetear el único estado que existe.
+ */
+function resetCustomizationExtrasUI() {
+  const upscale = document.getElementById('extra-upscale');
+  const qr = document.getElementById('extra-qr');
+  const qrMessage = document.getElementById('extra-qr-message');
+  const adapter = document.getElementById('extra-adapter');
+  if (upscale) upscale.checked = false;
+  if (qr) qr.checked = false;
+  if (qrMessage) {
+    qrMessage.value = '';
+    qrMessage.disabled = true; // igual que onExtraChange() cuando QR no está marcado
+  }
+  if (adapter) adapter.checked = false;
+}
+
+/**
  * Cerrar modal
  */
 function closeCustomization() {
@@ -573,6 +605,7 @@ function closeCustomization() {
   document.getElementById('custom-notes').value = '';
   document.getElementById('custom-files').value = '';
   document.getElementById('custom-file-list').innerHTML = '';
+  resetCustomizationExtrasUI();
   customizationState = {
     product: null,
     models: [],

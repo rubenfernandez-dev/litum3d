@@ -448,6 +448,127 @@ async function main() {
     check(els['custom-total'].textContent === '49.95', `selectModel(base, 0): esperaba "49.95", dio "${els['custom-total'].textContent}"`);
   }
 
+  // Regresión (reset entre productos): #extra-upscale/#extra-qr/#extra-adapter
+  // y #extra-qr-message son controles ESTÁTICOS del modal (a diferencia de
+  // #custom-models, que se regenera por completo) -- sin resetCustomization-
+  // ExtrasUI(), quedaban marcados/rellenos del producto anterior tanto en
+  // pantalla como en lo que getExtrasFromUI() (usada por
+  // confirmCustomization() para construir el ítem del carrito) devolvería
+  // para el producto SIGUIENTE. Ejercita openCustomization() ->
+  // closeCustomization() -> openCustomization() reales, con dos productos
+  // distintos.
+  {
+    function makeEl(initial) {
+      return { checked: false, disabled: false, value: '', textContent: initial, innerHTML: '' };
+    }
+    const els = {
+      'custom-modal-title': makeEl(''),
+      'customization-modal': { classList: { add() {}, remove() {} } },
+      'custom-models': makeEl(''),
+      'custom-notes': makeEl(''),
+      'custom-files': makeEl(''),
+      'custom-file-list': makeEl(''),
+      'extra-upscale': makeEl(''),
+      'extra-qr': makeEl(''),
+      'extra-adapter': makeEl(''),
+      'extra-qr-message': makeEl(''),
+      'custom-base-price': makeEl('0.00'),
+      'custom-total': makeEl('0.00')
+    };
+    const finalPriceEl = makeEl('€0.00');
+
+    const VARIANT_TYPES_FIXTURE_A = [
+      {
+        id: 4,
+        nombre: 'Forma',
+        options: [{ id: 10, nombre: 'Base', price_delta: '0.00' }, { id: 11, nombre: 'Cuadrada', price_delta: '15.00' }]
+      }
+    ];
+
+    const modalDocumentStub = {
+      addEventListener: () => {},
+      getElementById: (id) => els[id] || null,
+      querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+      querySelectorAll: () => [],
+      createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+      body: { appendChild: () => {} }
+    };
+
+    const sandbox = {
+      console,
+      document: modalDocumentStub,
+      fetch: async (url) => {
+        if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+        // Producto A (id 42) tiene modelo con variantes; Producto B (id 43) no.
+        if (url.includes('/productos/42/variant-types')) return { ok: true, json: async () => VARIANT_TYPES_FIXTURE_A };
+        if (url.includes('/variant-types')) return { ok: true, json: async () => [] };
+        return { ok: false, json: async () => ({ ok: false }) };
+      }
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
+    await sandbox.loadPricingConfig();
+    vm.runInContext(
+      `allShopProducts = [
+        { id: 42, nombre: 'Producto A', precio: '49.95' },
+        { id: 43, nombre: 'Producto B', precio: '30.00' }
+      ];`,
+      sandbox,
+      { filename: 'shop-test-setup.js' }
+    );
+
+    // --- Producto A: modelo + los 3 extras + mensaje QR ---
+    await sandbox.openCustomization(42);
+    sandbox.selectModel(11, 'Cuadrada', 15);
+    els['extra-upscale'].checked = true;
+    els['extra-qr'].checked = true;
+    els['extra-qr-message'].value = 'Mensaje secreto de A';
+    els['extra-adapter'].checked = true;
+    sandbox.onExtraChange();
+    check(
+      els['custom-total'].textContent === '78.95',
+      `Producto A con modelo+3 extras: esperaba "78.95" (49.95+15+5+5+4), dio "${els['custom-total'].textContent}"`
+    );
+
+    // Cerrar SIN añadir al carrito
+    sandbox.closeCustomization();
+
+    // --- Producto B: abrir inmediatamente ---
+    await sandbox.openCustomization(43);
+
+    check(els['extra-upscale'].checked === false, `Reset entre productos: extra-upscale debe quedar desmarcado en B, quedó checked=${els['extra-upscale'].checked}`);
+    check(els['extra-qr'].checked === false, `Reset entre productos: extra-qr debe quedar desmarcado en B, quedó checked=${els['extra-qr'].checked}`);
+    check(els['extra-adapter'].checked === false, `Reset entre productos: extra-adapter debe quedar desmarcado en B, quedó checked=${els['extra-adapter'].checked}`);
+    check(els['extra-qr-message'].value === '', `Reset entre productos: extra-qr-message debe quedar vacío en B, quedó "${els['extra-qr-message'].value}"`);
+    check(
+      els['custom-total'].textContent === '30.00',
+      `Reset entre productos: precio inicial de B debe ser su propia base "30.00" (sin extras/modelo heredados de A), dio "${els['custom-total'].textContent}"`
+    );
+
+    // getExtrasFromUI() es lo que confirmCustomization() enviaría al carrito:
+    // debe reflejar el estado limpio, no lo heredado de A.
+    const extrasB = sandbox.getExtrasFromUI();
+    check(
+      extrasB.upscale === false && extrasB.qr === false && extrasB.adapter === false && extrasB.qrMessage === '' && extrasB.extrasTotal === 0,
+      `Reset entre productos: getExtrasFromUI() para B debe estar limpio, dio ${JSON.stringify(extrasB)}`
+    );
+
+    // B sigue recalculando con sus propias opciones
+    els['extra-upscale'].checked = true;
+    sandbox.onExtraChange();
+    check(els['custom-total'].textContent === '35.00', `B recalcula con su propio extra: esperaba "35.00", dio "${els['custom-total'].textContent}"`);
+
+    // --- Volver a A: tampoco debe arrastrar lo que él mismo tenía antes ---
+    sandbox.closeCustomization();
+    await sandbox.openCustomization(42);
+    check(
+      els['custom-total'].textContent === '49.95',
+      `Reabrir A: debe volver a su propia base "49.95" limpia, no lo que A mismo tenía seleccionado antes, dio "${els['custom-total'].textContent}"`
+    );
+    check(els['extra-upscale'].checked === false, 'Reabrir A: extra-upscale no debe recordar la selección anterior de A');
+    check(els['extra-qr-message'].value === '', 'Reabrir A: extra-qr-message no debe recordar el mensaje anterior de A');
+  }
+
   // EUR-ONLY-01 (sección 22): ningún script de storefront activo debe
   // contener "CHF" como etiqueta de precio hardcodeada. Comprobación de
   // texto fuente, no de ejecución -- si algún día hace falta distinguir
