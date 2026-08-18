@@ -313,7 +313,11 @@ async function loadVariantTypes(productId) {
  * Actualizar precio de personalización
  */
 function updateCustomizationPrice() {
-  const basePrice = customizationState.product?.precio || 0;
+  // customizationState.product.precio viene de /api/productos como string
+  // (columna DECIMAL vía mysql2, p.ej. "49.95"). Sin parseFloat, el "+" de
+  // abajo concatena en vez de sumar ("49.95"+15+5 = "49.951550") y el precio
+  // mostrado queda anclado al precio base pase lo que pase se seleccione.
+  const basePrice = parseFloat(customizationState.product?.precio || 0);
   const modelDelta = customizationState.selectedModelPriceDelta || 0;
 
   // Calcular extras. Precios desde /api/pricing-config (getExtraPrice),

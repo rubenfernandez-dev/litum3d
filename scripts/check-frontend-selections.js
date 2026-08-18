@@ -291,6 +291,68 @@ async function main() {
     check(shop.getExtraPrice('adapter') === 4, 'shop.js: getExtraPrice lee desde pricingConfig tras loadPricingConfig()');
   }
 
+  // Regresión (precio en vivo del modal de personalización): GET
+  // /api/productos devuelve precio como STRING (columna DECIMAL vía
+  // mysql2, p.ej. "49.95"). updateCustomizationPrice() debe convertirlo a
+  // número antes de sumarlo -- si no, "+" concatena en vez de sumar
+  // ("49.95"+15+5 -> "49.951550") y el total mostrado queda anclado al
+  // precio base sin reflejar modelo/extras, aunque el carrito sí calcule
+  // bien (cart.js#addToCart sí hace parseFloat(productPrice)).
+  {
+    function makeTextEl(initial) {
+      return { checked: false, textContent: initial };
+    }
+    const els = {
+      'extra-upscale': makeTextEl(''),
+      'extra-qr': makeTextEl(''),
+      'extra-adapter': makeTextEl(''),
+      'custom-base-price': makeTextEl('0.00'),
+      'custom-total': makeTextEl('0.00')
+    };
+    els['extra-upscale'].checked = true; // extra Upscale activo (+5, ver PRICING_CONFIG_FIXTURE)
+    const finalPriceEl = makeTextEl('€0.00');
+
+    const modalDocumentStub = {
+      addEventListener: () => {},
+      getElementById: (id) => els[id] || null,
+      querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+      querySelectorAll: () => [], // sin dropdowns de variantes adicionales en este caso
+      createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+      body: { appendChild: () => {} }
+    };
+
+    const sandbox = { console, document: modalDocumentStub, fetch: makeFetchStub(PRICING_CONFIG_FIXTURE) };
+    vm.createContext(sandbox);
+    vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
+    await sandbox.loadPricingConfig();
+
+    // customizationState es `let` de nivel de script: no se expone como
+    // sandbox.customizationState, se asigna ejecutando código en el MISMO
+    // contexto (igual que hace loadPricingConfig() internamente con
+    // pricingConfig), reproduciendo exactamente lo que hace openCustomization()
+    // con la respuesta real de /api/productos (precio como string).
+    vm.runInContext(
+      `customizationState.product = { precio: '49.95' }; customizationState.selectedModelPriceDelta = 15;`,
+      sandbox,
+      { filename: 'shop-test-setup.js' }
+    );
+
+    sandbox.updateCustomizationPrice();
+
+    check(
+      els['custom-total'].textContent === '69.95',
+      `updateCustomizationPrice(): basePrice string "49.95" + modelo 15 + extra upscale 5 debe dar "69.95", dio "${els['custom-total'].textContent}"`
+    );
+    check(
+      finalPriceEl.textContent === '69.95 €',
+      `updateCustomizationPrice(): [data-variant-price] debe mostrar "69.95 €", mostró "${finalPriceEl.textContent}"`
+    );
+    check(
+      els['custom-total'].textContent !== '49.95',
+      'Regresión: el total no debe quedarse anclado al precio base por concatenación de strings'
+    );
+  }
+
   // EUR-ONLY-01 (sección 22): ningún script de storefront activo debe
   // contener "CHF" como etiqueta de precio hardcodeada. Comprobación de
   // texto fuente, no de ejecución -- si algún día hace falta distinguir
