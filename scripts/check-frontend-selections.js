@@ -353,6 +353,101 @@ async function main() {
     );
   }
 
+  // Regresión (precio inicial al abrir el modal): antes de esta
+  // reparación, openCustomization() nunca llamaba a
+  // updateCustomizationPrice(), así que el modal se abría mostrando el
+  // placeholder estático "€0.00"/"0.00" del HTML hasta la primera
+  // interacción. Ejercita la secuencia real completa a través de las
+  // funciones reales de producción (openCustomization, selectModel,
+  // onExtraChange) -- no reimplementa la fórmula de precio.
+  {
+    function makeEl(initial) {
+      return { checked: false, disabled: false, value: '', textContent: initial, innerHTML: '' };
+    }
+    const els = {
+      'custom-modal-title': makeEl(''),
+      'customization-modal': { classList: { add() {}, remove() {} } },
+      'custom-models': makeEl(''),
+      'extra-upscale': makeEl(''),
+      'extra-qr': makeEl(''),
+      'extra-adapter': makeEl(''),
+      'extra-qr-message': makeEl(''),
+      'custom-base-price': makeEl('0.00'),
+      'custom-total': makeEl('0.00')
+    };
+    const finalPriceEl = makeEl('€0.00');
+
+    const VARIANT_TYPES_FIXTURE = [
+      {
+        id: 4,
+        nombre: 'Forma',
+        options: [
+          { id: 10, nombre: 'Base', price_delta: '0.00' },
+          { id: 11, nombre: 'Cuadrada', price_delta: '15.00' }
+        ]
+      }
+    ];
+
+    const modalDocumentStub = {
+      addEventListener: () => {},
+      getElementById: (id) => els[id] || null,
+      querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+      querySelectorAll: () => [],
+      createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+      body: { appendChild: () => {} }
+    };
+
+    const sandbox = {
+      console,
+      document: modalDocumentStub,
+      fetch: async (url) => {
+        if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+        if (url.includes('/variant-types')) return { ok: true, json: async () => VARIANT_TYPES_FIXTURE };
+        return { ok: false, json: async () => ({ ok: false }) };
+      }
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
+
+    // Misma secuencia que en el navegador real: loadPricingConfig() al
+    // cargar la página, allShopProducts poblado desde /api/productos
+    // (precio como string, igual que la API real).
+    await sandbox.loadPricingConfig();
+    vm.runInContext(
+      `allShopProducts = [{ id: 42, nombre: 'Producto Test', precio: '49.95' }];`,
+      sandbox,
+      { filename: 'shop-test-setup.js' }
+    );
+
+    await sandbox.openCustomization(42);
+    check(
+      els['custom-total'].textContent === '49.95',
+      `openCustomization(): el precio inicial debe mostrar la base "49.95" nada más abrir, sin interacción, mostró "${els['custom-total'].textContent}"`
+    );
+    check(
+      finalPriceEl.textContent === '49.95 €',
+      `openCustomization(): [data-variant-price] debe mostrar "49.95 €" nada más abrir, mostró "${finalPriceEl.textContent}"`
+    );
+
+    // Modelo "Cuadrada" (+15) -- misma función real que dispara el onchange del radio
+    sandbox.selectModel(11, 'Cuadrada', 15);
+    check(els['custom-total'].textContent === '64.95', `selectModel(+15): esperaba "64.95", dio "${els['custom-total'].textContent}"`);
+
+    // Extra Upscale (+5) -- misma función real que dispara el onchange del checkbox
+    els['extra-upscale'].checked = true;
+    sandbox.onExtraChange();
+    check(els['custom-total'].textContent === '69.95', `onExtraChange() activar upscale: esperaba "69.95", dio "${els['custom-total'].textContent}"`);
+
+    // Quitar el extra
+    els['extra-upscale'].checked = false;
+    sandbox.onExtraChange();
+    check(els['custom-total'].textContent === '64.95', `onExtraChange() desactivar upscale: esperaba "64.95", dio "${els['custom-total'].textContent}"`);
+
+    // Volver al modelo base (delta 0)
+    sandbox.selectModel(10, 'Base', 0);
+    check(els['custom-total'].textContent === '49.95', `selectModel(base, 0): esperaba "49.95", dio "${els['custom-total'].textContent}"`);
+  }
+
   // EUR-ONLY-01 (sección 22): ningún script de storefront activo debe
   // contener "CHF" como etiqueta de precio hardcodeada. Comprobación de
   // texto fuente, no de ejecución -- si algún día hace falta distinguir

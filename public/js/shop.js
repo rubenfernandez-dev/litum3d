@@ -199,6 +199,13 @@ async function openCustomization(productId) {
     files: []
   };
 
+  // Precio inicial (sin modelo/extras adicionales todavía): antes de esta
+  // llamada, el modal mostraba el placeholder estático "€0.00" del HTML
+  // hasta la primera interacción (selectModel/onExtraChange), porque
+  // ninguna función pintaba el precio en la apertura. Misma función que
+  // usan las interacciones posteriores, sin fórmula nueva.
+  updateCustomizationPrice();
+
   // Actualizar título del modal
   document.getElementById('custom-modal-title').textContent = `Personalizar: ${product.nombre}`;
 
