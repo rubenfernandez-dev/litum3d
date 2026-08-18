@@ -1092,16 +1092,133 @@ async function main() {
     }
   }
 
-  // ================= Consentimiento de fotos (opcional, solo si el modal lo incluye) =================
-  // views/index.html (Home/ES) incluye #photo-consent; views/shop.html no.
-  // confirmCustomization() debe exigirlo SOLO cuando el elemento existe en
-  // la página (comprobación con document.getElementById, no un flag nuevo),
-  // preservando exactamente el comportamiento que ya tenía home.js antes de
-  // compartir esta lógica, sin imponérselo a /shop.
+  // ================= Consentimiento de fotos: unificado entre Home y Shop =================
+  // fix(customization): require photo consent across home and shop.
+  //
+  // Antes, #photo-consent solo existía en views/index.html (Home/ES);
+  // views/shop.html (y el resto de vistas) no lo incluían, así que la misma
+  // personalización tenía una regla distinta según por dónde entrara el
+  // usuario. Ahora #photo-consent existe en las 6 vistas (Home + Shop,
+  // ES/DE/FR) con el mismo contrato DOM, y confirmCustomization() -- ÚNICA
+  // fuente de validación, sin lógica añadida en home.js/shop.js -- sigue
+  // siendo la misma comprobación condicional a que el elemento exista en el
+  // DOM (no un flag nuevo, no una lista de páginas).
   {
     const src = readScript('public/js/customization.js');
     check(/getElementById\('photo-consent'\)/.test(src), 'customization.js comprueba #photo-consent antes de confirmar (si existe en la página)');
     check(/photoConsentCheckbox\.checked/.test(src) || /photo-consent.*checked|checked.*photo-consent/s.test(src), 'customization.js exige que #photo-consent esté marcado cuando existe');
+
+    // Comprobación de fuente (sección 10): evita que #photo-consent
+    // desaparezca de alguna vista sin que ningún test lo detecte -- lo que
+    // pasó desapercibido en /shop hasta este fix. Sobre el HTML tal cual se
+    // sirve, no sobre una copia reescrita.
+    const CONSENT_VIEWS = ['index.html', 'index-de.html', 'index-fr.html', 'shop.html', 'shop-de.html', 'shop-fr.html'];
+    for (const view of CONSENT_VIEWS) {
+      const html = readScript(`views/${view}`);
+      check(/id="photo-consent"/.test(html), `views/${view} debe incluir #photo-consent en el modal de personalización`);
+    }
+  }
+
+  // Comportamiento real (bloquea/permite) y reset entre aperturas, ejecutado
+  // con el código real de cart.js + customization.js + shop.js/home.js --
+  // no una reimplementación de la regla.
+  {
+    function makeEl(initial) {
+      return { checked: false, disabled: false, value: '', textContent: initial, innerHTML: '', style: {}, focus() {} };
+    }
+
+    function buildConsentSandbox(pageScript, pageScriptName) {
+      const els = {
+        'custom-modal-title': makeEl(''),
+        'customization-modal': { classList: { add() {}, remove() {} } },
+        'custom-models': makeEl(''),
+        'custom-models-section': makeEl(''),
+        'custom-notes': makeEl(''),
+        'custom-files': makeEl(''),
+        'custom-file-list': makeEl(''),
+        'extra-upscale': makeEl(''),
+        'extra-qr': makeEl(''),
+        'extra-qr-message': makeEl(''),
+        'extra-adapter': makeEl(''),
+        'photo-consent': makeEl(''),
+        'custom-base-price': makeEl('0.00'),
+        'custom-total': makeEl('0.00')
+      };
+      const finalPriceEl = makeEl('€0.00');
+      const alerts = [];
+      const modalDocumentStub = {
+        addEventListener: () => {},
+        getElementById: (id) => els[id] || null,
+        querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+        querySelectorAll: () => [],
+        createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+        body: { appendChild: () => {} }
+      };
+      const sandbox = {
+        console,
+        document: modalDocumentStub,
+        alert: (msg) => alerts.push(msg),
+        FormData,
+        AbortController,
+        setTimeout: () => {},
+        localStorage: makeLocalStorageStub(),
+        fetch: async (url) => {
+          if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+          if (url.includes('/variant-types')) return { ok: true, json: async () => [] }; // sin modelos: foco exclusivo en el consentimiento
+          if (url.includes('/api/uploads/custom')) return { ok: true, json: async () => ({ files: [] }) };
+          return { ok: false, json: async () => ({ ok: false }) };
+        }
+      };
+      vm.createContext(sandbox);
+      vm.runInContext(readScript('public/js/cart.js'), sandbox, { filename: 'cart.js' });
+      vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
+      vm.runInContext(readScript(pageScript), sandbox, { filename: pageScriptName });
+      return {
+        sandbox,
+        els,
+        alerts,
+        setFiles: () => vm.runInContext("customizationState.files = [{name:'foto.jpg'}];", sandbox, { filename: 'set-files.js' })
+      };
+    }
+
+    for (const [pageScript, pageScriptName, label] of [
+      ['public/js/shop.js', 'shop.js', 'Shop'],
+      ['public/js/home.js', 'home.js', 'Home']
+    ]) {
+      const ctx = buildConsentSandbox(pageScript, pageScriptName);
+      ctx.sandbox.setCustomizationProducts([
+        { id: 201, nombre: 'Producto A', precio: '25.00' },
+        { id: 202, nombre: 'Producto B', precio: '18.00' }
+      ]);
+
+      // --- Sin marcar: bloquea (con foto y sin restricción de modelo, para aislar el consentimiento) ---
+      await ctx.sandbox.openCustomization(201);
+      ctx.setFiles();
+      await ctx.sandbox.confirmCustomization();
+      check(ctx.alerts.length === 1 && /fotos/i.test(ctx.alerts[0]), `${label}: sin marcar #photo-consent, confirmCustomization() debe bloquear; alerts=${JSON.stringify(ctx.alerts)}`);
+      check(ctx.sandbox.getCart().length === 0, `${label}: el bloqueo por falta de consentimiento no debe añadir nada al carrito`);
+
+      // --- Marcando: permite ---
+      ctx.alerts.length = 0;
+      ctx.els['photo-consent'].checked = true;
+      await ctx.sandbox.confirmCustomization();
+      check(ctx.alerts.length === 0, `${label}: con #photo-consent marcado, confirmCustomization() debe proceder; alerts=${JSON.stringify(ctx.alerts)}`);
+      check(ctx.sandbox.getCart().length === 1, `${label}: el producto debe añadirse al carrito tras aceptar el consentimiento`);
+
+      // --- Reset (sección 6): A marca consentimiento y cierra SIN añadir; B no debe heredarlo ---
+      await ctx.sandbox.openCustomization(201);
+      ctx.els['photo-consent'].checked = true;
+      ctx.sandbox.closeCustomization(); // cierre explícito, sin confirmar
+
+      await ctx.sandbox.openCustomization(202);
+      check(ctx.els['photo-consent'].checked === false, `${label}: abrir B tras marcar consentimiento en A (cerrado sin añadir) no debe heredarlo`);
+
+      // --- Marcar en B, cerrar, reabrir A: debe volver a estar desmarcado ---
+      ctx.els['photo-consent'].checked = true;
+      ctx.sandbox.closeCustomization();
+      await ctx.sandbox.openCustomization(201);
+      check(ctx.els['photo-consent'].checked === false, `${label}: reabrir A tras marcar y cerrar B no debe heredar el consentimiento de B`);
+    }
   }
 
   // EUR-ONLY-01 (sección 22): ningún script de storefront activo debe

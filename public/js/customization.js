@@ -456,12 +456,13 @@ async function confirmCustomization() {
     return;
   }
 
-  // Consentimiento de privacidad de fotos: solo existe hoy en el modal de
-  // Home/ES (views/index.html#photo-consent); el de /shop no tiene este
-  // control. Comprobación opcional -- si el elemento no existe en la
-  // página actual, no se exige nada (mismo comportamiento que /shop de
-  // siempre), y donde sí existe se preserva exactamente la misma validación
-  // que tenía home.js antes de compartir esta lógica.
+  // Consentimiento de privacidad de fotos: #photo-consent existe ahora en
+  // las 6 vistas (Home + Shop, ES/DE/FR) con el mismo contrato DOM, así que
+  // Home y Shop exigen exactamente la misma regla a través de esta única
+  // comprobación. Sigue siendo condicional a que el elemento exista en el
+  // DOM (no un flag nuevo) para no depender de una lista de páginas -- si
+  // algún día una vista del modal no permite subir fotos y por tanto no
+  // incluye el checkbox, esta comprobación se desactiva sola.
   const photoConsentCheckbox = document.getElementById('photo-consent');
   if (files.length > 0 && photoConsentCheckbox && !photoConsentCheckbox.checked) {
     alert('⚠️ Debes aceptar el tratamiento de tus fotos para continuar.\n\nLas fotos se utilizan para personalizar y gestionar tu pedido.');
@@ -603,19 +604,24 @@ function buildNotesWithExtras(notes, extras) {
 }
 
 /**
- * Reinicia los controles de extras del modal (Upscale/QR/mensaje/Adapter).
+ * Reinicia los controles de extras del modal (Upscale/QR/mensaje/Adapter) y
+ * el consentimiento de fotos (#photo-consent, si la página lo incluye).
  * Única función de reset, reutilizada por closeCustomization() (deja el
  * modal limpio al cerrar) y openCustomization() (garantiza un estado
  * limpio para el producto que se abre, aunque el cierre anterior no haya
  * pasado por closeCustomization() -- p.ej. navegación con el botón atrás).
- * No hay customizationState.extras: getExtrasFromUI() los lee siempre del
- * DOM, así que resetear el DOM es resetear el único estado que existe.
+ * No hay customizationState.extras ni customizationState.photoConsent:
+ * getExtrasFromUI()/confirmCustomization() los leen siempre del DOM, así
+ * que resetear el DOM es resetear el único estado que existe -- sin esto,
+ * el consentimiento marcado en un producto quedaba marcado también para el
+ * siguiente, aunque corresponda a otra subida de fotos distinta.
  */
 function resetCustomizationExtrasUI() {
   const upscale = document.getElementById('extra-upscale');
   const qr = document.getElementById('extra-qr');
   const qrMessage = document.getElementById('extra-qr-message');
   const adapter = document.getElementById('extra-adapter');
+  const photoConsent = document.getElementById('photo-consent');
   if (upscale) upscale.checked = false;
   if (qr) qr.checked = false;
   if (qrMessage) {
@@ -623,6 +629,7 @@ function resetCustomizationExtrasUI() {
     qrMessage.disabled = true; // igual que onExtraChange() cuando QR no está marcado
   }
   if (adapter) adapter.checked = false;
+  if (photoConsent) photoConsent.checked = false;
 }
 
 /**
