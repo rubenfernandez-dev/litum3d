@@ -713,6 +713,209 @@ async function main() {
     );
   }
 
+  // ================= Obligatoriedad de modelo depende de la configuración real, no del producto =================
+  // Antes de esta reparación, confirmCustomization() solo comprobaba
+  // `!customizationState.selectedModelId`, que no distingue "el producto no
+  // tiene modelos" de "tiene modelos y el usuario no eligió ninguno" --
+  // bloqueaba SIEMPRE que no hubiera selección, incluso en productos sin
+  // ningún modelo configurado en Admin. Este bloque ejercita el MISMO
+  // product_id (99) cambiando lo que devuelve /variant-types entre llamadas
+  // (0 -> 2 -> 0 modelos), simulando que Admin reconfigura el producto sin
+  // ningún despliegue de frontend -- demuestra que la regla depende de la
+  // configuración real, no de una lista/ID hardcodeado.
+  {
+    function makeEl(initial) {
+      return { checked: false, disabled: false, value: '', textContent: initial, innerHTML: '', style: {} };
+    }
+
+    function buildModalSandbox(pageScript, pageScriptName) {
+      const els = {
+        'custom-modal-title': makeEl(''),
+        'customization-modal': { classList: { add() {}, remove() {} } },
+        'custom-models': makeEl(''),
+        'custom-models-section': makeEl(''),
+        'custom-notes': makeEl(''),
+        'custom-files': makeEl(''),
+        'custom-file-list': makeEl(''),
+        'extra-upscale': makeEl(''),
+        'extra-qr': makeEl(''),
+        'extra-qr-message': makeEl(''),
+        'extra-adapter': makeEl(''),
+        'custom-base-price': makeEl('0.00'),
+        'custom-total': makeEl('0.00')
+      };
+      const finalPriceEl = makeEl('€0.00');
+      const alerts = [];
+
+      const modalDocumentStub = {
+        addEventListener: () => {},
+        getElementById: (id) => els[id] || null,
+        querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+        querySelectorAll: () => [],
+        createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+        body: { appendChild: () => {} }
+      };
+
+      // Fixture mutable de /variant-types para el producto 99: cambia entre
+      // llamadas para simular una reconfiguración real hecha desde Admin.
+      let variantTypesFixture = [];
+      const sandbox = {
+        console,
+        document: modalDocumentStub,
+        alert: (msg) => alerts.push(msg),
+        FormData,
+        setTimeout: () => {},
+        localStorage: makeLocalStorageStub(),
+        fetch: async (url) => {
+          if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+          if (url.includes('/variant-types')) return { ok: true, json: async () => variantTypesFixture };
+          if (url.includes('/api/uploads/custom')) return { ok: true, json: async () => ({ files: [] }) };
+          return { ok: false, json: async () => ({ ok: false }) };
+        }
+      };
+      vm.createContext(sandbox);
+      vm.runInContext(readScript('public/js/cart.js'), sandbox, { filename: 'cart.js' });
+      vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
+      vm.runInContext(readScript(pageScript), sandbox, { filename: pageScriptName });
+
+      return {
+        sandbox,
+        els,
+        alerts,
+        setVariantTypes: (fixture) => { variantTypesFixture = fixture; },
+        getState: () => vm.runInContext('customizationState', sandbox, { filename: 'read-state.js' }),
+        setFiles: () => vm.runInContext("customizationState.files = [{name:'foto.jpg'}];", sandbox, { filename: 'set-files.js' })
+      };
+    }
+
+    const MODEL_OPTIONS_FIXTURE = [
+      {
+        id: 4,
+        nombre: 'Forma',
+        options: [
+          { id: 20, nombre: 'Redonda', price_delta: '10.00' },
+          { id: 21, nombre: 'Cuadrada', price_delta: '15.00' }
+        ]
+      }
+    ];
+
+    // --- Secuencia completa (Estado 1 -> 2 -> 3) sobre /shop ---
+    const ctx = buildModalSandbox('public/js/shop.js', 'shop.js');
+    ctx.sandbox.setCustomizationProducts([{ id: 99, nombre: 'Producto Dinámico', precio: '30.00' }]);
+
+    // Estado 1: el producto 99 no tiene modelos configurados todavía.
+    ctx.setVariantTypes([]);
+    await ctx.sandbox.openCustomization(99);
+    check(ctx.getState().hasSelectableModels === false, 'Estado 1 (0 modelos): hasSelectableModels=false');
+    check(ctx.getState().modelsLoaded === true, 'Estado 1: modelsLoaded=true tras completar la carga');
+    check(ctx.els['custom-models-section'].style.display === 'none', 'Estado 1: la sección Modelo se oculta cuando el producto no tiene modelos');
+
+    ctx.setFiles();
+    await ctx.sandbox.confirmCustomization();
+    check(ctx.alerts.length === 0, `Estado 1: confirmCustomization no debe bloquear un producto sin modelos; alerts=${JSON.stringify(ctx.alerts)}`);
+    let cart = ctx.sandbox.getCart();
+    check(cart.length === 1, 'Estado 1: el producto se añade al carrito sin exigir modelo');
+    check(cart[0].modelId === null, 'Estado 1: modelId=null en el carrito cuando el producto no tiene modelos');
+    check(cart[0].priceDelta === 0, 'Estado 1: priceDelta=0 cuando el producto no tiene modelos');
+
+    // Estado 2: Admin añade 2 modelos al MISMO producto 99 (mismo product_id,
+    // ningún cambio de código ni redeploy de frontend).
+    ctx.setVariantTypes(MODEL_OPTIONS_FIXTURE);
+    await ctx.sandbox.openCustomization(99);
+    check(ctx.getState().hasSelectableModels === true, 'Estado 2 (2 modelos): hasSelectableModels=true para el MISMO product_id que en el Estado 1 no los tenía');
+    check(ctx.els['custom-models-section'].style.display === '', 'Estado 2: la sección Modelo se muestra cuando el producto pasa a tener modelos');
+
+    ctx.setFiles();
+    await ctx.sandbox.confirmCustomization();
+    check(ctx.alerts.length === 1 && /modelo/i.test(ctx.alerts[0]), `Estado 2: sin seleccionar modelo, confirmCustomization debe bloquear (mismo producto que en el Estado 1 no lo exigía); alerts=${JSON.stringify(ctx.alerts)}`);
+    check(ctx.sandbox.getCart().length === 1, 'Estado 2: el bloqueo por falta de selección no debe añadir nada al carrito');
+
+    ctx.alerts.length = 0;
+    ctx.sandbox.selectModel(21, 'Cuadrada', 15);
+    ctx.setFiles();
+    await ctx.sandbox.confirmCustomization();
+    check(ctx.alerts.length === 0, `Estado 2: con modelo seleccionado, confirmCustomization debe proceder; alerts=${JSON.stringify(ctx.alerts)}`);
+    cart = ctx.sandbox.getCart();
+    check(cart.length === 2, 'Estado 2: la personalización con modelo se añade como línea nueva (no se fusiona con la línea sin modelo)');
+    check(cart[1].variantOptionIds.includes(21), 'Estado 2: el modelo elegido viaja en variantOptionIds (21)');
+    check(cart[1].modelName === 'Cuadrada', 'Estado 2: modelName conserva la etiqueta de presentación del modelo elegido');
+    check(cart[1].priceDelta === 15, 'Estado 2: priceDelta refleja el price_delta del modelo elegido (15)');
+
+    // Estado 3: Admin elimina de nuevo todos los modelos del MISMO producto 99.
+    ctx.setVariantTypes([]);
+    await ctx.sandbox.openCustomization(99);
+    check(ctx.getState().hasSelectableModels === false, 'Estado 3 (vuelve a 0 modelos): hasSelectableModels=false para el MISMO product_id');
+    check(ctx.getState().selectedModelId === null, 'Estado 3: la selección de modelo del Estado 2 no se conserva al reabrir');
+    check(ctx.els['custom-models-section'].style.display === 'none', 'Estado 3: la sección Modelo vuelve a ocultarse');
+
+    ctx.setFiles();
+    await ctx.sandbox.confirmCustomization();
+    check(ctx.alerts.length === 0, `Estado 3: confirmCustomization vuelve a permitir continuar sin modelo para el mismo producto que en el Estado 2 lo exigía; alerts=${JSON.stringify(ctx.alerts)}`);
+    cart = ctx.sandbox.getCart();
+    // La nueva línea sin personalización se fusiona con la del Estado 1 (id
+    // 99, también sin modelo/variantes/extras) -- mismo comportamiento de
+    // fusión que cualquier producto sin personalización (ver hasNoPersonalization
+    // en cart.js), no un caso especial de esta reparación.
+    check(cart.length === 2, 'Estado 3: se fusiona con la línea sin personalización del Estado 1 (mismo producto, sin modelo en ambos casos)');
+    check(cart[0].quantity === 2, 'Estado 3: la fusión incrementa la cantidad de la línea sin modelo');
+    check(cart[0].modelId === null && cart[0].priceDelta === 0, 'Estado 3: modelId=null y priceDelta=0, igual que en el Estado 1, para el mismo producto');
+
+    // --- Home usa exactamente la misma regla (fuente única: customization.js) ---
+    const homeCtx = buildModalSandbox('public/js/home.js', 'home.js');
+    homeCtx.sandbox.setCustomizationProducts([{ id: 99, nombre: 'Producto Dinámico', precio: '30.00' }]);
+
+    homeCtx.setVariantTypes([]);
+    await homeCtx.sandbox.openCustomization(99);
+    homeCtx.setFiles();
+    await homeCtx.sandbox.confirmCustomization();
+    check(homeCtx.alerts.length === 0, 'Home, 0 modelos: confirmCustomization no bloquea (misma regla que Shop)');
+
+    homeCtx.setVariantTypes(MODEL_OPTIONS_FIXTURE);
+    await homeCtx.sandbox.openCustomization(99);
+    homeCtx.setFiles();
+    await homeCtx.sandbox.confirmCustomization();
+    check(homeCtx.alerts.length === 1 && /modelo/i.test(homeCtx.alerts[0]), 'Home, 2 modelos sin seleccionar: confirmCustomization bloquea (misma regla que Shop)');
+
+    homeCtx.alerts.length = 0;
+    homeCtx.sandbox.selectModel(20, 'Redonda', 10);
+    homeCtx.setFiles();
+    await homeCtx.sandbox.confirmCustomization();
+    check(homeCtx.alerts.length === 0, 'Home, 2 modelos con selección: confirmCustomization procede (misma regla que Shop)');
+
+    // Asincronía (sección 7): confirmCustomization no puede decidir nada
+    // mientras loadModelsForProduct() está en curso -- se bloquea igual que
+    // ante una respuesta todavía desconocida, en vez de asumir "sin modelos".
+    {
+      const raceCtx = buildModalSandbox('public/js/shop.js', 'shop.js');
+      raceCtx.sandbox.setCustomizationProducts([{ id: 100, nombre: 'Producto Lento', precio: '20.00' }]);
+      let resolveVariantTypes;
+      raceCtx.sandbox.fetch = async (url) => {
+        if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+        if (url.includes('/variant-types')) {
+          await new Promise((resolve) => { resolveVariantTypes = resolve; });
+          return { ok: true, json: async () => [] };
+        }
+        return { ok: false, json: async () => ({ ok: false }) };
+      };
+      const openPromise = raceCtx.sandbox.openCustomization(100);
+      check(raceCtx.getState().modelsLoaded === false, 'Carga en curso: modelsLoaded=false mientras /variant-types no ha respondido');
+      raceCtx.setFiles();
+      await raceCtx.sandbox.confirmCustomization();
+      check(raceCtx.alerts.length === 1 && /espera|cargando/i.test(raceCtx.alerts[0]), `Carga en curso: confirmCustomization bloquea en vez de asumir "sin modelos"; alerts=${JSON.stringify(raceCtx.alerts)}`);
+      check(raceCtx.sandbox.getCart().length === 0, 'Carga en curso: el bloqueo no debe haber añadido nada al carrito');
+      resolveVariantTypes();
+      await openPromise;
+    }
+
+    // Sin hardcode de IDs de producto para esta decisión (sección 5).
+    {
+      const src = readScript('public/js/customization.js');
+      check(!/product(Id)?\s*===?\s*[67]\b/.test(src), 'customization.js no compara product.id/productId contra IDs concretos (p.ej. 6/7) para decidir sobre modelos');
+      check(!/productsWithoutModels/i.test(src), 'customization.js no contiene una lista hardcodeada de productos sin modelos');
+      check(/hasSelectableModels/.test(src), 'customization.js deriva la obligatoriedad de modelo de un estado explícito (hasSelectableModels), no de selectedModelId a secas');
+    }
+  }
+
   // ================= Consentimiento de fotos (opcional, solo si el modal lo incluye) =================
   // views/index.html (Home/ES) incluye #photo-consent; views/shop.html no.
   // confirmCustomization() debe exigirlo SOLO cuando el elemento existe en

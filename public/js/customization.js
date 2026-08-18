@@ -29,6 +29,16 @@ let pricingConfig = null;
 let customizationState = {
   product: null,
   models: [],
+  // Estado canónico de disponibilidad de modelos para el producto actual,
+  // derivado exclusivamente de la respuesta de /variant-types (ver
+  // loadModelsForProduct). NO se infiere de selectedModelId: eso solo dice
+  // si el usuario eligió algo, no si había algo que elegir -- eran dos
+  // preguntas distintas que antes se confundían en confirmCustomization().
+  hasSelectableModels: false,
+  // false mientras loadModelsForProduct() está en curso (o si falló): evita
+  // que confirmCustomization() decida "no hace falta modelo" solo porque
+  // hasSelectableModels todavía no se ha actualizado desde su valor inicial.
+  modelsLoaded: false,
   selectedModelId: null,
   selectedModelName: null,
   selectedModelPriceDelta: 0,
@@ -116,6 +126,8 @@ async function openCustomization(productId) {
   customizationState = {
     product,
     models: [],
+    hasSelectableModels: false,
+    modelsLoaded: false,
     selectedModelId: null,
     selectedModelName: null,
     selectedModelPriceDelta: 0,
@@ -153,30 +165,41 @@ async function openCustomization(productId) {
 }
 
 /**
- * Cargar modelos disponibles para un producto
+ * Cargar modelos disponibles para un producto. Determina
+ * customizationState.hasSelectableModels exclusivamente a partir de las
+ * opciones que devuelve /variant-types para ESTE producto -- nunca por
+ * id/nombre/posición -- de forma que un producto sin modelos configurados en
+ * Admin deja de exigirlos, y uno al que Admin le añade modelos empieza a
+ * exigirlos, sin tocar este código.
  */
 async function loadModelsForProduct(productId) {
+  // false durante toda la carga: confirmCustomization() debe permanecer
+  // bloqueada mientras no se sepa con certeza si el producto tiene modelos
+  // (ver comprobación al inicio de confirmCustomization).
+  customizationState.modelsLoaded = false;
+  const modelsContainer = document.getElementById('custom-models');
+  const modelsSection = document.getElementById('custom-models-section');
+
   try {
     const res = await fetch(`/api/productos/${productId}/variant-types`);
     if (!res.ok) throw new Error('Error al obtener variantes');
 
     const variantTypes = await res.json();
-    const modelsContainer = document.getElementById('custom-models');
 
-    if (!variantTypes || variantTypes.length === 0) {
-      modelsContainer.innerHTML = '<p style="opacity: 0.7;">No hay opciones de modelo disponibles.</p>';
-      return;
-    }
-
-    // Buscar el tipo de variante de modelo (usualmente por nombre)
-    const modelVariant = variantTypes.find(v =>
+    // Buscar el tipo de variante de modelo (usualmente por nombre, según lo
+    // haya llamado Admin al crearlo: Base/Forma/Model/Shape...).
+    const modelVariant = (variantTypes || []).find(v =>
       v.nombre.toLowerCase().includes('model') ||
       v.nombre.toLowerCase().includes('forma') ||
       v.nombre.toLowerCase().includes('shape')
     );
+    const hasModels = !!(modelVariant && modelVariant.options && modelVariant.options.length > 0);
 
-    if (modelVariant && modelVariant.options && modelVariant.options.length > 0) {
+    customizationState.hasSelectableModels = hasModels;
+
+    if (hasModels) {
       customizationState.models = modelVariant.options;
+      if (modelsSection) modelsSection.style.display = '';
       modelsContainer.innerHTML = modelVariant.options.map(opt => `
         <label class="custom-model-option">
           <input type="radio" name="model" value="${opt.id}" onchange="selectModel(${opt.id}, '${escapeHtml(opt.nombre)}', ${opt.price_delta || 0})">
@@ -184,14 +207,23 @@ async function loadModelsForProduct(productId) {
         </label>
       `).join('');
     } else {
-      modelsContainer.innerHTML = '<p style="opacity: 0.7;">No hay opciones de modelo disponibles.</p>';
+      // Sin modelos configurados para este producto: no se renderiza una
+      // selección vacía ni se exige nada (ver confirmCustomization).
+      customizationState.models = [];
+      if (modelsSection) modelsSection.style.display = 'none';
+      modelsContainer.innerHTML = '';
     }
 
-    // Cargar variantes adicionales
+    // Cargar variantes adicionales (distintas del "modelo")
     loadVariantTypes(productId);
+    customizationState.modelsLoaded = true;
   } catch (err) {
     console.error(err);
-    document.getElementById('custom-models').innerHTML = '<p style="color: #ff6b6b;">Error al cargar opciones.</p>';
+    // modelsLoaded queda en false: no se sabe si el producto tiene modelos,
+    // así que confirmCustomization() permanece bloqueada hasta reintentar
+    // (mismo efecto práctico que el comportamiento previo ante error).
+    if (modelsContainer) modelsContainer.innerHTML = '<p style="color: #ff6b6b;">Error al cargar opciones.</p>';
+    if (modelsSection) modelsSection.style.display = '';
   }
 }
 
@@ -359,7 +391,21 @@ async function confirmCustomization() {
     return;
   }
 
-  if (!customizationState.selectedModelId) {
+  // Mientras no se sepa con certeza si el producto tiene modelos
+  // configurados (carga en curso o fallida), no se puede decidir nada:
+  // bloquear en vez de asumir "sin modelos" por defecto (ver loadModelsForProduct).
+  if (!customizationState.modelsLoaded) {
+    alert('Espera un momento: todavía se están cargando las opciones de personalización.');
+    return;
+  }
+
+  // Un modelo es obligatorio SOLO si la configuración real del producto
+  // (obtenida de /variant-types, ver loadModelsForProduct) tiene modelos
+  // seleccionables. Si no los tiene, no se exige selección: distingue "no
+  // hay nada que elegir" de "había algo y no se eligió", que es la causa
+  // raíz del bug (antes solo se comprobaba selectedModelId, que no
+  // distingue esos dos casos).
+  if (customizationState.hasSelectableModels && !customizationState.selectedModelId) {
     alert('Por favor selecciona un modelo');
     return;
   }
@@ -545,6 +591,8 @@ function closeCustomization() {
   customizationState = {
     product: null,
     models: [],
+    hasSelectableModels: false,
+    modelsLoaded: false,
     selectedModelId: null,
     selectedModelName: null,
     selectedModelPriceDelta: 0,
