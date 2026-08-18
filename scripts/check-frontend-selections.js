@@ -77,7 +77,7 @@ const PRICING_CONFIG_FIXTURE = {
 // carga SIEMPRE antes de shop.js/home.js, igual que en las vistas reales
 // (ver <script> en views/shop.html y views/index.html).
 function loadHomeSandbox() {
-  const sandbox = { console, document: makeDocumentStub(), fetch: makeFetchStub({ ok: false }) };
+  const sandbox = { console, document: makeDocumentStub(), fetch: makeFetchStub({ ok: false }), AbortController };
   vm.createContext(sandbox);
   vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
   vm.runInContext(readScript('public/js/home.js'), sandbox, { filename: 'home.js' });
@@ -85,7 +85,7 @@ function loadHomeSandbox() {
 }
 
 function loadShopSandbox() {
-  const sandbox = { console, document: makeDocumentStub(), fetch: makeFetchStub({ ok: false }) };
+  const sandbox = { console, document: makeDocumentStub(), fetch: makeFetchStub({ ok: false }), AbortController };
   vm.createContext(sandbox);
   vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
   vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
@@ -292,7 +292,7 @@ async function main() {
       body: { appendChild: () => {} }
     };
 
-    const sandbox = { console, document: modalDocumentStub, fetch: makeFetchStub(PRICING_CONFIG_FIXTURE) };
+    const sandbox = { console, document: modalDocumentStub, fetch: makeFetchStub(PRICING_CONFIG_FIXTURE), AbortController };
     vm.createContext(sandbox);
     vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
     vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
@@ -372,6 +372,7 @@ async function main() {
     const sandbox = {
       console,
       document: modalDocumentStub,
+      AbortController,
       fetch: async (url) => {
         if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
         if (url.includes('/variant-types')) return { ok: true, json: async () => VARIANT_TYPES_FIXTURE };
@@ -466,6 +467,7 @@ async function main() {
     const sandbox = {
       console,
       document: modalDocumentStub,
+      AbortController,
       fetch: async (url) => {
         if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
         // Producto A (id 42) tiene modelo con variantes; Producto B (id 43) no.
@@ -581,6 +583,7 @@ async function main() {
     const sandbox = {
       console,
       document: modalDocumentStub,
+      AbortController,
       fetch: async (url) => {
         if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
         if (url.includes('/variant-types')) return { ok: true, json: async () => VARIANT_TYPES_FIXTURE };
@@ -666,6 +669,7 @@ async function main() {
       const sandbox = {
         console,
         document: modalDocumentStub,
+        AbortController,
         fetch: async (url) => {
           if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
           if (url.includes('/variant-types')) return { ok: true, json: async () => VARIANT_TYPES_FIXTURE };
@@ -764,6 +768,7 @@ async function main() {
         document: modalDocumentStub,
         alert: (msg) => alerts.push(msg),
         FormData,
+        AbortController,
         setTimeout: () => {},
         localStorage: makeLocalStorageStub(),
         fetch: async (url) => {
@@ -888,11 +893,21 @@ async function main() {
     {
       const raceCtx = buildModalSandbox('public/js/shop.js', 'shop.js');
       raceCtx.sandbox.setCustomizationProducts([{ id: 100, nombre: 'Producto Lento', precio: '20.00' }]);
+      // loadModelsForProduct() ahora espera (await) también a loadVariantTypes(),
+      // que consulta el MISMO endpoint /variant-types una segunda vez de forma
+      // secuencial (ver informe de la carrera): solo la PRIMERA llamada se deja
+      // pendiente aquí -- es la que basta para demostrar "todavía no se sabe
+      // si hay modelos"; la segunda se resuelve enseguida para no bloquear el
+      // test en una promesa que nunca se resolvería.
       let resolveVariantTypes;
+      let variantTypesCallCount = 0;
       raceCtx.sandbox.fetch = async (url) => {
         if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
         if (url.includes('/variant-types')) {
-          await new Promise((resolve) => { resolveVariantTypes = resolve; });
+          variantTypesCallCount++;
+          if (variantTypesCallCount === 1) {
+            await new Promise((resolve) => { resolveVariantTypes = resolve; });
+          }
           return { ok: true, json: async () => [] };
         }
         return { ok: false, json: async () => ({ ok: false }) };
@@ -913,6 +928,167 @@ async function main() {
       check(!/product(Id)?\s*===?\s*[67]\b/.test(src), 'customization.js no compara product.id/productId contra IDs concretos (p.ej. 6/7) para decidir sobre modelos');
       check(!/productsWithoutModels/i.test(src), 'customization.js no contiene una lista hardcodeada de productos sin modelos');
       check(/hasSelectableModels/.test(src), 'customization.js deriva la obligatoriedad de modelo de un estado explícito (hasSelectableModels), no de selectedModelId a secas');
+    }
+  }
+
+  // ================= Carrera entre aperturas: respuestas obsoletas nunca deben mutar el estado/DOM actual =================
+  // fix(customization): prevent stale variant loading races.
+  //
+  // Causa raíz (ver informe): cada apertura llamaba a
+  // loadModelsForProduct()/loadVariantTypes() sin ninguna forma de saber si
+  // seguía siendo la apertura vigente. Una respuesta que llegaba tarde --
+  // porque el usuario ya había cerrado el modal, o abierto OTRO producto --
+  // mutaba customizationState y el DOM (#custom-models, #custom-models-section,
+  // el precio) igualmente, y openCustomization() volvía a mostrar el modal
+  // (classList.add('show')) sin comprobar si esa apertura seguía vigente.
+  // Estos tests reproducen exactamente esas dos secuencias con latencia
+  // controlada por producto y demuestran que, tras el fix (AbortController
+  // por apertura, comprobado con signal.aborted tras cada await), una
+  // respuesta obsoleta queda sin efecto.
+  {
+    function makeEl(initial) {
+      return { checked: false, disabled: false, value: '', textContent: initial, innerHTML: '', style: {} };
+    }
+
+    // fetch controlable con latencia INDEPENDIENTE por producto: las
+    // llamadas a /variant-types de un producto quedan pendientes hasta que
+    // el test llama a release(id) explícitamente -- momento en el que se
+    // resuelven todas las que estén pendientes en ese instante Y las que
+    // lleguen después (loadModelsForProduct ahora también espera a
+    // loadVariantTypes(), que repite la misma llamada de forma secuencial).
+    function makeControllableFetch(fixtures) {
+      const released = new Set();
+      const waiters = {};
+      const urlLog = [];
+      async function fetchImpl(url) {
+        urlLog.push(url);
+        if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+        const m = url.match(/\/api\/productos\/(\d+)\/variant-types/);
+        if (!m) return { ok: false, json: async () => ({ ok: false }) };
+        const id = m[1];
+        if (released.has(id)) {
+          return { ok: true, json: async () => fixtures[id] || [] };
+        }
+        return new Promise((resolve) => {
+          (waiters[id] = waiters[id] || []).push(resolve);
+        });
+      }
+      function release(id) {
+        id = String(id);
+        released.add(id);
+        const pendingForId = waiters[id] || [];
+        waiters[id] = [];
+        pendingForId.forEach((resolve) => resolve({ ok: true, json: async () => fixtures[id] || [] }));
+      }
+      return { fetchImpl, release, urlLog };
+    }
+
+    function buildRaceSandbox(fetchImpl) {
+      const els = {
+        'custom-modal-title': makeEl(''),
+        'customization-modal': { classList: { add() {}, remove() {} } },
+        'custom-models': makeEl(''),
+        'custom-models-section': makeEl(''),
+        'custom-notes': makeEl(''),
+        'custom-files': makeEl(''),
+        'custom-file-list': makeEl(''),
+        'extra-upscale': makeEl(''),
+        'extra-qr': makeEl(''),
+        'extra-qr-message': makeEl(''),
+        'extra-adapter': makeEl(''),
+        'custom-base-price': makeEl('0.00'),
+        'custom-total': makeEl('0.00')
+      };
+      const finalPriceEl = makeEl('€0.00');
+      const modalDocumentStub = {
+        addEventListener: () => {},
+        getElementById: (id) => els[id] || null,
+        querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+        querySelectorAll: () => [],
+        createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+        body: { appendChild: () => {} }
+      };
+      const sandbox = { console, document: modalDocumentStub, fetch: fetchImpl, AbortController };
+      vm.createContext(sandbox);
+      vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
+      vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
+      return {
+        sandbox,
+        els,
+        finalPriceEl,
+        getState: () => vm.runInContext('customizationState', sandbox, { filename: 'read-state.js' })
+      };
+    }
+
+    const MODEL_A_FIXTURE = [{ id: 4, nombre: 'Forma', options: [{ id: 16, nombre: 'cilindrica-de-A', price_delta: '0.00' }] }];
+
+    // --- Test 1: A pendiente -> se abre B -> B responde primero -> A responde tarde (abandonada) ---
+    {
+      const { fetchImpl, release } = makeControllableFetch({ 1: MODEL_A_FIXTURE, 2: [] });
+      const ctx = buildRaceSandbox(fetchImpl);
+      ctx.sandbox.setCustomizationProducts([
+        { id: 1, nombre: 'Producto A', precio: '49.95' },
+        { id: 2, nombre: 'Producto B', precio: '30.00' }
+      ]);
+
+      const openA = ctx.sandbox.openCustomization(1); // fetch de A queda pendiente
+      await Promise.resolve();
+
+      const openB = ctx.sandbox.openCustomization(2); // sustituye a A como apertura vigente; fetch de B también pendiente
+      await Promise.resolve();
+
+      release('2'); // B responde primero
+      await openB;
+
+      check(ctx.getState().product?.id === 2, 'Estrés A->B: tras responder B, el producto activo debe ser B');
+      check(ctx.getState().hasSelectableModels === false, 'Estrés A->B: hasSelectableModels debe reflejar la config de B (sin modelos), no la de A');
+      check(ctx.els['custom-models'].innerHTML === '', 'Estrés A->B: #custom-models debe reflejar B (vacío), no contener nada de A');
+      check(ctx.els['custom-total'].textContent === '30.00', 'Estrés A->B: el precio mostrado debe ser el de B (30.00)');
+
+      release('1'); // AHORA llega tarde la respuesta abandonada de A
+      await new Promise((r) => setTimeout(r, 0));
+      await new Promise((r) => setTimeout(r, 0));
+      await openA.catch(() => {});
+
+      // La respuesta tardía de A NO debe haber modificado nada de lo que el
+      // usuario está viendo (que sigue siendo B): ni el estado ni el DOM.
+      check(ctx.getState().product?.id === 2, 'Estrés A->B: tras la respuesta tardía de A, el producto activo sigue siendo B');
+      check(ctx.getState().hasSelectableModels === false, 'Estrés A->B: la respuesta tardía de A no debe activar hasSelectableModels de B');
+      check(ctx.els['custom-models'].innerHTML === '', `Estrés A->B: #custom-models NO debe contener el modelo de A ("cilindrica-de-A"); contenido actual: ${JSON.stringify(ctx.els['custom-models'].innerHTML)}`);
+      check(ctx.els['custom-total'].textContent === '30.00', 'Estrés A->B: el precio debe seguir siendo el de B (30.00), no verse alterado por A');
+      check(ctx.els['custom-modal-title'].textContent === 'Personalizar: Producto B', 'Estrés A->B: el título debe seguir siendo el de B');
+    }
+
+    // --- Test 2: A pendiente -> el usuario CIERRA antes de que responda -> llega la respuesta -> nada debe cambiar ---
+    {
+      const { fetchImpl, release } = makeControllableFetch({ 1: MODEL_A_FIXTURE });
+      const ctx = buildRaceSandbox(fetchImpl);
+      ctx.sandbox.setCustomizationProducts([{ id: 1, nombre: 'Producto A', precio: '49.95' }]);
+
+      // classList.add('show') es la señal de "el modal se muestra": se
+      // instrumenta para detectar si una respuesta tardía lo reabre solo.
+      const showCalls = [];
+      ctx.els['customization-modal'].classList.add = () => showCalls.push('add');
+      ctx.els['customization-modal'].classList.remove = () => showCalls.push('remove');
+
+      const openA = ctx.sandbox.openCustomization(1); // fetch de A queda pendiente
+      await Promise.resolve();
+
+      ctx.sandbox.closeCustomization(); // el usuario cierra ANTES de que A responda
+      const stateAfterClose = ctx.getState();
+      check(stateAfterClose.product === null, 'Cierre antes de respuesta: closeCustomization() deja product=null de inmediato');
+      check(showCalls[showCalls.length - 1] === 'remove', 'Cierre antes de respuesta: el modal se oculta (classList.remove) al cerrar');
+
+      release('1'); // llega la respuesta, tarde, para un modal ya cerrado
+      await new Promise((r) => setTimeout(r, 0));
+      await new Promise((r) => setTimeout(r, 0));
+      await openA.catch(() => {});
+
+      check(!showCalls.includes('add'), `Cierre antes de respuesta: la respuesta tardía de A NUNCA debe reabrir el modal (classList.add('show')); llamadas registradas=${JSON.stringify(showCalls)}`);
+      const stateAfterLateResponse = ctx.getState();
+      check(stateAfterLateResponse.product === null, 'Cierre antes de respuesta: el estado sigue "cerrado" (product=null) tras la respuesta tardía');
+      check(stateAfterLateResponse.hasSelectableModels === false, 'Cierre antes de respuesta: la respuesta tardía no debe filtrar hasSelectableModels al estado ya reseteado');
+      check(ctx.els['custom-models'].innerHTML === '', 'Cierre antes de respuesta: #custom-models no debe rellenarse con el modelo de A tras el cierre');
     }
   }
 

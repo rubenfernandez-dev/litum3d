@@ -116,12 +116,31 @@ function buildVariantOptionIds(selectedModelOptionId, otherOptionValues) {
   return ids;
 }
 
+// AbortController de la apertura EN CURSO. openCustomization() es la única
+// que lo crea/aborta: cada apertura cancela la anterior (haya terminado o
+// no), y closeCustomization() también la cancela al cerrar sin abrir nada
+// nuevo. loadModelsForProduct()/loadVariantTypes() reciben su signal y lo
+// comprueban tras cada await -- así una respuesta que llega tarde para un
+// producto ya cerrado o sustituido por otro NUNCA toca customizationState ni
+// el DOM del producto que se esté mostrando ahora, y openCustomization()
+// nunca reabre un modal que el usuario ya cerró (ver informe de la carrera).
+let currentOpeningController = null;
+
 /**
  * Abrir modal de personalización
  */
 async function openCustomization(productId) {
   const product = customizationProducts.find(p => p.id === productId);
   if (!product) return;
+
+  // Cualquier carga anterior (de este producto o de otro) deja de importar
+  // en cuanto empieza una apertura nueva -- se aborta su fetch en curso y su
+  // eventual respuesta tardía se descarta sin tocar nada (comprobación de
+  // signal.aborted en loadModelsForProduct/loadVariantTypes).
+  if (currentOpeningController) currentOpeningController.abort();
+  const openingController = new AbortController();
+  currentOpeningController = openingController;
+  const { signal } = openingController;
 
   customizationState = {
     product,
@@ -158,7 +177,13 @@ async function openCustomization(productId) {
   applyPricingConfigToExtrasUI();
 
   // Cargar modelos disponibles
-  await loadModelsForProduct(product.id);
+  await loadModelsForProduct(product.id, signal);
+
+  // Si esta apertura fue cancelada mientras esperábamos (el usuario cerró el
+  // modal, o abrió otro producto antes de que esto terminara), no se debe
+  // mostrar nada: hacerlo reabriría un modal que el usuario ya no espera ver,
+  // con datos que ya no corresponden a la apertura actual.
+  if (signal.aborted) return;
 
   // Mostrar modal
   document.getElementById('customization-modal').classList.add('show');
@@ -171,8 +196,14 @@ async function openCustomization(productId) {
  * id/nombre/posición -- de forma que un producto sin modelos configurados en
  * Admin deja de exigirlos, y uno al que Admin le añade modelos empieza a
  * exigirlos, sin tocar este código.
+ *
+ * `signal` identifica la apertura que la invocó (ver openCustomization): tras
+ * cada await se comprueba signal.aborted antes de tocar customizationState o
+ * el DOM, para que una respuesta perteneciente a una apertura ya superada
+ * (cerrada, o sustituida por la de otro producto) se descarte en silencio en
+ * vez de aplicarse al producto que se esté mostrando ahora.
  */
-async function loadModelsForProduct(productId) {
+async function loadModelsForProduct(productId, signal) {
   // false durante toda la carga: confirmCustomization() debe permanecer
   // bloqueada mientras no se sepa con certeza si el producto tiene modelos
   // (ver comprobación al inicio de confirmCustomization).
@@ -181,10 +212,12 @@ async function loadModelsForProduct(productId) {
   const modelsSection = document.getElementById('custom-models-section');
 
   try {
-    const res = await fetch(`/api/productos/${productId}/variant-types`);
+    const res = await fetch(`/api/productos/${productId}/variant-types`, { signal });
+    if (signal.aborted) return;
     if (!res.ok) throw new Error('Error al obtener variantes');
 
     const variantTypes = await res.json();
+    if (signal.aborted) return;
 
     // Buscar el tipo de variante de modelo (usualmente por nombre, según lo
     // haya llamado Admin al crearlo: Base/Forma/Model/Shape...).
@@ -214,10 +247,19 @@ async function loadModelsForProduct(productId) {
       modelsContainer.innerHTML = '';
     }
 
-    // Cargar variantes adicionales (distintas del "modelo")
-    loadVariantTypes(productId);
+    // Cargar variantes adicionales (distintas del "modelo"). Se espera
+    // (await) a que termine antes de marcar modelsLoaded=true: la apertura
+    // debe conocer la configuración COMPLETA del producto (modelo + resto de
+    // variantes), no solo la parte de "modelo", antes de considerarse lista.
+    await loadVariantTypes(productId, signal);
+    if (signal.aborted) return;
+
     customizationState.modelsLoaded = true;
   } catch (err) {
+    // Un abort no es un fallo real: es la apertura anterior cediendo el
+    // paso a una más reciente (u a un cierre). No se toca el DOM ni se
+    // registra como error.
+    if (signal.aborted) return;
     console.error(err);
     // modelsLoaded queda en false: no se sabe si el producto tiene modelos,
     // así que confirmCustomization() permanece bloqueada hasta reintentar
@@ -238,14 +280,17 @@ function selectModel(modelId, modelName, priceDelta) {
 }
 
 /**
- * Cargar tipos de variantes
+ * Cargar tipos de variantes. `signal`: ver loadModelsForProduct -- misma
+ * apertura, mismo criterio de descarte si ya quedó superada.
  */
-async function loadVariantTypes(productId) {
+async function loadVariantTypes(productId, signal) {
   try {
-    const res = await fetch(`/api/productos/${productId}/variant-types`);
+    const res = await fetch(`/api/productos/${productId}/variant-types`, { signal });
+    if (signal.aborted) return;
     if (!res.ok) return;
 
     const variantTypes = await res.json();
+    if (signal.aborted) return;
     const container = document.querySelector('[data-variants-section] .variant-types-container');
 
     if (!container || !variantTypes || variantTypes.length === 0) return;
@@ -276,6 +321,7 @@ async function loadVariantTypes(productId) {
       </div>
     `).join('');
   } catch (err) {
+    if (signal.aborted) return; // abort esperado (apertura superada), no un error real
     console.error(err);
   }
 }
@@ -583,6 +629,14 @@ function resetCustomizationExtrasUI() {
  * Cerrar modal
  */
 function closeCustomization() {
+  // Cancela cualquier carga de modelos/variantes todavía en curso para el
+  // producto que se está cerrando: sin esto, su respuesta podía llegar más
+  // tarde y reabrir el modal o pisar el estado de la apertura siguiente (ver
+  // openCustomization/loadModelsForProduct).
+  if (currentOpeningController) {
+    currentOpeningController.abort();
+    currentOpeningController = null;
+  }
   document.getElementById('customization-modal').classList.remove('show');
   document.getElementById('custom-notes').value = '';
   document.getElementById('custom-files').value = '';
