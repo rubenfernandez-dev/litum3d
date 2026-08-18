@@ -1,16 +1,14 @@
 /*
-  LITUM3D - Test de regresión: persistencia de Base/Forma al CREAR un
-  producto desde Admin (fix(admin): persist product variants on creation).
+  LITUM3D - Test de regresión: flujo de creación de productos desde Admin
+  (fix(admin): configure variants after product creation).
 
-  Causa raíz que este test demuestra: saveProduct() en views/admin-products.html
-  creaba el producto vía POST /api/productos pero nunca asociaba las
-  selecciones de los <select> Base/Forma -- había un
-  "// TODO: asociar base/forma al producto cuando exista endpoint específico"
-  aunque el endpoint (POST /admin/variantes) ya existía y ya lo usa "+ Añadir"
-  en edición. Bajo el código anterior, saveProduct() solo emite UNA llamada
-  de red (la de /api/productos); este test falla con esa versión porque
-  espera además las llamadas de asociación con el product_id REAL devuelto
-  por la creación.
+  Decisión de arquitectura vigente (sustituye a la de e4e00ff): crear un
+  producto guarda SOLO sus datos propios; las variantes (Base/Forma vía
+  product_variant_types/product_variant_options) se configuran DESPUÉS, en
+  edición, con el "+ Añadir" que ya funciona. saveProduct() ya NO debe copiar
+  ni asociar automáticamente ninguna variante durante la creación -- ese
+  comportamiento (introducido en e4e00ff y ya retirado) es precisamente lo
+  que este test debe detectar si alguna vez reaparece.
 
   Ejecuta el <script> inline de views/admin-products.html TAL CUAL se sirve
   al navegador, en un sandbox de Node (vm nativo) con DOM/fetch/adminFetch
@@ -38,19 +36,24 @@ function readAdminProductsHtml() {
 }
 
 function makeElementStub() {
+  const addCalls = [];
+  const removeCalls = [];
   return {
     textContent: '', innerHTML: '', value: '', style: {}, dataset: {},
-    classList: { add() {}, remove() {} },
+    classList: {
+      add(c) { addCalls.push(c); },
+      remove(c) { removeCalls.push(c); }
+    },
     addEventListener() {},
-    appendChild() {}
+    appendChild() {},
+    reset() {},
+    _classListCalls: { addCalls, removeCalls }
   };
 }
 
 // <select> real: value/innerHTML necesitan comportamiento propio
 // (loadProductVariants reinicia el select reasignando innerHTML como string
-// y luego añade <option> reales vía appendChild; saveProduct lee
-// selectedOptions[0] para obtener la plantilla nombre/price_delta/stock del
-// option cuyo value coincide con el value seleccionado).
+// y luego añade <option> reales vía appendChild).
 function makeSelectStub() {
   const state = { value: '', options: [] };
   const el = {
@@ -114,35 +117,19 @@ let checks = 0;
 function ok(cond, msg) { assert.ok(cond, msg); checks++; }
 function eq(a, b, msg) { assert.strictEqual(a, b, msg); checks++; }
 
-const BASE_TYPES_FIXTURE = [
-  {
-    id: 3, nombre: 'Base', options: [
-      { id: 15, nombre: 'Base Soga', price_delta: '2.50', stock: 40 }
-    ]
-  },
-  {
-    id: 4, nombre: 'Forma', options: [
-      { id: 16, nombre: 'cilindrica', price_delta: '0.00', stock: 70 }
-    ]
-  }
-];
-
 async function main() {
-  // ================= Creación: producto + Base/Forma se asocian con el ID real =================
+  // ================= Creación: SOLO datos propios, sin copiar/asociar variantes =================
   {
-    // IDs deliberadamente aleatorios en cada ejecución: el test no debe
-    // depender de -- ni el código debe adivinar -- ningún valor fijo. Si
-    // saveProduct() alguna vez vuelve a usar un ID hardcodeado o el de
-    // "el primer producto", este test lo detecta.
-    const suggestionSourceProductId = 1000 + Math.floor(Math.random() * 500); // producto arbitrario del que se cargan las SUGERENCIAS del select
-    const newProductId = 9000 + Math.floor(Math.random() * 90000); // id que /api/productos devolverá al crear
+    // Aleatorio en cada ejecución: el test no debe depender de -- ni el
+    // código debe adivinar -- ningún ID fijo.
+    const newProductId = 9000 + Math.floor(Math.random() * 90000);
 
     const adminFetchCalls = [];
+    const fetchCalls = [];
     const { sandbox, document, alerts } = loadAdminProductsSandbox({
       onFetch: async (url) => {
-        if (url === `/api/productos/${suggestionSourceProductId}/variant-types`) {
-          return { ok: true, json: async () => BASE_TYPES_FIXTURE };
-        }
+        fetchCalls.push(url);
+        if (url === `/api/productos/${newProductId}/variant-types`) return { ok: true, json: async () => [] };
         if (url === '/api/productos') return { ok: true, json: async () => [] };
         return { ok: false, json: async () => ({}) };
       },
@@ -152,167 +139,128 @@ async function main() {
         if (url === '/api/productos') {
           return { ok: true, status: 201, json: async () => ({ id: newProductId, nombre: body.nombre, precio: body.precio }) };
         }
-        if (url === '/admin/variantes') {
-          return { ok: true, json: async () => ({ success: true, optionId: 777 }) };
-        }
-        return { ok: false, json: async () => ({ error: 'unexpected call in test' }) };
+        return { ok: false, json: async () => ({ error: 'unexpected call in test: ' + url }) };
       }
     });
 
-    // Simula abrir "Nuevo Producto": las sugerencias del select se cargan
-    // desde un producto EXISTENTE cualquiera (comportamiento preexistente,
-    // no tocado por este fix) mientras el producto propio aún no existe.
-    await sandbox.loadProductVariants(suggestionSourceProductId);
-    ok(document.getElementById('variantBase').selectedOptions.length === 0, 'precondición: nada seleccionado todavía en Base');
+    // Simula abrir "Nuevo Producto": debe ocultar la sección de variantes,
+    // sin tocar red para poblar ninguna sugerencia.
+    sandbox.openNewProductModal();
+    eq(document.getElementById('variantsSection').style.display, 'none', '"Nuevo Producto" debe ocultar la sección de variantes');
+    eq(fetchCalls.length, 0, '"Nuevo Producto" no debe hacer ninguna llamada de red para poblar sugerencias (no depende de products[0])');
 
-    setField(document, 'productId', ''); // producto nuevo: sin id
     setField(document, 'productName', 'Producto de prueba E2E');
     setField(document, 'productPrice', '42.50');
     setField(document, 'productStock', '10');
-    document.getElementById('variantBase').value = '15'; // opción "Base Soga" cargada arriba
-    document.getElementById('variantShape').value = '16'; // opción "cilindrica"
 
     await sandbox.saveProduct();
 
-    eq(alerts.length, 0, `creación sin fallos no debe mostrar ningún alert; alerts=${JSON.stringify(alerts)}`);
+    eq(alerts.length, 0, `crear un producto sin variantes no debe mostrar ningún alert; alerts=${JSON.stringify(alerts)}`);
 
     const createCall = adminFetchCalls.find((c) => c.url === '/api/productos' && c.method === 'POST');
     ok(!!createCall, 'saveProduct() debe llamar POST /api/productos para crear el producto');
-    ok(!('baseId' in createCall.body) && !('shapeId' in createCall.body) && !('variantBase' in createCall.body), 'el body de creación del producto no debe llevar campos de variantes (contrato de /api/productos sin cambios)');
+    ok(
+      !('baseId' in createCall.body) && !('shapeId' in createCall.body) && !('variantBase' in createCall.body) && !('variantShape' in createCall.body),
+      'el body de creación del producto no debe llevar ningún campo de variantes'
+    );
 
+    // REGRESIÓN CLAVE: la estrategia de e4e00ff (copiar Base/Forma como
+    // plantilla y asociarlas automáticamente) queda retirada. Si algún día
+    // vuelve, esta llamada dejará de tener longitud 0.
     const variantCalls = adminFetchCalls.filter((c) => c.url === '/admin/variantes');
-    eq(variantCalls.length, 2, `REGRESIÓN CLAVE: saveProduct() debe asociar Base Y Forma tras crear el producto (el código anterior no hacía ninguna llamada aquí); llamadas=${JSON.stringify(adminFetchCalls.map(c => c.url))}`);
+    eq(variantCalls.length, 0, `REGRESIÓN: saveProduct() NO debe llamar a /admin/variantes automáticamente durante la creación (esa era la estrategia de e4e00ff, ya retirada); llamadas=${JSON.stringify(adminFetchCalls.map((c) => c.url))}`);
 
-    const baseCall = variantCalls.find((c) => c.body.tipo === 'base');
-    const shapeCall = variantCalls.find((c) => c.body.tipo === 'forma');
-    ok(!!baseCall && !!shapeCall, 'debe existir una llamada de asociación para "base" y otra para "forma"');
+    // Transición: el Admin pasa a EDITAR el producto real recién creado.
+    eq(document.getElementById('productId').value, newProductId, 'tras crear, el formulario debe quedar apuntando al ID REAL devuelto por el backend');
+    eq(document.getElementById('modalTitle').textContent, '✏️ Editar Producto', 'tras crear, el modal debe pasar a modo edición');
+    eq(document.getElementById('variantsSection').style.display, '', 'tras crear, la sección de variantes debe mostrarse (ya hay un producto real sobre el que trabajar)');
+    ok(document.getElementById('productModal')._classListCalls.removeCalls.length === 0, 'el modal NO debe cerrarse tras crear: el Admin debe permanecer en el contexto del producto recién creado');
 
-    // El punto central del fix: product_id debe ser el ID REAL devuelto por
-    // la creación, nunca el producto usado solo para sugerencias ni ningún
-    // valor por defecto/hardcodeado.
-    eq(baseCall.body.product_id, newProductId, 'la asociación de Base debe usar el product_id REAL devuelto por POST /api/productos');
-    eq(shapeCall.body.product_id, newProductId, 'la asociación de Forma debe usar el product_id REAL devuelto por POST /api/productos');
-    ok(baseCall.body.product_id !== suggestionSourceProductId, 'product_id de la asociación NUNCA debe ser el producto usado solo para poblar las sugerencias del select');
-
-    // nombre/price_delta/stock deben venir de la plantilla elegida (copiados
-    // del option real, no inventados ni vacíos).
-    eq(baseCall.body.nombre, 'Base Soga', 'el nombre asociado debe ser el de la opción elegida en el select');
-    eq(baseCall.body.price_delta, 2.5, 'el price_delta asociado debe copiarse del dataset del option elegido');
-    eq(baseCall.body.stock, 40, 'el stock asociado debe copiarse del dataset del option elegido');
-    eq(shapeCall.body.nombre, 'cilindrica', 'el nombre de Forma debe ser el de la opción elegida');
+    // loadProductVariants(newProductId) debe haberse llamado con el ID REAL
+    // (consulta sus propias variant-types, que están vacías: producto sin
+    // variantes todavía, válido).
+    ok(fetchCalls.includes(`/api/productos/${newProductId}/variant-types`), `tras crear, debe consultarse /variant-types del producto REAL (${newProductId}), no de ningún otro; llamadas=${JSON.stringify(fetchCalls)}`);
   }
 
-  // ================= Creación sin seleccionar Base/Forma: sigue siendo válida =================
-  {
-    const newProductId = 9000 + Math.floor(Math.random() * 90000);
-    const adminFetchCalls = [];
-    const { sandbox, document, alerts } = loadAdminProductsSandbox({
-      onFetch: async () => ({ ok: true, json: async () => [] }),
-      onAdminFetch: async (url, opts) => {
-        const body = JSON.parse(opts.body);
-        adminFetchCalls.push({ url, method: opts.method, body });
-        if (url === '/api/productos') return { ok: true, status: 201, json: async () => ({ id: newProductId, nombre: body.nombre, precio: body.precio }) };
-        return { ok: false, json: async () => ({ error: 'unexpected call' }) };
-      }
-    });
-
-    setField(document, 'productId', '');
-    setField(document, 'productName', 'Producto sin variantes E2E');
-    setField(document, 'productPrice', '19.90');
-    setField(document, 'productStock', '5');
-    // Base/Forma quedan sin seleccionar (value='' por defecto del stub).
-
-    await sandbox.saveProduct();
-
-    eq(alerts.length, 0, 'crear un producto sin elegir Base/Forma no debe bloquear ni mostrar ningún alert (son opcionales, ver sección 5 del informe)');
-    const variantCalls = adminFetchCalls.filter((c) => c.url === '/admin/variantes');
-    eq(variantCalls.length, 0, 'si no se seleccionó ninguna plantilla, no debe emitirse ninguna llamada de asociación');
-  }
-
-  // ================= Error parcial: producto creado, asociación falla =================
-  {
-    const newProductId = 9000 + Math.floor(Math.random() * 90000);
-    const adminFetchCalls = [];
-    const { sandbox, document, alerts } = loadAdminProductsSandbox({
-      onFetch: async (url) => {
-        if (url === `/api/productos/${newProductId}/variant-types`) return { ok: true, json: async () => [] };
-        return { ok: true, json: async () => [] };
-      },
-      onAdminFetch: async (url, opts) => {
-        const body = JSON.parse(opts.body);
-        adminFetchCalls.push({ url, method: opts.method, body });
-        if (url === '/api/productos') return { ok: true, status: 201, json: async () => ({ id: newProductId, nombre: body.nombre, precio: body.precio }) };
-        if (url === '/admin/variantes') {
-          if (body.tipo === 'base') return { ok: true, json: async () => ({ success: true, optionId: 1 }) };
-          // Forma falla (p.ej. caída transitoria de BD)
-          return { ok: false, status: 500, json: async () => ({ error: 'Error al crear variante' }) };
-        }
-        return { ok: false, json: async () => ({}) };
-      }
-    });
-
-    setField(document, 'productId', '');
-    setField(document, 'productName', 'Producto parcial E2E');
-    setField(document, 'productPrice', '25.00');
-    setField(document, 'productStock', '3');
-    document.getElementById('variantBase').value = '15';
-    document.getElementById('variantShape').value = '16';
-    // El select necesita opciones reales con dataset para leer la plantilla:
-    const baseOpt = { value: '15', textContent: 'Base Soga', dataset: { priceDelta: '2.5', stock: '40' } };
-    const shapeOpt = { value: '16', textContent: 'cilindrica', dataset: { priceDelta: '0', stock: '70' } };
-    document.getElementById('variantBase').appendChild(baseOpt);
-    document.getElementById('variantShape').appendChild(shapeOpt);
-
-    await sandbox.saveProduct();
-
-    ok(alerts.length === 1, `un fallo de asociación debe producir exactamente un alert informativo; alerts=${JSON.stringify(alerts)}`);
-    ok(/creado/i.test(alerts[0]) && new RegExp(String(newProductId)).test(alerts[0]), 'el alert debe indicar que el producto SÍ se creó y mostrar su ID real, no ocultar la creación parcial');
-    ok(/forma/i.test(alerts[0]), 'el alert debe identificar cuál de las dos variantes falló');
-    ok(!/correctamente$/i.test(alerts[0].trim()) && !/guardado correctamente/i.test(alerts[0]), 'el alert de un fallo parcial NUNCA debe leerse como un éxito completo ("guardado correctamente")');
-
-    eq(document.getElementById('productId').value, newProductId, 'tras un fallo parcial, el formulario debe quedar apuntando al producto REAL ya creado (no se pierde el ID) para poder reintentar con "+ Añadir"');
-    eq(document.getElementById('modalTitle').textContent, '✏️ Editar Producto', 'tras un fallo parcial, el modal debe pasar a modo edición sobre el producto ya creado, no cerrarse fingiendo éxito');
-  }
-
-  // ================= Regresión directa: el código anterior solo hacía 1 llamada =================
-  // Documenta explícitamente qué distingue el código nuevo del anterior: con
-  // Base y Forma seleccionadas, debe haber MÁS de una llamada de red de
-  // escritura. Bajo el código con el TODO original, esto era falso (solo 1).
+  // ================= Edición posterior: "+ Añadir" usa el ID real del producto recién creado =================
   {
     const newProductId = 9000 + Math.floor(Math.random() * 90000);
     const adminFetchCalls = [];
     const { sandbox, document } = loadAdminProductsSandbox({
-      onFetch: async () => ({ ok: true, json: async () => [] }),
+      onFetch: async (url) => ({ ok: true, json: async () => [] }),
       onAdminFetch: async (url, opts) => {
-        adminFetchCalls.push(url);
-        if (url === '/api/productos') return { ok: true, status: 201, json: async () => ({ id: newProductId, nombre: 'x', precio: 1 }) };
-        return { ok: true, json: async () => ({ success: true }) };
+        const body = JSON.parse(opts.body);
+        adminFetchCalls.push({ url, method: opts.method, body });
+        if (url === '/api/productos') return { ok: true, status: 201, json: async () => ({ id: newProductId, nombre: body.nombre, precio: body.precio }) };
+        if (url === '/admin/variantes') return { ok: true, json: async () => ({ success: true, optionId: 1 }) };
+        return { ok: false, json: async () => ({}) };
       }
     });
-    setField(document, 'productId', '');
-    setField(document, 'productName', 'Regresión directa');
-    setField(document, 'productPrice', '10');
-    setField(document, 'productStock', '1');
-    const baseOpt = { value: '15', textContent: 'Base Soga', dataset: { priceDelta: '0', stock: '10' } };
-    document.getElementById('variantBase').appendChild(baseOpt);
-    document.getElementById('variantBase').value = '15';
 
-    await sandbox.saveProduct();
-    ok(adminFetchCalls.length > 1, `con una variante seleccionada, saveProduct() debe emitir más de 1 llamada de red (creación + asociación); con el código anterior (TODO sin implementar) esto era 1. Llamadas: ${JSON.stringify(adminFetchCalls)}`);
+    sandbox.openNewProductModal();
+    setField(document, 'productName', 'Producto luego editado E2E');
+    setField(document, 'productPrice', '15.00');
+    setField(document, 'productStock', '2');
+    await sandbox.saveProduct(); // transición a edición sobre newProductId
+
+    // Ahora, exactamente el flujo YA EXISTENTE de "+ Añadir": abrir el modal
+    // de variante, rellenar y guardar. saveVariant() lee productId del
+    // formulario (ya puesto por saveProduct() en la transición).
+    sandbox.openVariantModal('base');
+    setField(document, 'variantNameInput', 'Madera');
+    setField(document, 'variantPriceDeltaInput', '8');
+    setField(document, 'variantStockInput', '20');
+    await sandbox.saveVariant();
+
+    const variantCall = adminFetchCalls.find((c) => c.url === '/admin/variantes');
+    ok(!!variantCall, '"+ Añadir" debe llamar a POST /admin/variantes');
+    eq(variantCall.body.product_id, newProductId, '"+ Añadir" debe asociar la variante al ID REAL del producto recién creado, no a ningún otro');
+    eq(variantCall.body.tipo, 'base', 'el tipo debe ser el elegido en openVariantModal');
+    eq(variantCall.body.nombre, 'Madera', 'el nombre debe ser el introducido en el formulario de "+ Añadir"');
   }
 
-  // ================= HTML: Base/Forma ya no se presentan como universalmente obligatorias =================
+  // ================= editProduct(): también muestra la sección de variantes =================
+  {
+    const existingId = 3000 + Math.floor(Math.random() * 100);
+    const { sandbox, document } = loadAdminProductsSandbox({
+      onFetch: async (url) => {
+        if (url === `/api/productos/${existingId}`) {
+          return { ok: true, json: async () => ({ id: existingId, nombre: 'Existente', precio: '10.00', stock: 1 }) };
+        }
+        if (url === `/api/productos/${existingId}/variant-types`) return { ok: true, json: async () => [] };
+        return { ok: false, json: async () => ({}) };
+      }
+    });
+    await sandbox.editProduct(existingId);
+    eq(document.getElementById('variantsSection').style.display, '', 'editProduct() debe mostrar la sección de variantes');
+    eq(document.getElementById('productId').value, existingId, 'editProduct() debe fijar el productId real');
+  }
+
+  // ================= Helpers de la estrategia retirada ya no existen =================
+  {
+    const { sandbox } = loadAdminProductsSandbox();
+    eq(typeof sandbox.readVariantChoice, 'undefined', 'readVariantChoice() (helper de la estrategia de copia, e4e00ff) ya no debe existir');
+    eq(typeof sandbox.associateVariant, 'undefined', 'associateVariant() (helper de la estrategia de copia, e4e00ff) ya no debe existir');
+  }
+
+  // ================= HTML: estructura y ausencia de dependencia de products[0] =================
   {
     const html = readAdminProductsHtml();
-    const baseBlock = html.slice(html.indexOf('variantBase'), html.indexOf('variantBase') + 400);
-    const shapeBlock = html.slice(html.indexOf('variantShape'), html.indexOf('variantShape') + 400);
-    ok(!/<select id="variantBase"[^>]*\brequired\b/.test(html), 'el <select> Base ya no debe llevar el atributo required (evidencia: productos activos sin ninguna variante configurada funcionan correctamente en checkout, ver customization.js#hasSelectableModels)');
-    ok(!/<select id="variantShape"[^>]*\brequired\b/.test(html), 'el <select> Forma ya no debe llevar el atributo required');
-    ok(!/Base \*<\/label>/.test(html), 'la etiqueta de Base ya no debe presentarse con el asterisco de obligatoriedad');
-    ok(!/Forma \*<\/label>/.test(html), 'la etiqueta de Forma ya no debe presentarse con el asterisco de obligatoriedad');
+
+    ok(/id="variantsSection"[^>]*style="display:\s*none;?"/.test(html), 'variantsSection debe existir y estar oculto por defecto en el HTML');
+
+    // No debe quedar ninguna llamada a loadProductVariants(null) en el
+    // listener de inicialización de página (esa era la dependencia de
+    // products[0] en modo creación, ya retirada).
+    const domReadyMatch = html.match(/document\.addEventListener\('DOMContentLoaded',[\s\S]*?\}\);/);
+    ok(!!domReadyMatch, 'debe existir el listener de inicialización DOMContentLoaded');
+    ok(!/loadProductVariants\(null\)/.test(domReadyMatch[0]), 'DOMContentLoaded ya no debe precargar variantes con loadProductVariants(null) (dependía de products[0])');
+
+    ok(!/<select id="variantBase"[^>]*\brequired\b/.test(html), 'el <select> Base sigue sin required (un producto puede tener cero variantes)');
+    ok(!/<select id="variantShape"[^>]*\brequired\b/.test(html), 'el <select> Forma sigue sin required');
   }
 
-  console.log(`OK: ${checks} comprobaciones sobre la persistencia de Base/Forma al crear un producto desde Admin.`);
+  console.log(`OK: ${checks} comprobaciones sobre el flujo de creación de productos desde Admin (crear -> ID real -> editar -> "+ Añadir").`);
 }
 
 main().catch((err) => {

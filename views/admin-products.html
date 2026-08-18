@@ -361,32 +361,38 @@
                         <label for="productImage">URL de la Imagen</label>
                         <input type="url" id="productImage" placeholder="https://...">
                     </div>
-                    <!-- Base/Forma son OPCIONALES: existen productos activos y
-                         vendibles sin ninguna variante configurada (ver
-                         customization.js#hasSelectableModels, que ya permite
-                         comprar sin modelo cuando el producto no tiene
-                         variant-types). El HTML ya no debe fingir que son
-                         universalmente obligatorias -- ver informe. -->
-                    <div class="form-group">
-                        <label for="variantBase">Base (opcional)</label>
-                        <div style="display:flex;gap:8px;align-items:center;">
-                            <select id="variantBase" style="flex:1;">
-                                <option value="">Selecciona una base</option>
-                                <!-- Opciones dinámicas -->
-                            </select>
-                            <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;"
-                                onclick="openVariantModal('base')">+ Añadir</button>
+                    <!-- Base/Forma son propias del modo EDICIÓN, no de la
+                         creación inicial: un producto se crea solo con sus
+                         datos propios, se guarda, y el Admin pasa a editar
+                         ESE producto (ID real) para configurar variantes con
+                         "+ Añadir" -- ver informe ("Nuevo Producto"). Oculto
+                         por defecto; openNewProductModal()/saveProduct() lo
+                         mantienen oculto en creación, editProduct() y la
+                         transición tras crear lo muestran. Son opcionales:
+                         un producto con variant-types:[] es válido (ver
+                         customization.js#hasSelectableModels). -->
+                    <div class="form-group" id="variantsSection" style="display:none;">
+                        <div class="form-group">
+                            <label for="variantBase">Base (opcional)</label>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <select id="variantBase" style="flex:1;">
+                                    <option value="">Selecciona una base</option>
+                                    <!-- Opciones dinámicas -->
+                                </select>
+                                <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;"
+                                    onclick="openVariantModal('base')">+ Añadir</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="variantShape">Forma (opcional)</label>
-                        <div style="display:flex;gap:8px;align-items:center;">
-                            <select id="variantShape" style="flex:1;">
-                                <option value="">Selecciona una forma</option>
-                                <!-- Opciones dinámicas -->
-                            </select>
-                            <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;"
-                                onclick="openVariantModal('forma')">+ Añadir</button>
+                        <div class="form-group">
+                            <label for="variantShape">Forma (opcional)</label>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <select id="variantShape" style="flex:1;">
+                                    <option value="">Selecciona una forma</option>
+                                    <!-- Opciones dinámicas -->
+                                </select>
+                                <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;"
+                                    onclick="openVariantModal('forma')">+ Añadir</button>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -425,11 +431,16 @@
 
     <script src="/js/admin-fetch.js?v=20260818-1"></script>
     <script>
-        // Abrir modal de nuevo producto
+        // Abrir modal de nuevo producto. La creación solo pide los datos
+        // propios del producto -- Base/Forma no forman parte de este modo
+        // (ver informe): se ocultan explícitamente, sin depender de
+        // ningún producto existente. saveProduct() muestra la sección tras
+        // crear, para configurarlas en edición sobre el ID real.
         function openNewProductModal() {
             document.getElementById('modalTitle').textContent = '➕ Nuevo Producto';
             document.getElementById('productForm').reset();
             document.getElementById('productId').value = '';
+            document.getElementById('variantsSection').style.display = 'none';
             document.getElementById('productModal').classList.add('show');
         }
 
@@ -529,18 +540,10 @@
                     console.log(`📝 Procesando tipo: ${type.nombre}, opciones:`, type.options.length);
 
                     type.options.forEach((opt) => {
-                        // price_delta/stock viajan como dataset del <option>:
-                        // son la plantilla que se copiará al crear la opción
-                        // REAL del producto nuevo (ver saveProduct) -- nunca
-                        // se reutiliza opt.id, que pertenece a la variante de
-                        // OTRO producto y no puede reasignarse sin corromper
-                        // su catálogo.
                         if (isBase) {
                             const baseOption = document.createElement('option');
                             baseOption.value = opt.id;
                             baseOption.textContent = opt.nombre;
-                            baseOption.dataset.priceDelta = opt.price_delta || 0;
-                            baseOption.dataset.stock = opt.stock || 100;
                             baseSelect.appendChild(baseOption);
                             baseCount++;
                         }
@@ -549,8 +552,6 @@
                             const shapeOption = document.createElement('option');
                             shapeOption.value = opt.id;
                             shapeOption.textContent = opt.nombre;
-                            shapeOption.dataset.priceDelta = opt.price_delta || 0;
-                            shapeOption.dataset.stock = opt.stock || 100;
                             shapeSelect.appendChild(shapeOption);
                             shapeCount++;
                         }
@@ -560,57 +561,6 @@
                 console.log(`✅ Variantes cargadas - Bases: ${baseCount}, Formas: ${shapeCount}`);
             } catch (err) {
                 console.error('❌ Error cargando variantes:', err);
-            }
-        }
-
-        // Lee la opción actualmente seleccionada de un <select> Base/Forma
-        // como una PLANTILLA {nombre, price_delta, stock} para crear una
-        // variante nueva -- nunca como un ID a reasignar. El option.value es
-        // el id de un product_variant_options que pertenece a OTRO producto
-        // (loadProductVariants puede haberlo cargado desde el primero
-        // existente cuando aún no hay producto propio); reutilizar ese id
-        // directamente movería la variante de un producto ajeno. Solo su
-        // nombre/price_delta/stock sirven de plantilla para POST /admin/variantes,
-        // el mismo endpoint que ya usa "+ Añadir" en edición.
-        function readVariantChoice(selectEl) {
-            if (!selectEl || !selectEl.value) return null;
-            const opt = selectEl.selectedOptions && selectEl.selectedOptions[0];
-            if (!opt) return null;
-            return {
-                nombre: (opt.textContent || '').trim(),
-                price_delta: parseFloat(opt.dataset.priceDelta || '0') || 0,
-                stock: parseInt(opt.dataset.stock, 10) || 100
-            };
-        }
-
-        // Asocia una plantilla Base/Forma a un producto ya creado, usando el
-        // MISMO endpoint canónico que "+ Añadir" en edición
-        // (product_variant_types/product_variant_options). product_id debe
-        // ser el id REAL devuelto por la creación del producto -- nunca un
-        // valor por defecto, para no caer en el fallback de
-        // POST /admin/variantes que, si product_id llega vacío, adjunta la
-        // variante al primer producto de la tabla.
-        async function associateVariant(tipo, choice, productId) {
-            if (!choice || !productId) return { ok: true, skipped: true };
-            try {
-                const res = await adminFetch('/admin/variantes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        tipo,
-                        nombre: choice.nombre,
-                        price_delta: choice.price_delta,
-                        stock: choice.stock,
-                        product_id: productId
-                    })
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok || !data.success) {
-                    return { ok: false, error: data.error || data.details || 'Error desconocido' };
-                }
-                return { ok: true };
-            } catch (err) {
-                return { ok: false, error: err.message };
             }
         }
 
@@ -626,11 +576,6 @@
                 const precio = parseFloat(document.getElementById('productPrice').value);
                 const stock = parseInt(document.getElementById('productStock').value, 10) || 0;
                 const imagen = document.getElementById('productImage').value.trim() || null;
-                // Capturadas ANTES de la llamada de red: son plantillas
-                // (nombre/price_delta/stock), no algo que /api/productos
-                // necesite conocer.
-                const baseChoice = readVariantChoice(document.getElementById('variantBase'));
-                const shapeChoice = readVariantChoice(document.getElementById('variantShape'));
 
                 if (!nombre || isNaN(precio)) {
                     alert('Nombre y precio son obligatorios');
@@ -663,39 +608,22 @@
                     throw new Error(data.error || 'No se pudo guardar el producto');
                 }
 
-                // Asociar Base/Forma SOLO al crear un producto nuevo: en
-                // edición, el select ya muestra las variantes propias del
-                // producto (cargadas por loadProductVariants(p.id)) y
-                // cualquier cambio se hace con "+ Añadir", que ya funciona.
                 if (!id) {
+                    // Producto recién creado: las variantes se configuran EN
+                    // EDICIÓN, nunca copiándolas/creándolas automáticamente
+                    // durante el alta (estrategia anterior retirada -- ver
+                    // informe). El Admin pasa a editar ESTE producto, con el
+                    // ID real devuelto por el backend, donde "+ Añadir" ya
+                    // funciona. El modal queda abierto: cerrarlo aquí perdería
+                    // ese contexto.
                     const created = await res.json();
                     const newProductId = created.id;
-
-                    const results = await Promise.all([
-                        baseChoice ? associateVariant('base', baseChoice, newProductId) : Promise.resolve({ ok: true, skipped: true }),
-                        shapeChoice ? associateVariant('forma', shapeChoice, newProductId) : Promise.resolve({ ok: true, skipped: true })
-                    ]);
-                    const failures = results
-                        .map((r, i) => ({ tipo: i === 0 ? 'Base' : 'Forma', ...r }))
-                        .filter((r) => !r.ok);
-
-                    if (failures.length) {
-                        // El producto SÍ se creó: no lo ocultamos ni fingimos
-                        // un guardado completo. Se deja el modal abierto y en
-                        // modo edición sobre el producto real ya creado, para
-                        // que el Admin pueda reintentar con "+ Añadir" sin
-                        // perder el productId.
-                        document.getElementById('productId').value = newProductId;
-                        document.getElementById('modalTitle').textContent = '✏️ Editar Producto';
-                        await loadProducts();
-                        await loadProductVariants(newProductId);
-                        alert(
-                            `⚠️ Producto creado (ID ${newProductId}), pero no se pudieron guardar todas las variantes:\n` +
-                            failures.map((f) => `${f.tipo}: ${f.error}`).join('\n') +
-                            `\n\nUsa "+ Añadir" para completarlas antes de cerrar este formulario.`
-                        );
-                        return;
-                    }
+                    document.getElementById('productId').value = newProductId;
+                    document.getElementById('modalTitle').textContent = '✏️ Editar Producto';
+                    document.getElementById('variantsSection').style.display = '';
+                    await loadProducts();
+                    await loadProductVariants(newProductId);
+                    return;
                 }
 
                 await loadProducts();
@@ -724,6 +652,7 @@
                 document.getElementById('productImage').value = p.imagen || '';
 
                 document.getElementById('modalTitle').textContent = '✏️ Editar Producto';
+                document.getElementById('variantsSection').style.display = '';
                 document.getElementById('productModal').classList.add('show');
 
                 // Cargar variantes asociadas al producto
@@ -802,10 +731,15 @@
             }
         }
 
-        // Inicializar al cargar la página
+        // Inicializar al cargar la página. Ya NO se precarga
+        // loadProductVariants(null): ese camino solo servía para poblar
+        // sugerencias de Base/Forma en el modo creación (retirado -- ver
+        // informe), y dependía de "el primer producto" (products[0]), que es
+        // precisamente lo que la sección 7 pide dejar de usar en Nuevo
+        // Producto. editProduct() sigue llamando loadProductVariants(p.id)
+        // con el producto real cuando corresponde.
         document.addEventListener('DOMContentLoaded', () => {
             loadProducts();
-            loadProductVariants(null);
         });
     </script>
     <!-- Código JS principal está dentro del <script> anterior -->
