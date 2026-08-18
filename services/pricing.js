@@ -351,22 +351,8 @@ async function priceLine(rawItem, itemIndex, dataAccess) {
 
   const lineSubtotalCents = unitPriceCents * quantity;
 
-  const discountedUnits = Math.floor(quantity / 2);
-  const lineDiscountCents = Math.round(
-    (unitPriceCents * pricingConfig.SECOND_UNIT_DISCOUNT_PERCENT * discountedUnits) / 100
-  );
-
   if (!Number.isSafeInteger(lineSubtotalCents) || lineSubtotalCents <= 0) {
     throw new PricingValidationError(`lineSubtotalCents inválido para el producto ${productId}: ${lineSubtotalCents}`, { itemIndex, field: 'lineSubtotalCents' });
-  }
-  if (!Number.isSafeInteger(lineDiscountCents) || lineDiscountCents < 0) {
-    throw new PricingValidationError(`lineDiscountCents inválido para el producto ${productId}: ${lineDiscountCents}`, { itemIndex, field: 'lineDiscountCents' });
-  }
-  if (lineDiscountCents >= lineSubtotalCents) {
-    throw new PricingValidationError(
-      `lineDiscountCents (${lineDiscountCents}) no puede ser mayor o igual que lineSubtotalCents (${lineSubtotalCents}) para el producto ${productId}`,
-      { itemIndex, field: 'lineDiscountCents' }
-    );
   }
 
   return {
@@ -383,7 +369,6 @@ async function priceLine(rawItem, itemIndex, dataAccess) {
     unitPriceCents,
     quantity,
     lineSubtotalCents,
-    lineDiscountCents,
     images,
     notes
   };
@@ -414,15 +399,14 @@ async function priceCartFromSelections(items, options = {}) {
   }
 
   const subtotalCents = sumCents(canonicalItems.map(l => l.lineSubtotalCents));
-  const discountCents = sumCents(canonicalItems.map(l => l.lineDiscountCents));
   const shippingCents = 0;
-  const totalCents = subtotalCents - discountCents + shippingCents;
+  const totalCents = subtotalCents + shippingCents;
 
   // IVA: extracción vía ratio entero (100 / (100+VAT_PERCENT)), no 1/1.21.
   const netCents = Math.round((totalCents * 100) / (100 + pricingConfig.VAT_PERCENT));
   const taxCents = totalCents - netCents;
 
-  const totals = { subtotalCents, discountCents, shippingCents, totalCents, netCents, taxCents };
+  const totals = { subtotalCents, shippingCents, totalCents, netCents, taxCents };
   assertTotalsInvariants(totals);
 
   return {
@@ -437,13 +421,10 @@ async function priceCartFromSelections(items, options = {}) {
 // invariantes no se cumple, hay un error de cálculo o de configuración de
 // catálogo, no un problema de validación de entrada del cliente.
 function assertTotalsInvariants(totals) {
-  const { subtotalCents, discountCents, shippingCents, totalCents, netCents, taxCents } = totals;
+  const { subtotalCents, shippingCents, totalCents, netCents, taxCents } = totals;
 
   if (!Number.isSafeInteger(subtotalCents) || subtotalCents <= 0) {
     throw new PricingValidationError(`subtotalCents inválido: ${subtotalCents}`);
-  }
-  if (!Number.isSafeInteger(discountCents) || discountCents < 0) {
-    throw new PricingValidationError(`discountCents inválido: ${discountCents}`);
   }
   if (!Number.isSafeInteger(shippingCents) || shippingCents < 0) {
     throw new PricingValidationError(`shippingCents inválido: ${shippingCents}`);

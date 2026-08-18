@@ -8,8 +8,6 @@
 // que Stripe cobra. cart.js sigue guardando price/basePrice/priceDelta en
 // localStorage solo para las páginas de carrito (compatibilidad de display),
 // pero checkout.js nunca envía esos campos al servidor.
-//
-// SECOND_UNIT_DISCOUNT_RATE viene declarada por cart.js, cargado antes en checkout.html/-fr/-de
 let stripe;
 let elements;
 let paymentElement;
@@ -432,12 +430,6 @@ function renderOrderSummaryFromBreakdown(breakdown, cart) {
       <span>IVA:</span>
       <span>${formatCurrency(t.taxCents, currency)}</span>
     </div>
-    ${t.discountCents > 0 ? `
-    <div class="cart-summary-row">
-      <span>Descuento 2ª unidad:</span>
-      <span style="color: #90ee90;">-${formatCurrency(t.discountCents, currency)}</span>
-    </div>
-    ` : ''}
     <div class="cart-summary-row total">
       <span>TOTAL:</span>
       <span>${formatCurrency(t.totalCents, currency)}</span>

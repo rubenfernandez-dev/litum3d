@@ -290,7 +290,7 @@ async function checkBreakdownAuthority() {
         json: async () => ({
           ok: true, draftId: 1, reused: false, clientSecret: 'cs_test', paymentIntentId: 'pi_test', paymentIntentStatus: 'requires_payment_method',
           currency: 'eur',
-          totals: { subtotalCents: 4995, discountCents: 0, shippingCents: 0, totalCents: 4995, netCents: 4128, taxCents: 867 },
+          totals: { subtotalCents: 4995, shippingCents: 0, totalCents: 4995, netCents: 4128, taxCents: 867 },
           items: [{ productId: 8, productName: 'Litofanía', quantity: 1, modelName: null, variantSelections: [], extras: { upscale: false, qr: false, adapter: false, qrMessage: '' }, unitPriceCents: 4995 }]
         })
       };
@@ -329,7 +329,7 @@ async function checkAlreadySucceededSkipsPaymentElement() {
         json: async () => ({
           ok: true, draftId: 1, reused: true, clientSecret: 'cs_test', paymentIntentId: 'pi_already_paid', paymentIntentStatus: 'succeeded',
           currency: 'eur',
-          totals: { subtotalCents: 4995, discountCents: 0, shippingCents: 0, totalCents: 4995, netCents: 4128, taxCents: 867 },
+          totals: { subtotalCents: 4995, shippingCents: 0, totalCents: 4995, netCents: 4128, taxCents: 867 },
           items: [{ productId: 8, productName: 'Litofanía', quantity: 1, modelName: null, variantSelections: [], extras: { upscale: false, qr: false, adapter: false, qrMessage: '' }, unitPriceCents: 4995 }]
         })
       };
@@ -372,7 +372,7 @@ async function checkCanceledPaymentIntentInvalidatesAttempt() {
         json: async () => ({
           ok: true, draftId: createCalls, reused: false, clientSecret: 'cs_test', paymentIntentId: `pi_${createCalls}`, paymentIntentStatus: status,
           currency: 'eur',
-          totals: { subtotalCents: 4995, discountCents: 0, shippingCents: 0, totalCents: 4995, netCents: 4128, taxCents: 867 },
+          totals: { subtotalCents: 4995, shippingCents: 0, totalCents: 4995, netCents: 4128, taxCents: 867 },
           items: [{ productId: 8, productName: 'Litofanía', quantity: 1, modelName: null, variantSelections: [], extras: { upscale: false, qr: false, adapter: false, qrMessage: '' }, unitPriceCents: 4995 }]
         })
       };

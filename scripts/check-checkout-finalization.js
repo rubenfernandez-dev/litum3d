@@ -181,10 +181,10 @@ function buildSnapshot(overrides = {}) {
       variantSelections: [{ variantTypeId: 2, variantTypeName: 'Base', optionId: 7, optionName: 'Madera', priceDeltaCents: 500 }],
       extras: { upscale: true, qr: false, adapter: false, qrMessage: '' },
       extrasPricingCents: { upscale: 500, qr: 500, adapter: 400 }, extrasTotalCents: 500,
-      unitPriceCents: 6500, quantity: 1, lineSubtotalCents: 6500, lineDiscountCents: 0,
+      unitPriceCents: 6500, quantity: 1, lineSubtotalCents: 6500,
       images: [{ url: 'https://example.com/foto.jpg' }], notes: 'Grabar "Feliz cumpleaños"'
     }],
-    totals: { subtotalCents: 6500, discountCents: 0, shippingCents: 0, totalCents: 6500, netCents: 5372, taxCents: 1128 }
+    totals: { subtotalCents: 6500, shippingCents: 0, totalCents: 6500, netCents: 5372, taxCents: 1128 }
   }, overrides);
 }
 
@@ -313,7 +313,7 @@ function centsToDecimalStringLocal(cents) { return centsToDecimalString(cents); 
 // =======================================================================
 async function checkDecimalOverflowBlocksFinalization() {
   const pool = makeFakePool();
-  const hugeSnapshot = buildSnapshot({ totals: { subtotalCents: 20000000000, discountCents: 0, shippingCents: 0, totalCents: 20000000000, netCents: 16528925620, taxCents: 3471074380 } });
+  const hugeSnapshot = buildSnapshot({ totals: { subtotalCents: 20000000000, shippingCents: 0, totalCents: 20000000000, netCents: 16528925620, taxCents: 3471074380 } });
   const draft = seedValidDraft(pool, { paymentIntentId: 'pi_huge', snapshot: hugeSnapshot });
   const pi = buildPaymentIntent({ id: 'pi_huge', draftId: draft.id, amount: 20000000000, status: 'succeeded' });
   await rejects(() => finalizePaidCheckout(pi, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) }), CentsRangeError, 'un total que excede DECIMAL(10,2) debe bloquear la finalización, no truncarse en silencio');

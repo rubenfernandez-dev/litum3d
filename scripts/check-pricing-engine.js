@@ -77,7 +77,6 @@ async function main() {
     const result = await price([{ productId: 8, quantity: 1 }]);
     check(result.items[0].basePriceCents === 4995, 'Precio base: 49.95 EUR -> 4995 cents');
     check(result.items[0].unitPriceCents === 4995, 'Precio base: sin modelo/variantes/extras, unitPrice = basePrice');
-    check(result.items[0].lineDiscountCents === 0, 'Cantidad 1: sin descuento');
     check(result.totals.totalCents === 4995, 'Total con una sola línea base');
     // EUR-ONLY-01: currency siempre viene de config/pricing.js, nunca hardcodeada aquí.
     check(result.currency === 'eur', 'El motor de pricing produce currency="eur" (fuente: config/pricing.js)');
@@ -116,18 +115,19 @@ async function main() {
     check(result.items[0].extras.qr === false, 'qr no seleccionado');
   }
 
-  // --- Cantidad 2/3/4 y redondeo -----------------------------------
+  // --- Cantidad 1/2/3: subtotal = unitPrice * quantity, sin descuento -----
   {
+    const r1 = await price([{ productId: 8, quantity: 1 }]);
+    check(r1.items[0].lineSubtotalCents === 4995, 'Cantidad 1: lineSubtotal 4995*1, sin descuento');
+    check(r1.totals.totalCents === 4995, 'Cantidad 1: totalCents = lineSubtotal (sin descuento)');
+
     const r2 = await price([{ productId: 8, quantity: 2 }]);
-    check(r2.items[0].lineDiscountCents === 749, 'Cantidad 2: round(4995*15*1/100) = round(749.25) = 749 (fracción de rappen)');
-    check(r2.items[0].lineSubtotalCents === 9990, 'lineSubtotal 4995*2');
+    check(r2.items[0].lineSubtotalCents === 9990, 'Cantidad 2: lineSubtotal 4995*2, sin descuento');
+    check(r2.totals.totalCents === 9990, 'Cantidad 2: totalCents = lineSubtotal (sin descuento)');
 
     const r3 = await price([{ productId: 8, quantity: 3 }]);
-    check(r3.items[0].lineDiscountCents === 749, 'Cantidad 3: floor(3/2)=1 unidad con descuento, igual que cantidad 2');
-    check(r3.items[0].lineSubtotalCents === 14985, 'lineSubtotal 4995*3');
-
-    const r4 = await price([{ productId: 8, quantity: 4 }]);
-    check(r4.items[0].lineDiscountCents === 1499, 'Cantidad 4: floor(4/2)=2 unidades, round(4995*15*2/100)=round(1498.5)=1499');
+    check(r3.items[0].lineSubtotalCents === 14985, 'Cantidad 3: lineSubtotal 4995*3, sin descuento');
+    check(r3.totals.totalCents === 14985, 'Cantidad 3: totalCents = lineSubtotal (sin descuento)');
   }
 
   // --- IVA (caso íntegro, línea compuesta) --------------------------
@@ -138,13 +138,11 @@ async function main() {
     }]);
     const line = result.items[0];
     check(line.unitPriceCents === 7095, 'unitPrice = 4995+700+500+900 = 7095');
-    check(line.lineSubtotalCents === 14190, 'lineSubtotal = 7095*2');
-    check(line.lineDiscountCents === 1064, 'lineDiscount = round(7095*15*1/100) = round(1064.25) = 1064');
+    check(line.lineSubtotalCents === 14190, 'lineSubtotal = 7095*2, sin descuento');
     check(result.totals.subtotalCents === 14190, 'subtotalCents');
-    check(result.totals.discountCents === 1064, 'discountCents');
-    check(result.totals.totalCents === 13126, 'totalCents = 14190-1064');
-    check(result.totals.netCents === 10848, 'IVA: netCents = round(13126*100/121) = 10848');
-    check(result.totals.taxCents === 2278, 'IVA: taxCents = 13126-10848 = 2278');
+    check(result.totals.totalCents === 14190, 'totalCents = subtotalCents (sin descuento)');
+    check(result.totals.netCents === 11727, 'IVA: netCents = round(14190*100/121) = 11727');
+    check(result.totals.taxCents === 2463, 'IVA: taxCents = 14190-11727 = 2463');
   }
 
   // --- Seguridad: campos económicos heredados se rechazan, no se ignoran ---

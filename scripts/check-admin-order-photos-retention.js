@@ -548,7 +548,7 @@ async function checkAdminEmailHasAttachmentsCustomerDoesNot() {
     async finalizePaidCheckout(paymentIntent, { sendConfirmationEmail }) {
       const snapshot = {
         currency: 'eur',
-        totals: { totalCents: 5000, subtotalCents: 5000, discountCents: 0, shippingCents: 0, netCents: 4132, taxCents: 868 },
+        totals: { totalCents: 5000, subtotalCents: 5000, shippingCents: 0, netCents: 4132, taxCents: 868 },
         customerData: { name: 'Cliente Test', email: 'cliente-test@example.com', phone: '+34600000000', address: 'Calle Test 1', city: 'Madrid', zip: '28001' },
         items: [{
           productId: 8, productName: 'Lámpara', modelName: null, notes: null, quantity: 1, unitPriceCents: 5000,

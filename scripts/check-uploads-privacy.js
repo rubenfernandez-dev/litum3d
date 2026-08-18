@@ -571,11 +571,11 @@ async function checkSnapshotFingerprintAndFinalization() {
       items: [{
         productId: 8, productName: 'Litofanía', modelId: null, modelName: null,
         variantSelections: [], extras: { upscale: false, qr: false, adapter: false, qrMessage: '' },
-        unitPriceCents: 6500, quantity: 1, lineSubtotalCents: 6500, lineDiscountCents: 0,
+        unitPriceCents: 6500, quantity: 1, lineSubtotalCents: 6500,
         images: [{ url: `/api/uploads/custom/preview/${filename}?t=${'c'.repeat(64)}` }],
         notes: ''
       }],
-      totals: { subtotalCents: 6500, discountCents: 0, shippingCents: 0, totalCents: 6500, netCents: 5372, taxCents: 1128 }
+      totals: { subtotalCents: 6500, shippingCents: 0, totalCents: 6500, netCents: 5372, taxCents: 1128 }
     };
     pool._seedDraft({ id: draftId, status: 'payment_pending', snapshot_json: JSON.stringify(snapshot), stripe_payment_intent_id: 'pi_fotos_1', idempotency_key: 'dk', selections_fingerprint: 'fp', access_token_hash: 'ah', created_at: new Date(), updated_at: new Date(), expires_at: null });
     const draftsDataAccess = { async findById(id) { const row = pool._state.checkoutDrafts.get(id); return row ? { ...row } : null; } };

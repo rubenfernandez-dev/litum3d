@@ -166,7 +166,7 @@ async function checkRouteLayerHttpMapping() {
   {
     const fakeSnapshot = {
       currency: 'eur',
-      totals: { subtotalCents: 1000, discountCents: 0, shippingCents: 0, totalCents: 1000, netCents: 826, taxCents: 174 },
+      totals: { subtotalCents: 1000, shippingCents: 0, totalCents: 1000, netCents: 826, taxCents: 174 },
       customerData: { name: 'Ana', email: 'a@b.com', phone: '1', address: '2', city: '3', zip: '4' },
       items: [{ productId: 8, productName: 'X', quantity: 1, modelName: null, variantSelections: [], extras: { upscale: false, qr: false, adapter: false, qrMessage: '' }, unitPriceCents: 1000, images: ['foo'], notes: 'nota' }]
     };

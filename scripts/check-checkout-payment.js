@@ -210,9 +210,8 @@ async function checkSnapshot() {
 
   eq(snapshot.schemaVersion, 1, 'snapshot.schemaVersion debe ser 1 (viene de priceCartFromSelections)');
   eq(snapshot.currency, 'eur', 'snapshot.currency debe venir del motor de pricing (config/pricing.js)');
-  // 2 x 50.00 EUR = 10000 cents de subtotal, menos el descuento de 2ª
-  // unidad (15% sobre 1 unidad descontable) = 10000 - 750 = 9250.
-  eq(snapshot.totals.totalCents, 9250, 'la información económica debe coincidir EXACTAMENTE con el motor de pricing, incluido el descuento de 2ª unidad');
+  // 2 x 50.00 EUR = 10000 cents de subtotal, sin descuento alguno.
+  eq(snapshot.totals.totalCents, 10000, 'la información económica debe coincidir EXACTAMENTE con el motor de pricing (subtotal sin descuentos)');
   eq(snapshot.items[0].images[0], 'https://example.com/a.jpg', 'images debe conservarse tal cual devuelve el motor de pricing');
   eq(snapshot.items[0].notes, 'Nota de prueba', 'notes debe conservarse tal cual devuelve el motor de pricing');
   eq(snapshot.items[0].productId, 8, 'los nombres de campo del item deben ser EXACTAMENTE los de services/pricing.js, sin renombrar');

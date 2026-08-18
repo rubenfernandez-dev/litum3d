@@ -1,6 +1,5 @@
 // Cart Page Management - EUR Only
 const CURRENCY = { code: 'eur', symbol: '€' };
-const PAGE_SECOND_UNIT_DISCOUNT_RATE = 0.15;
 function renderCartItems() {
   const container = document.getElementById('cart-items-container');
   const summary = document.getElementById('cart-summary');
@@ -64,7 +63,6 @@ function renderCartItems() {
 
   // Render summary
   const total = calculateCartTotalDisplay(cart, currency);
-  const discount = calculateSecondUnitDiscountCart(cart);
   const count = getCartCount();
   const base = total / 1.21;
   const iva = total - base;
@@ -81,12 +79,6 @@ function renderCartItems() {
       <span>IVA (21%):</span>
       <span>${currency.symbol} ${iva.toFixed(2)}</span>
     </div>
-    ${discount > 0 ? `
-    <div class="cart-summary-row">
-      <span>Descuento 2ª unidad (15%):</span>
-      <span style="color: #90ee90;">-${currency.symbol} ${discount.toFixed(2)}</span>
-    </div>
-    ` : ''}
     <div class="cart-summary-row total">
       <span>TOTAL:</span>
       <span>${currency.symbol} ${total.toFixed(2)}</span>
@@ -97,9 +89,8 @@ function renderCartItems() {
 function calculateItemTotalDisplay(item, currency) {
   const qty = parseInt(item.quantity || 1);
   const unit = parseFloat(item.price || 0);
-  const discount = calculateSecondUnitDiscountItem(item);
   // item.price ya tiene base + extras, no convertir
-  return (unit * qty) - discount;
+  return unit * qty;
 }
 
 function calculateCartTotalDisplay(cart, currency) {
@@ -109,21 +100,7 @@ function calculateCartTotalDisplay(cart, currency) {
     const qty = parseInt(item.quantity || 1);
     total += parseFloat(item.price || 0) * qty;
   });
-  const discount = calculateSecondUnitDiscountCart(cart);
-  return total - discount;
-}
-
-function calculateSecondUnitDiscountItem(item) {
-  const qty = parseInt(item.quantity || 1);
-  const unit = parseFloat(item.price || 0);
-  if (!Number.isFinite(qty) || qty < 2 || !Number.isFinite(unit)) return 0;
-  const discountedUnits = Math.floor(qty / 2);
-  return unit * PAGE_SECOND_UNIT_DISCOUNT_RATE * discountedUnits;
-}
-
-function calculateSecondUnitDiscountCart(cart) {
-  if (!Array.isArray(cart)) return 0;
-  return cart.reduce((discount, item) => discount + calculateSecondUnitDiscountItem(item), 0);
+  return total;
 }
 
 function getExtrasSummary(item) {

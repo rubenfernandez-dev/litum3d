@@ -25,11 +25,6 @@ module.exports = {
     adapter: 400
   },
 
-  // Porcentaje ENTERO de descuento aplicado a las unidades pares de cada
-  // línea (2ª, 4ª, 6ª...). Entero para poder calcular en rappen sin depender
-  // del literal decimal 0.15.
-  SECOND_UNIT_DISCOUNT_PERCENT: 15,
-
   // Porcentaje de IVA ya incluido en los precios almacenados (precio bruto).
   // Entero para poder calcular en rappen sin depender del literal 1.21.
   VAT_PERCENT: 21
