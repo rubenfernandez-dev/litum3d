@@ -72,9 +72,14 @@ const PRICING_CONFIG_FIXTURE = {
   }
 };
 
+// customization.js (public/js/customization.js) es la fuente única de la
+// lógica del modal de personalización, compartida entre /shop y Home -- se
+// carga SIEMPRE antes de shop.js/home.js, igual que en las vistas reales
+// (ver <script> en views/shop.html y views/index.html).
 function loadHomeSandbox() {
   const sandbox = { console, document: makeDocumentStub(), fetch: makeFetchStub({ ok: false }) };
   vm.createContext(sandbox);
+  vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
   vm.runInContext(readScript('public/js/home.js'), sandbox, { filename: 'home.js' });
   return sandbox;
 }
@@ -82,6 +87,7 @@ function loadHomeSandbox() {
 function loadShopSandbox() {
   const sandbox = { console, document: makeDocumentStub(), fetch: makeFetchStub({ ok: false }) };
   vm.createContext(sandbox);
+  vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
   vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
   return sandbox;
 }
@@ -192,69 +198,49 @@ async function main() {
     check(normalizedNew[0].selectionSchemaVersion === 1, 'E: normalizeCart conserva selectionSchemaVersion:1 en un item que ya lo tenía');
   }
 
-  // ================= home.js =================
-
-  // Fórmula única de delta (corrección del bug modelo+variante)
+  // ================= arquitectura compartida (refactor(customization)) =================
+  // Antes de este refactor, home.js tenía su PROPIA implementación completa
+  // del modal (customizationState/pricingConfig duplicados, su propio
+  // openCustomization/closeCustomization/updateCustomTotal, y un sistema de
+  // "modelo" distinto basado en /api/productos/:id/modelos +
+  // /calculate-variant-price, en vez del enfoque de shop.js basado en
+  // variant-types). Esa implementación ya no existe: Home usa exactamente
+  // public/js/customization.js, la misma lógica que /shop. Estas
+  // comprobaciones verifican que la duplicación no ha vuelto.
   {
-    const home = loadHomeSandbox();
-    check(home.computeCustomizationPriceDelta(7, 5) === 12, 'computeCustomizationPriceDelta suma modelDelta + variantDelta');
-    check(home.computeCustomizationPriceDelta(0, 5) === 5, 'computeCustomizationPriceDelta funciona solo con variante (sin modelo)');
-    check(home.computeCustomizationPriceDelta(undefined, undefined) === 0, 'computeCustomizationPriceDelta con valores ausentes -> 0');
+    const shopSrc = readScript('public/js/shop.js');
+    const homeSrc = readScript('public/js/home.js');
+    for (const [label, src] of [['shop.js', shopSrc], ['home.js', homeSrc]]) {
+      check(!/let\s+customizationState/.test(src), `${label} ya no declara su propio customizationState (vive en customization.js)`);
+      check(!/let\s+pricingConfig/.test(src), `${label} ya no declara su propio pricingConfig (vive en customization.js)`);
+      check(!/function\s+openCustomization/.test(src), `${label} ya no declara su propio openCustomization (vive en customization.js)`);
+      check(!/function\s+updateCustomizationPrice|function\s+updateCustomTotal/.test(src), `${label} ya no declara su propio cálculo de precio del modal (vive en customization.js)`);
+      check(!/function\s+confirmCustomization/.test(src), `${label} ya no declara su propio confirmCustomization (vive en customization.js)`);
+    }
+    // El sistema de "modelo" legacy de home.js (product_models reales vía
+    // /modelos + /calculate-variant-price) queda completamente retirado:
+    // Home usa ahora el mismo enfoque que shop.js (variant-types).
+    check(!/computeCustomizationPriceDelta|getSelectedVariantOptionIds|\/calculate-variant-price|\/modelos/.test(homeSrc), 'home.js ya no contiene el sistema de "modelo" legacy (product_models/calculate-variant-price), sustituido por el de customization.js (variant-types)');
   }
 
-  // variantOptionIds desde selectedVariants ({typeId: optionId})
+  // customization.js: sin fallback hardcodeado 5/5/4; consume /api/pricing-config
   {
-    const home = loadHomeSandbox();
-    const ids = home.getSelectedVariantOptionIds({ 2: '7', 3: '27' }).slice().sort((a, b) => a - b);
-    check(JSON.stringify(ids) === JSON.stringify([7, 27]), 'getSelectedVariantOptionIds extrae los IDs de selectedVariants como números');
-    check(JSON.stringify(home.getSelectedVariantOptionIds({})) === '[]', 'getSelectedVariantOptionIds sin selecciones -> []');
-  }
-
-  // Sin fallback hardcodeado 5/5/4; consume /api/pricing-config
-  {
-    const src = readScript('public/js/home.js');
+    const src = readScript('public/js/customization.js');
     check(
-      !/upscale:\s*5\b/.test(src) && !/qr:\s*5\b/.test(src) && !/adapter:\s*4\b/.test(src),
-      'home.js ya no contiene las constantes económicas hardcodeadas 5/5/4 como fuente de cálculo'
+      !/extrasCost \+= 5/.test(src) && !/extrasCost \+= 4/.test(src) && !/\(upscale \? 5/.test(src) && !/\(adapter \? 4/.test(src),
+      'customization.js no contiene las constantes económicas hardcodeadas 5/5/4 como fuente de cálculo'
     );
-    check(/\/api\/pricing-config/.test(src), 'home.js consume /api/pricing-config');
+    check(/\/api\/pricing-config/.test(src), 'customization.js consume /api/pricing-config');
 
-    // Blindaje estructural del bug corregido: confirmCustomization debe usar
-    // la misma función que updateCustomTotal, no volver a sumar a mano
-    // (eso es exactamente lo que causó que el total mostrado y el precio
-    // añadido al carrito pudieran divergir).
-    const occurrences = (src.match(/computeCustomizationPriceDelta\(/g) || []).length;
-    check(occurrences >= 2, 'computeCustomizationPriceDelta se usa en más de un sitio (total mostrado y precio añadido al carrito comparten la misma fórmula)');
-    check(/priceDelta:\s*computeCustomizationPriceDelta\(/.test(src), 'confirmCustomization pasa a addToCart el resultado de computeCustomizationPriceDelta, no una suma manual');
+    const shop = loadShopSandbox();
+    shop.fetch = makeFetchStub(PRICING_CONFIG_FIXTURE);
+    await shop.loadPricingConfig();
+    check(shop.getExtraPrice('adapter') === 4, 'customization.js: getExtraPrice lee desde pricingConfig tras loadPricingConfig() (probado vía el sandbox de shop)');
 
-    const home = loadHomeSandbox();
-    home.fetch = makeFetchStub(PRICING_CONFIG_FIXTURE);
-    await home.loadPricingConfig(); // igual que en el navegador: fetch real + asignación interna
-    check(
-      home.getExtraPrice('upscale') === 5 && home.getExtraPrice('qr') === 5 && home.getExtraPrice('adapter') === 4,
-      'getExtraPrice lee los precios desde pricingConfig tras loadPricingConfig() (simulando /api/pricing-config)'
-    );
-  }
-
-  // Home: precio mostrado === precio legacy enviado al carrito (bug corregido, caso íntegro)
-  {
     const home = loadHomeSandbox();
     home.fetch = makeFetchStub(PRICING_CONFIG_FIXTURE);
     await home.loadPricingConfig();
-
-    const base = 49.95;
-    const modelDelta = 7;
-    const variantDelta = 3;
-    const extrasTotal = home.getExtraPrice('upscale') + home.getExtraPrice('adapter'); // 9
-
-    const displayedTotal = base + home.computeCustomizationPriceDelta(modelDelta, variantDelta) + extrasTotal; // updateCustomTotal
-    const priceDeltaSentToCart = home.computeCustomizationPriceDelta(modelDelta, variantDelta); // confirmCustomization
-    const legacyCartUnitPrice = base + priceDeltaSentToCart + extrasTotal; // fórmula de cart.js addToCart
-
-    check(displayedTotal === legacyCartUnitPrice, 'Home: precio mostrado === precio legacy enviado al carrito para la misma personalización');
-
-    const variantOptionIds = home.getSelectedVariantOptionIds({ 2: 27 });
-    check(JSON.stringify(variantOptionIds) === '[27]', 'Home: variantOptionIds contiene la opción de variante adicional seleccionada');
+    check(home.getExtraPrice('adapter') === 4, 'customization.js: getExtraPrice funciona igual vía el sandbox de home (misma función, mismo resultado)');
   }
 
   // ================= shop.js =================
@@ -274,21 +260,6 @@ async function main() {
       JSON.stringify(cart.normalizeVariantOptionIds(shop.buildVariantOptionIds('7', ['17', '27']))) === JSON.stringify([7, 17, 27]),
       'Shop: la opción que actúa visualmente como modelo/forma también aparece en variantOptionIds tras normalizar'
     );
-  }
-
-  // Sin fallback hardcodeado 5/5/4; consume /api/pricing-config
-  {
-    const src = readScript('public/js/shop.js');
-    check(
-      !/extrasCost \+= 5/.test(src) && !/extrasCost \+= 4/.test(src) && !/\(upscale \? 5/.test(src) && !/\(adapter \? 4/.test(src),
-      'shop.js ya no contiene las constantes económicas hardcodeadas 5/5/4 como fuente de cálculo'
-    );
-    check(/\/api\/pricing-config/.test(src), 'shop.js consume /api/pricing-config');
-
-    const shop = loadShopSandbox();
-    shop.fetch = makeFetchStub(PRICING_CONFIG_FIXTURE);
-    await shop.loadPricingConfig();
-    check(shop.getExtraPrice('adapter') === 4, 'shop.js: getExtraPrice lee desde pricingConfig tras loadPricingConfig()');
   }
 
   // Regresión (precio en vivo del modal de personalización): GET
@@ -323,6 +294,7 @@ async function main() {
 
     const sandbox = { console, document: modalDocumentStub, fetch: makeFetchStub(PRICING_CONFIG_FIXTURE) };
     vm.createContext(sandbox);
+    vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
     vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
     await sandbox.loadPricingConfig();
 
@@ -407,17 +379,14 @@ async function main() {
       }
     };
     vm.createContext(sandbox);
+    vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
     vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
 
     // Misma secuencia que en el navegador real: loadPricingConfig() al
-    // cargar la página, allShopProducts poblado desde /api/productos
-    // (precio como string, igual que la API real).
+    // cargar la página, lista de productos poblada desde /api/productos
+    // (precio como string, igual que la API real) vía setCustomizationProducts().
     await sandbox.loadPricingConfig();
-    vm.runInContext(
-      `allShopProducts = [{ id: 42, nombre: 'Producto Test', precio: '49.95' }];`,
-      sandbox,
-      { filename: 'shop-test-setup.js' }
-    );
+    sandbox.setCustomizationProducts([{ id: 42, nombre: 'Producto Test', precio: '49.95' }]);
 
     await sandbox.openCustomization(42);
     check(
@@ -506,16 +475,13 @@ async function main() {
       }
     };
     vm.createContext(sandbox);
+    vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
     vm.runInContext(readScript('public/js/shop.js'), sandbox, { filename: 'shop.js' });
     await sandbox.loadPricingConfig();
-    vm.runInContext(
-      `allShopProducts = [
-        { id: 42, nombre: 'Producto A', precio: '49.95' },
-        { id: 43, nombre: 'Producto B', precio: '30.00' }
-      ];`,
-      sandbox,
-      { filename: 'shop-test-setup.js' }
-    );
+    sandbox.setCustomizationProducts([
+      { id: 42, nombre: 'Producto A', precio: '49.95' },
+      { id: 43, nombre: 'Producto B', precio: '30.00' }
+    ]);
 
     // --- Producto A: modelo + los 3 extras + mensaje QR ---
     await sandbox.openCustomization(42);
@@ -569,13 +535,203 @@ async function main() {
     check(els['extra-qr-message'].value === '', 'Reabrir A: extra-qr-message no debe recordar el mensaje anterior de A');
   }
 
+  // ================= Home (Destacados) usa la misma secuencia que Shop =================
+  // Mismo escenario que el bloque "precio inicial al abrir el modal" de
+  // arriba, pero cargando customization.js + home.js (en vez de shop.js) y
+  // poblando la lista de productos como lo haría loadFeaturedProducts(),
+  // para demostrar que Home ejecuta exactamente la misma función real, no
+  // una reimplementación con el mismo resultado por casualidad.
+  {
+    function makeEl(initial) {
+      return { checked: false, disabled: false, value: '', textContent: initial, innerHTML: '' };
+    }
+    const els = {
+      'custom-modal-title': makeEl(''),
+      'customization-modal': { classList: { add() {}, remove() {} } },
+      'custom-models': makeEl(''),
+      'custom-notes': makeEl(''),
+      'custom-files': makeEl(''),
+      'custom-file-list': makeEl(''),
+      'extra-upscale': makeEl(''),
+      'extra-qr': makeEl(''),
+      'extra-adapter': makeEl(''),
+      'extra-qr-message': makeEl(''),
+      'custom-base-price': makeEl('0.00'),
+      'custom-total': makeEl('0.00')
+    };
+    const finalPriceEl = makeEl('€0.00');
+
+    const VARIANT_TYPES_FIXTURE = [
+      {
+        id: 4,
+        nombre: 'Forma',
+        options: [{ id: 10, nombre: 'Base', price_delta: '0.00' }, { id: 11, nombre: 'Cuadrada', price_delta: '15.00' }]
+      }
+    ];
+
+    const modalDocumentStub = {
+      addEventListener: () => {},
+      getElementById: (id) => els[id] || null,
+      querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+      querySelectorAll: () => [],
+      createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+      body: { appendChild: () => {} }
+    };
+
+    const sandbox = {
+      console,
+      document: modalDocumentStub,
+      fetch: async (url) => {
+        if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+        if (url.includes('/variant-types')) return { ok: true, json: async () => VARIANT_TYPES_FIXTURE };
+        return { ok: false, json: async () => ({ ok: false }) };
+      }
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
+    vm.runInContext(readScript('public/js/home.js'), sandbox, { filename: 'home.js' });
+    await sandbox.loadPricingConfig();
+    // Como haría loadFeaturedProducts() con la respuesta de /api/productos.
+    sandbox.setCustomizationProducts([{ id: 42, nombre: 'Producto Test', precio: '49.95' }]);
+
+    await sandbox.openCustomization(42);
+    check(els['custom-total'].textContent === '49.95', `Home: precio inicial al abrir debe ser "49.95", dio "${els['custom-total'].textContent}"`);
+    check(finalPriceEl.textContent === '49.95 €', `Home: [data-variant-price] inicial debe ser "49.95 €", dio "${finalPriceEl.textContent}"`);
+
+    sandbox.selectModel(11, 'Cuadrada', 15);
+    check(els['custom-total'].textContent === '64.95', `Home: selectModel(+15) esperaba "64.95", dio "${els['custom-total'].textContent}"`);
+
+    els['extra-upscale'].checked = true;
+    sandbox.onExtraChange();
+    check(els['custom-total'].textContent === '69.95', `Home: onExtraChange() activar upscale esperaba "69.95", dio "${els['custom-total'].textContent}"`);
+
+    els['extra-upscale'].checked = false;
+    sandbox.onExtraChange();
+    check(els['custom-total'].textContent === '64.95', `Home: onExtraChange() desactivar upscale esperaba "64.95", dio "${els['custom-total'].textContent}"`);
+
+    sandbox.selectModel(10, 'Base', 0);
+    check(els['custom-total'].textContent === '49.95', `Home: volver a modelo base esperaba "49.95", dio "${els['custom-total'].textContent}"`);
+
+    // Reset: abrir un segundo producto tras dejar extras marcados en el primero.
+    sandbox.setCustomizationProducts([
+      { id: 42, nombre: 'Producto A', precio: '49.95' },
+      { id: 43, nombre: 'Producto B', precio: '30.00' }
+    ]);
+    els['extra-upscale'].checked = true;
+    sandbox.onExtraChange();
+    sandbox.closeCustomization();
+    await sandbox.openCustomization(43);
+    check(els['extra-upscale'].checked === false, 'Home: reset entre productos -- extra-upscale debe quedar desmarcado al abrir B');
+    check(els['custom-total'].textContent === '30.00', `Home: reset entre productos -- precio inicial de B debe ser su propia base "30.00", dio "${els['custom-total'].textContent}"`);
+  }
+
+  // ================= Paridad Home vs Shop =================
+  // Para la MISMA selección (mismo producto, modelo y extras), Home y Shop
+  // deben producir exactamente el mismo precio mostrado y el mismo objeto
+  // de extras que confirmCustomization() enviaría al carrito. Dos sandboxes
+  // independientes (uno con shop.js, otro con home.js) sobre el mismo
+  // customization.js real.
+  {
+    function makeParitySandbox(pageScript, pageScriptName) {
+      function makeEl(initial) {
+        return { checked: false, disabled: false, value: '', textContent: initial, innerHTML: '' };
+      }
+      const els = {
+        'custom-modal-title': makeEl(''),
+        'customization-modal': { classList: { add() {}, remove() {} } },
+        'custom-models': makeEl(''),
+        'extra-upscale': makeEl(''),
+        'extra-qr': makeEl(''),
+        'extra-adapter': makeEl(''),
+        'extra-qr-message': makeEl(''),
+        'custom-base-price': makeEl('0.00'),
+        'custom-total': makeEl('0.00')
+      };
+      const finalPriceEl = makeEl('€0.00');
+      const VARIANT_TYPES_FIXTURE = [
+        {
+          id: 4,
+          nombre: 'Forma',
+          options: [{ id: 10, nombre: 'Base', price_delta: '0.00' }, { id: 11, nombre: 'Cuadrada', price_delta: '15.00' }]
+        }
+      ];
+      const modalDocumentStub = {
+        addEventListener: () => {},
+        getElementById: (id) => els[id] || null,
+        querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+        querySelectorAll: () => [],
+        createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+        body: { appendChild: () => {} }
+      };
+      const sandbox = {
+        console,
+        document: modalDocumentStub,
+        fetch: async (url) => {
+          if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+          if (url.includes('/variant-types')) return { ok: true, json: async () => VARIANT_TYPES_FIXTURE };
+          return { ok: false, json: async () => ({ ok: false }) };
+        }
+      };
+      vm.createContext(sandbox);
+      vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
+      vm.runInContext(readScript(pageScript), sandbox, { filename: pageScriptName });
+      return { sandbox, els, finalPriceEl };
+    }
+
+    const shopCtx = makeParitySandbox('public/js/shop.js', 'shop.js');
+    const homeCtx = makeParitySandbox('public/js/home.js', 'home.js');
+
+    for (const ctx of [shopCtx, homeCtx]) {
+      await ctx.sandbox.loadPricingConfig();
+      ctx.sandbox.setCustomizationProducts([{ id: 42, nombre: 'Producto Paridad', precio: '49.95' }]);
+      await ctx.sandbox.openCustomization(42);
+      ctx.sandbox.selectModel(11, 'Cuadrada', 15);
+      ctx.els['extra-upscale'].checked = true;
+      ctx.els['extra-qr'].checked = true;
+      ctx.els['extra-qr-message'].value = 'Mismo mensaje';
+      ctx.sandbox.onExtraChange();
+    }
+
+    check(
+      shopCtx.els['custom-total'].textContent === homeCtx.els['custom-total'].textContent,
+      `Paridad: precio mostrado Shop (${shopCtx.els['custom-total'].textContent}) === Home (${homeCtx.els['custom-total'].textContent})`
+    );
+    check(
+      shopCtx.finalPriceEl.textContent === homeCtx.finalPriceEl.textContent,
+      `Paridad: [data-variant-price] Shop (${shopCtx.finalPriceEl.textContent}) === Home (${homeCtx.finalPriceEl.textContent})`
+    );
+
+    const shopExtras = shopCtx.sandbox.getExtrasFromUI();
+    const homeExtras = homeCtx.sandbox.getExtrasFromUI();
+    check(
+      JSON.stringify(shopExtras) === JSON.stringify(homeExtras),
+      `Paridad: getExtrasFromUI() (lo que confirmCustomization() enviaría al carrito) Shop === Home. Shop=${JSON.stringify(shopExtras)} Home=${JSON.stringify(homeExtras)}`
+    );
+    check(
+      shopCtx.sandbox.getVariantsPriceDelta() === homeCtx.sandbox.getVariantsPriceDelta(),
+      'Paridad: getVariantsPriceDelta() Shop === Home'
+    );
+  }
+
+  // ================= Consentimiento de fotos (opcional, solo si el modal lo incluye) =================
+  // views/index.html (Home/ES) incluye #photo-consent; views/shop.html no.
+  // confirmCustomization() debe exigirlo SOLO cuando el elemento existe en
+  // la página (comprobación con document.getElementById, no un flag nuevo),
+  // preservando exactamente el comportamiento que ya tenía home.js antes de
+  // compartir esta lógica, sin imponérselo a /shop.
+  {
+    const src = readScript('public/js/customization.js');
+    check(/getElementById\('photo-consent'\)/.test(src), 'customization.js comprueba #photo-consent antes de confirmar (si existe en la página)');
+    check(/photoConsentCheckbox\.checked/.test(src) || /photo-consent.*checked|checked.*photo-consent/s.test(src), 'customization.js exige que #photo-consent esté marcado cuando existe');
+  }
+
   // EUR-ONLY-01 (sección 22): ningún script de storefront activo debe
   // contener "CHF" como etiqueta de precio hardcodeada. Comprobación de
   // texto fuente, no de ejecución -- si algún día hace falta distinguir
   // comentario de código activo aquí, seguir el patrón de
   // scripts/check-migration-no-demo-inserts.js.
   {
-    const storefrontFiles = ['public/js/home.js', 'public/js/shop.js', 'public/js/cart.js', 'public/js/cart-page.js', 'public/js/checkout.js'];
+    const storefrontFiles = ['public/js/customization.js', 'public/js/home.js', 'public/js/shop.js', 'public/js/cart.js', 'public/js/cart-page.js', 'public/js/checkout.js'];
     for (const relPath of storefrontFiles) {
       const src = readScript(relPath);
       check(!/CHF/.test(src), `${relPath} no contiene "CHF" como etiqueta de precio (EUR-ONLY-01)`);
