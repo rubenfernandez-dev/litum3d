@@ -264,7 +264,8 @@ router.get('/api/dashboard', requireAuth, async (req, res) => {
                 p.total,
                 p.currency,
                 p.created_at,
-                COALESCE(p.customer_name, u.nombre, 'Sin nombre') as customer_name
+                COALESCE(p.customer_name, u.nombre, 'Sin nombre') as customer_name,
+                p.customer_email as email
             FROM pedidos p
             JOIN estado_pedido ep ON p.estado_id = ep.id
             LEFT JOIN usuarios u ON p.usuario_id = u.id
@@ -369,18 +370,20 @@ router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Cabecera del pedido. customer_address/city/zip/country vienen
-        // EXCLUSIVAMENTE de la propia fila de `pedidos` (lo que el cliente
-        // introdujo/seleccionó al pagar ESE pedido) -- nunca de `usuarios`,
-        // a diferencia de customer_name/email de arriba: si el cliente
-        // cambia su dirección de cuenta después, este pedido debe seguir
-        // mostrando la dirección con la que se envió/facturó realmente.
-        // Funciona igual para usuario registrado, guest o usuario_id NULL,
-        // porque nunca se hace JOIN con `usuarios` para estos 4 campos.
+        // Cabecera del pedido. customer_email/phone/address/city/zip/country
+        // vienen EXCLUSIVAMENTE de la propia fila de `pedidos` (los datos de
+        // contacto/envío usados AL COMPRAR ese pedido) -- nunca de
+        // `usuarios`, a diferencia de customer_name arriba (que sí conserva
+        // su fallback histórico a la cuenta, sin cambios en esta tarea): si
+        // el cliente cambia el email/teléfono de su cuenta después, este
+        // pedido debe seguir mostrando los datos de contacto reales con los
+        // que se compró. Funciona igual para usuario registrado, guest o
+        // usuario_id NULL, porque nunca se hace JOIN con `usuarios` para
+        // estos campos.
         const [orders] = await pool.query(`
                  SELECT p.id, p.total, p.currency, p.created_at, ep.nombre AS estado_nombre,
                      COALESCE(p.customer_name, u.nombre, 'Sin nombre') AS customer_name,
-                     COALESCE(p.customer_email, u.email) AS email,
+                     p.customer_email AS email, p.customer_phone AS phone,
                      p.customer_address, p.customer_city, p.customer_zip, p.customer_country
             FROM pedidos p
             JOIN estado_pedido ep ON p.estado_id = ep.id
