@@ -98,6 +98,14 @@ router.get('/privacy-policy-de', (req, res) => {
   res.sendFile(path.join(viewsDir, 'privacy-policy-de.html'));
 });
 
+router.get('/cookies-policy-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'cookies-policy-de.html'));
+});
+
+router.get('/terms-conditions-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'terms-conditions-de.html'));
+});
+
 // Rutas en francés
 router.get('/fr', (req, res) => {
   res.sendFile(path.join(viewsDir, 'index-fr.html'));
@@ -137,6 +145,14 @@ router.get('/shop-fr', (req, res) => {
 
 router.get('/privacy-policy-fr', (req, res) => {
   res.sendFile(path.join(viewsDir, 'privacy-policy-fr.html'));
+});
+
+router.get('/cookies-policy-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'cookies-policy-fr.html'));
+});
+
+router.get('/terms-conditions-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'terms-conditions-fr.html'));
 });
 
 module.exports = router;

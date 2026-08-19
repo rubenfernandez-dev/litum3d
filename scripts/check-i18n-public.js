@@ -349,7 +349,7 @@ function checkInternalLinksResolveToRealLocalizedRoutes() {
   // Páginas de navegación con versión localizada real: un enlace DE/FR a
   // ellas debe usar la variante -de/-fr, NUNCA la desnuda (ES), salvo que
   // sea explícitamente la opción "Español" del selector de idioma.
-  const NAV_TARGETS_WITH_LOCALE = ['shop', 'tienda', 'about', 'contact', 'gallery', 'cart', 'checkout', 'testimonios', 'privacy-policy'];
+  const NAV_TARGETS_WITH_LOCALE = ['shop', 'tienda', 'about', 'contact', 'gallery', 'cart', 'checkout', 'testimonios', 'privacy-policy', 'cookies-policy', 'terms-conditions'];
 
   for (const [views, suffix, langLabel] of [[deViews, '-de', 'Deutsch'], [frViews, '-fr', 'Français']]) {
     for (const file of views) {
@@ -419,6 +419,102 @@ function checkCartPageEmptyStateRespectsLocale() {
   }
 }
 
+// =======================================================================
+// 11) Localización jurídica Terms/Cookies (informe de localización legal
+//    pública DE/FR): existencia, rutas, footers y paridad estructural,
+//    mismo patrón ya validado para Privacy -- y confirmación de que las
+//    páginas ES no se alteraron.
+// =======================================================================
+
+const LEGAL_DOCS = [
+  { key: 'terms-conditions', esFile: 'terms-conditions.html', esH2: 16, esH3: 23, name: 'Terms' },
+  { key: 'cookies-policy', esFile: 'cookies-policy.html', esH2: 8, esH3: 8, name: 'Cookies' }
+];
+
+function checkLegalPagesExistAndUnchanged() {
+  for (const { key, esFile, esH2, esH3, name } of LEGAL_DOCS) {
+    for (const suffix of ['-de', '-fr']) {
+      const file = `views/${key}${suffix}.html`;
+      ok(fs.existsSync(path.join(__dirname, '..', file)), `${file} existe`);
+    }
+    // ES no se alteró sustantivamente: mismo número de secciones que antes
+    // de esta tarea (línea base tomada del propio fichero ES antes de tocar nada).
+    const esHtml = readView(esFile);
+    ok(/<html lang="es">/.test(esHtml), `views/${esFile}: sigue siendo lang="es", sin tocar`);
+    eq((esHtml.match(/<h2>/g) || []).length, esH2, `views/${esFile} (${name}): conserva sus ${esH2} secciones <h2> originales (no se alteró)`);
+    eq((esHtml.match(/<h3>/g) || []).length, esH3, `views/${esFile} (${name}): conserva sus ${esH3} subsecciones <h3> originales (no se alteró)`);
+  }
+}
+
+function checkLegalRoutesRegisteredAndServeRealFiles() {
+  const indexRouter = require('../routes/index');
+  const res = { sendFile: null };
+  for (const { key } of LEGAL_DOCS) {
+    for (const suffix of ['-de', '-fr']) {
+      const handler = getRouteHandler(indexRouter, 'get', `/${key}${suffix}`);
+      let sentPath = null;
+      handler({}, { sendFile: (p) => { sentPath = p; } });
+      ok(sentPath && sentPath.endsWith(`${key}${suffix}.html`), `GET /${key}${suffix} sirve views/${key}${suffix}.html`);
+      ok(fs.existsSync(sentPath), `GET /${key}${suffix}: el fichero que sirve existe realmente en disco`);
+    }
+  }
+}
+
+function checkLegalFootersLocalizedEverywhere() {
+  const deViews = listViews(/-de\.html$/).filter(f => !f.startsWith('terms-conditions') && !f.startsWith('cookies-policy'));
+  const frViews = listViews(/-fr\.html$/).filter(f => !f.startsWith('terms-conditions') && !f.startsWith('cookies-policy'));
+
+  for (const { key } of LEGAL_DOCS) {
+    for (const file of deViews) {
+      const html = readView(file);
+      if (!html.includes(`/${key}`)) continue; // esta vista no enlaza a este documento, no aplica
+      ok(!html.includes(`href="/${key}"`), `views/${file}: ningún enlace a ${key} apunta a la versión ES`);
+      ok(html.includes(`href="/${key}-de"`), `views/${file}: el enlace a ${key} apunta a /${key}-de`);
+    }
+    for (const file of frViews) {
+      const html = readView(file);
+      if (!html.includes(`/${key}`)) continue;
+      ok(!html.includes(`href="/${key}"`), `views/${file}: ningún enlace a ${key} apunta a la versión ES`);
+      ok(html.includes(`href="/${key}-fr"`), `views/${file}: el enlace a ${key} apunta a /${key}-fr`);
+    }
+  }
+}
+
+function checkLegalPagesStructuralParity() {
+  for (const { key, esFile, name } of LEGAL_DOCS) {
+    const es = readView(esFile);
+    const de = readView(`${key}-de.html`);
+    const fr = readView(`${key}-fr.html`);
+
+    const h2Count = html => (html.match(/<h2>/g) || []).length;
+    const h3Count = html => (html.match(/<h3>/g) || []).length;
+    const listCount = html => (html.match(/<(ul|ol|table)[ >]/g) || []).length;
+
+    eq(h2Count(de), h2Count(es), `${name}: -de.html tiene el mismo número de secciones <h2> que ES`);
+    eq(h2Count(fr), h2Count(es), `${name}: -fr.html tiene el mismo número de secciones <h2> que ES`);
+    eq(h3Count(de), h3Count(es), `${name}: -de.html tiene el mismo número de subsecciones <h3> que ES`);
+    eq(h3Count(fr), h3Count(es), `${name}: -fr.html tiene el mismo número de subsecciones <h3> que ES`);
+    eq(listCount(de), listCount(es), `${name}: -de.html tiene el mismo número de listas/tablas que ES`);
+    eq(listCount(fr), listCount(es), `${name}: -fr.html tiene el mismo número de listas/tablas que ES`);
+
+    ok(/<html lang="de">/.test(de), `${name}-de.html declara lang="de"`);
+    ok(/<html lang="fr">/.test(fr), `${name}-fr.html declara lang="fr"`);
+
+    // Mismo pie de página/estilo (.policy-nav/.policy-container/.policy-footer), sin rediseño.
+    for (const html of [de, fr]) {
+      ok(html.includes('policy-nav') && html.includes('policy-container') && html.includes('policy-footer'), `${name}: conserva las clases policy-nav/policy-container/policy-footer (mismo diseño que ES)`);
+    }
+  }
+}
+
+function checkPrivacyStillLocalizedAfterThisTask() {
+  // No debe haberse roto por los cambios de esta tarea (sección 8/9 del
+  // informe): mismas 3 rutas ya validadas en checkPrivacyRoutesServeRealFiles.
+  for (const file of ['views/privacy-policy.html', 'views/privacy-policy-de.html', 'views/privacy-policy-fr.html']) {
+    ok(fs.existsSync(path.join(__dirname, '..', file)), `${file} sigue existiendo`);
+  }
+}
+
 async function main() {
   console.log('Auditoría i18n público - WhatsApp (checkout-de/fr)');
   checkWhatsappTooltipLocalized();
@@ -440,6 +536,16 @@ async function main() {
   checkShopLinksUseLocalizedRoute();
   console.log('Corrección de navegación - cart-page.js: enlace de carrito vacío respeta el idioma');
   checkCartPageEmptyStateRespectsLocale();
+  console.log('Localización jurídica - Terms/Cookies DE/FR existen y ES no se alteró');
+  checkLegalPagesExistAndUnchanged();
+  console.log('Localización jurídica - rutas reales de Terms/Cookies DE/FR');
+  checkLegalRoutesRegisteredAndServeRealFiles();
+  console.log('Localización jurídica - footers DE/FR enlazan a Terms/Cookies localizados');
+  checkLegalFootersLocalizedEverywhere();
+  console.log('Localización jurídica - paridad estructural Terms/Cookies ES/DE/FR');
+  checkLegalPagesStructuralParity();
+  console.log('Localización jurídica - Privacy sigue correctamente localizada');
+  checkPrivacyStillLocalizedAfterThisTask();
   console.log(`OK: ${checks} comprobaciones sobre la auditoría de i18n público DE/FR.`);
 }
 
