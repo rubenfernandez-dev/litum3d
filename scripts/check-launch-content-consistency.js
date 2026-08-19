@@ -120,16 +120,32 @@ function checkNoRemovedSocialHrefHash() {
     const html = readView(file);
     ok(!/footer-socials|social-links/.test(html), `views/${file}: sin bloque de redes sociales (cuentas aún no existen)`);
   }
-  // success.html conserva un href="#" preexistente y NO relacionado (enlaces
-  // legales rotos, hallazgo reportado aparte, fuera de alcance de esta
-  // tarea) -- se excluye explícitamente de la prohibición general para no
-  // dar una falsa sensación de cobertura sobre un bug distinto.
-  const KNOWN_UNRELATED_HASH_LINKS = { 'success.html': 2 };
+  // success.html tenía 2 href="#" preexistentes y NO relacionados con redes
+  // sociales (enlaces legales rotos, corregidos en fix(success): correct
+  // legal footer links) -- ya no queda ninguna excepción pendiente.
   for (const file of listPublicViews()) {
     const html = readView(file);
     const hashLinks = (html.match(/href="#"/g) || []).length;
-    const allowed = KNOWN_UNRELATED_HASH_LINKS[file] || 0;
-    ok(hashLinks <= allowed, `views/${file}: sin href="#" nuevos de redes sociales (encontrados ${hashLinks}, permitidos ${allowed} ya reportados aparte)`);
+    ok(hashLinks === 0, `views/${file}: sin ningún href="#" (ni de redes sociales ni de enlaces legales)`);
+  }
+}
+
+// =======================================================================
+// 5b) success ES/DE/FR: los enlaces legales del footer apuntan a la ruta
+//     real localizada de cada idioma, nunca a "#" (regresión del hallazgo
+//     incidental de la auditoría de lanzamiento -- ver fix(success):
+//     correct legal footer links)
+// =======================================================================
+function checkSuccessLegalFooterLinksAreReal() {
+  const EXPECTED = {
+    'success.html': { privacy: '/privacy-policy', terms: '/terms-conditions' },
+    'success-de.html': { privacy: '/privacy-policy-de', terms: '/terms-conditions-de' },
+    'success-fr.html': { privacy: '/privacy-policy-fr', terms: '/terms-conditions-fr' }
+  };
+  for (const [file, { privacy, terms }] of Object.entries(EXPECTED)) {
+    const html = readView(file);
+    ok(html.includes(`href="${privacy}"`), `views/${file}: el enlace de Privacidad apunta a ${privacy}`);
+    ok(html.includes(`href="${terms}"`), `views/${file}: el enlace de Términos apunta a ${terms}`);
   }
 }
 
@@ -183,6 +199,7 @@ function main() {
   checkNoNewsletterBlockAnywhere();
   checkNewsletterDeadCodeRemoved();
   checkNoRemovedSocialHrefHash();
+  checkSuccessLegalFooterLinksAreReal();
   checkNoFabricatedLegalIdentity();
   checkOnlyRealSwissPhone();
   checkFiscalAndCheckoutUntouched();
