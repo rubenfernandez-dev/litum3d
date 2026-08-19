@@ -20,12 +20,25 @@ const uploadsRoutes = require('./routes/uploads');
 const reviewsRoutes = require('./routes/reviews');
 const seoRoutes = require('./routes/seo');
 const seoMiddleware = require('./config/seo-middleware');
+const { securityHeaders } = require('./middleware/securityHeaders');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// X-Powered-By (auditoría de headers de seguridad, sección 15): Express lo
+// añade por defecto ("X-Powered-By: Express"), revelando el framework sin
+// necesidad. app.disable() evita que se añada nunca, en vez de añadirlo y
+// luego borrarlo cabecera por cabecera en cada respuesta.
+app.disable('x-powered-by');
+
 // Middlewares
 app.use(morgan('dev'));
+
+// Cabeceras de seguridad (auditoría "headers de seguridad MUY controlado"):
+// se monta lo antes posible para que se apliquen a TODA respuesta, incluidas
+// Admin y /api -- ver middleware/securityHeaders.js para el detalle y el
+// razonamiento de cada cabecera/directiva.
+app.use(securityHeaders);
 
 // Stripe webhook (P0E-B5): DEBE montarse con el body RAW, ANTES de
 // express.json() global -- stripe.webhooks.constructEvent necesita el
