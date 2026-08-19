@@ -9,7 +9,12 @@ let featuredProductsCache = [];
 async function loadFeaturedProducts() {
   const container = document.getElementById('featured-products');
   try {
-    const res = await fetch('/api/productos');
+    // Mismo mecanismo de idioma que shop.js#loadShopProducts: el <html lang="...">
+    // de la propia página (index-de.html/index-fr.html) decide qué traducción
+    // pide la API -- Home no tenía esto y siempre mostraba nombre/descripcion
+    // en español, aunque el producto ya tuviera nombre_de/nombre_fr en BD.
+    const lang = document.documentElement.lang || 'es';
+    const res = await fetch(`/api/productos?lang=${lang}`);
     if (!res.ok) throw new Error('Error al obtener productos');
 
     let products = await res.json();

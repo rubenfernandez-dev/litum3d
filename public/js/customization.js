@@ -28,6 +28,74 @@
 // otro punto del frontend debe repetir este número.
 const MAX_CUSTOMIZATION_PHOTOS = 3;
 
+// --- i18n mínimo (auditoría de i18n pública DE/FR) ------------------------
+// customization.js es compartido entre /shop y Home en los 3 idiomas (ver
+// cabecera del archivo), pero sus textos visibles (título del modal,
+// validaciones, notificación de éxito) estaban hardcodeados solo en
+// español -- un usuario DE/FR los veía en español pese a que el resto de
+// la página ya estuviera traducida. Mismo mecanismo de idioma que ya usan
+// shop.js#loadShopProducts/home.js#loadFeaturedProducts
+// (document.documentElement.lang de la propia página), sin introducir una
+// librería de i18n ni triplicar este archivo: un diccionario mínimo aquí,
+// una función t() que lo consulta. Si el lang de la página no es uno de
+// los tres soportados (o no hay document.documentElement, p.ej. en los
+// sandboxes de test), cae a 'es' -- el mismo texto que ya existía antes de
+// esta auditoría.
+const CUSTOMIZATION_I18N = {
+  es: {
+    modalTitle: name => `Personalizar: ${name}`,
+    loadOptionsError: 'Error al cargar opciones.',
+    selectPlaceholder: label => `Selecciona ${label}`,
+    maxPhotos: n => `Máximo ${n} archivos permitidos`,
+    uploadAtLeastOne: 'Por favor sube al menos una foto',
+    waitLoadingOptions: 'Espera un momento: todavía se están cargando las opciones de personalización.',
+    selectModel: 'Por favor selecciona un modelo',
+    photoConsentRequired: '⚠️ Debes aceptar el tratamiento de tus fotos para continuar.\n\nLas fotos se utilizan para personalizar y gestionar tu pedido.',
+    extrasPriceUnavailable: 'No se pudo determinar el precio de los extras seleccionados. Recarga la página e inténtalo de nuevo.',
+    uploadError: msg => `Error al subir archivos: ${msg}`,
+    addedToCart: '✨ Producto añadido al carrito',
+    customizationError: 'Error al procesar la personalización'
+  },
+  de: {
+    modalTitle: name => `Personalisieren: ${name}`,
+    loadOptionsError: 'Fehler beim Laden der Optionen.',
+    selectPlaceholder: label => `${label} auswählen`,
+    maxPhotos: n => `Maximal ${n} Dateien erlaubt`,
+    uploadAtLeastOne: 'Bitte lade mindestens ein Foto hoch',
+    waitLoadingOptions: 'Einen Moment: die Personalisierungsoptionen werden noch geladen.',
+    selectModel: 'Bitte wähle ein Modell aus',
+    photoConsentRequired: '⚠️ Du musst der Verarbeitung deiner Fotos zustimmen, um fortzufahren.\n\nDie Fotos werden verwendet, um deine Bestellung zu personalisieren und zu bearbeiten.',
+    extrasPriceUnavailable: 'Der Preis der ausgewählten Extras konnte nicht ermittelt werden. Lade die Seite neu und versuche es erneut.',
+    uploadError: msg => `Fehler beim Hochladen der Dateien: ${msg}`,
+    addedToCart: '✨ Produkt zum Warenkorb hinzugefügt',
+    customizationError: 'Fehler bei der Verarbeitung der Personalisierung'
+  },
+  fr: {
+    modalTitle: name => `Personnaliser : ${name}`,
+    loadOptionsError: 'Erreur lors du chargement des options.',
+    selectPlaceholder: label => `Sélectionnez ${label}`,
+    maxPhotos: n => `Maximum ${n} fichiers autorisés`,
+    uploadAtLeastOne: 'Veuillez téléverser au moins une photo',
+    waitLoadingOptions: 'Un instant : les options de personnalisation sont encore en cours de chargement.',
+    selectModel: 'Veuillez sélectionner un modèle',
+    photoConsentRequired: '⚠️ Vous devez accepter le traitement de vos photos pour continuer.\n\nLes photos sont utilisées pour personnaliser et gérer votre commande.',
+    extrasPriceUnavailable: "Le prix des extras sélectionnés n'a pas pu être déterminé. Rechargez la page et réessayez.",
+    uploadError: msg => `Erreur lors du téléversement des fichiers : ${msg}`,
+    addedToCart: '✨ Produit ajouté au panier',
+    customizationError: 'Erreur lors du traitement de la personnalisation'
+  }
+};
+
+function getCustomizationLocale() {
+  const lang = (typeof document !== 'undefined' && document.documentElement && document.documentElement.lang) || 'es';
+  return CUSTOMIZATION_I18N[lang] ? lang : 'es';
+}
+
+function t(key, ...args) {
+  const entry = CUSTOMIZATION_I18N[getCustomizationLocale()][key];
+  return typeof entry === 'function' ? entry(...args) : entry;
+}
+
 // Única fuente de precios de extras: GET /api/pricing-config (servidor).
 // null mientras no ha cargado o si la carga falló — nunca hay un fallback
 // hardcodeado 5/5/4 en su lugar.
@@ -176,7 +244,7 @@ async function openCustomization(productId) {
   updateCustomizationPrice();
 
   // Actualizar título del modal
-  document.getElementById('custom-modal-title').textContent = `Personalizar: ${product.nombre}`;
+  document.getElementById('custom-modal-title').textContent = t('modalTitle', product.nombre);
 
   // Refleja si /api/pricing-config está disponible (puede haberse resuelto
   // ya, o seguir en curso si el modal se abre muy pronto tras cargar la página).
@@ -270,7 +338,7 @@ async function loadModelsForProduct(productId, signal) {
     // modelsLoaded queda en false: no se sabe si el producto tiene modelos,
     // así que confirmCustomization() permanece bloqueada hasta reintentar
     // (mismo efecto práctico que el comportamiento previo ante error).
-    if (modelsContainer) modelsContainer.innerHTML = '<p style="color: #ff6b6b;">Error al cargar opciones.</p>';
+    if (modelsContainer) modelsContainer.innerHTML = `<p style="color: #ff6b6b;">${t('loadOptionsError')}</p>`;
     if (modelsSection) modelsSection.style.display = '';
   }
 }
@@ -317,7 +385,7 @@ async function loadVariantTypes(productId, signal) {
       <div class="variant-type-group">
         <label>${variantType.nombre}</label>
         <select onchange="onVariantChange()">
-          <option value="">Selecciona ${variantType.nombre.toLowerCase()}</option>
+          <option value="">${t('selectPlaceholder', variantType.nombre.toLowerCase())}</option>
           ${variantType.options.map(opt => `
             <option value="${opt.id}" data-price="${opt.price_delta || 0}">
               ${escapeHtml(opt.nombre)} ${opt.price_delta ? `(+${parseFloat(opt.price_delta).toFixed(2)} €)` : ''}
@@ -399,7 +467,7 @@ function handleFileSelection(input) {
   const files = Array.from(input.files || []);
 
   if (files.length > MAX_CUSTOMIZATION_PHOTOS) {
-    alert(`Máximo ${MAX_CUSTOMIZATION_PHOTOS} archivos permitidos`);
+    alert(t('maxPhotos', MAX_CUSTOMIZATION_PHOTOS));
     return;
   }
 
@@ -445,7 +513,7 @@ async function confirmCustomization() {
   const notes = document.getElementById('custom-notes')?.value || '';
 
   if (files.length === 0) {
-    alert('Por favor sube al menos una foto');
+    alert(t('uploadAtLeastOne'));
     return;
   }
 
@@ -453,7 +521,7 @@ async function confirmCustomization() {
   // configurados (carga en curso o fallida), no se puede decidir nada:
   // bloquear en vez de asumir "sin modelos" por defecto (ver loadModelsForProduct).
   if (!customizationState.modelsLoaded) {
-    alert('Espera un momento: todavía se están cargando las opciones de personalización.');
+    alert(t('waitLoadingOptions'));
     return;
   }
 
@@ -464,7 +532,7 @@ async function confirmCustomization() {
   // raíz del bug (antes solo se comprobaba selectedModelId, que no
   // distingue esos dos casos).
   if (customizationState.hasSelectableModels && !customizationState.selectedModelId) {
-    alert('Por favor selecciona un modelo');
+    alert(t('selectModel'));
     return;
   }
 
@@ -477,7 +545,7 @@ async function confirmCustomization() {
   // incluye el checkbox, esta comprobación se desactiva sola.
   const photoConsentCheckbox = document.getElementById('photo-consent');
   if (files.length > 0 && photoConsentCheckbox && !photoConsentCheckbox.checked) {
-    alert('⚠️ Debes aceptar el tratamiento de tus fotos para continuar.\n\nLas fotos se utilizan para personalizar y gestionar tu pedido.');
+    alert(t('photoConsentRequired'));
     photoConsentCheckbox.focus();
     return;
   }
@@ -486,7 +554,7 @@ async function confirmCustomization() {
   // su precio no se pudo determinar de forma segura (config no disponible).
   const extrasPreview = getExtrasFromUI();
   if (!pricingConfig && (extrasPreview.upscale || extrasPreview.qr || extrasPreview.adapter)) {
-    alert('No se pudo determinar el precio de los extras seleccionados. Recarga la página e inténtalo de nuevo.');
+    alert(t('extrasPriceUnavailable'));
     return;
   }
 
@@ -541,7 +609,7 @@ async function confirmCustomization() {
         const text = await uploadRes.text();
         if (text) errorMsg = text;
       }
-      alert('Error al subir archivos: ' + errorMsg);
+      alert(t('uploadError', errorMsg));
       return;
     }
 
@@ -572,10 +640,10 @@ async function confirmCustomization() {
     closeCustomization();
 
     // Mostrar notificación
-    showNotification('✨ Producto añadido al carrito', 'success');
+    showNotification(t('addedToCart'), 'success');
   } catch (err) {
     console.error(err);
-    alert('Error al procesar la personalización');
+    alert(t('customizationError'));
   }
 }
 

@@ -94,6 +94,10 @@ router.get('/shop-de', (req, res) => {
   res.sendFile(path.join(viewsDir, 'shop-de.html'));
 });
 
+router.get('/privacy-policy-de', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'privacy-policy-de.html'));
+});
+
 // Rutas en francés
 router.get('/fr', (req, res) => {
   res.sendFile(path.join(viewsDir, 'index-fr.html'));
@@ -129,6 +133,10 @@ router.get('/success-fr', (req, res) => {
 
 router.get('/shop-fr', (req, res) => {
   res.sendFile(path.join(viewsDir, 'shop-fr.html'));
+});
+
+router.get('/privacy-policy-fr', (req, res) => {
+  res.sendFile(path.join(viewsDir, 'privacy-policy-fr.html'));
 });
 
 module.exports = router;
