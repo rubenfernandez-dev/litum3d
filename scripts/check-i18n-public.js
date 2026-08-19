@@ -427,7 +427,10 @@ function checkCartPageEmptyStateRespectsLocale() {
 // =======================================================================
 
 const LEGAL_DOCS = [
-  { key: 'terms-conditions', esFile: 'terms-conditions.html', esH2: 16, esH3: 23, name: 'Terms' },
+  // esH2/esH3 actualizados tras fix(legal): correct consumer and policy
+  // inconsistencies (consolidación §13/§16 -> -1 h2; reescritura de la
+  // cláusula de desistimiento en 2 h3 nuevos en vez de 1 -> +1 h3).
+  { key: 'terms-conditions', esFile: 'terms-conditions.html', esH2: 15, esH3: 24, name: 'Terms' },
   { key: 'cookies-policy', esFile: 'cookies-policy.html', esH2: 8, esH3: 8, name: 'Cookies' }
 ];
 
