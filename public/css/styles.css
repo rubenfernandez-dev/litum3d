@@ -1381,7 +1381,8 @@ main {
 }
 
 /* Section Titles */
-h2 {
+h2,
+.page-title {
   font-size: 2.5rem;
   margin: 3rem 0 2rem 0;
   background: linear-gradient(135deg, var(--gold), var(--light));
@@ -1392,7 +1393,8 @@ h2 {
   padding-bottom: 1rem;
 }
 
-h2::after {
+h2::after,
+.page-title::after {
   content: '';
   position: absolute;
   bottom: 0;
