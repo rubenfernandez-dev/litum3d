@@ -22,6 +22,12 @@
 //     .variant-types-container, #customization-modal.
 // ============================================
 
+// Regla comercial (retirada de la forma Cuadrada, sección 1): una
+// personalización admite como máximo 3 fotos, sin excepciones. Fuente única
+// consumida por handleFileSelection() y confirmCustomization() -- ningún
+// otro punto del frontend debe repetir este número.
+const MAX_CUSTOMIZATION_PHOTOS = 3;
+
 // Única fuente de precios de extras: GET /api/pricing-config (servidor).
 // null mientras no ha cargado o si la carga falló — nunca hay un fallback
 // hardcodeado 5/5/4 en su lugar.
@@ -392,8 +398,8 @@ function handleFileSelection(input) {
   const fileList = document.getElementById('custom-file-list');
   const files = Array.from(input.files || []);
 
-  if (files.length > 4) {
-    alert('Máximo 4 archivos permitidos');
+  if (files.length > MAX_CUSTOMIZATION_PHOTOS) {
+    alert(`Máximo ${MAX_CUSTOMIZATION_PHOTOS} archivos permitidos`);
     return;
   }
 
@@ -429,7 +435,13 @@ function removeFile(index) {
  * Confirmar personalización y agregar al carrito
  */
 async function confirmCustomization() {
-  const files = customizationState.files;
+  // Defensa adicional (sección 7): handleFileSelection() ya impide llegar
+  // aquí con más de MAX_CUSTOMIZATION_PHOTOS a través de la UI normal, pero
+  // customizationState es mutable desde fuera (DevTools/DOM manipulado) --
+  // recortar aquí, en el único punto que construye el FormData real,
+  // garantiza que nunca se suba ni se guarde en el carrito más de las fotos
+  // permitidas, sin repetir la regla de negocio en un segundo sitio.
+  const files = customizationState.files.slice(0, MAX_CUSTOMIZATION_PHOTOS);
   const notes = document.getElementById('custom-notes')?.value || '';
 
   if (files.length === 0) {

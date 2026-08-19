@@ -1221,6 +1221,209 @@ async function main() {
     }
   }
 
+  // ================= Regla comercial: máximo 3 fotos por personalización =================
+  // fix(customization): limit personalization to three photos.
+  //
+  // La antigua excepción de 4 fotos (ligada a la forma Cuadrada de 4 caras,
+  // que se retira de la oferta) desaparece: MAX_CUSTOMIZATION_PHOTOS=3 pasa a
+  // ser la única regla, definida una vez en customization.js y compartida
+  // por Home y Shop. Este bloque ejercita selección/acumulación/confirmación
+  // /carrito con el código real (no una reimplementación de la regla) y
+  // comprueba que no queda ninguna referencia funcional al máximo de 4
+  // anterior.
+  {
+    // --- Comprobación de fuente: la regla vive en un único sitio ---
+    const customizationSrc = readScript('public/js/customization.js');
+    const shopSrcForPhotos = readScript('public/js/shop.js');
+    const homeSrcForPhotos = readScript('public/js/home.js');
+    check(/const\s+MAX_CUSTOMIZATION_PHOTOS\s*=\s*3\s*;/.test(customizationSrc), 'customization.js define MAX_CUSTOMIZATION_PHOTOS=3 como fuente única del máximo de fotos');
+    check(
+      !/MAX_CUSTOMIZATION_PHOTOS/.test(shopSrcForPhotos) && !/MAX_CUSTOMIZATION_PHOTOS/.test(homeSrcForPhotos),
+      'home.js/shop.js no redeclaran la regla de máximo de fotos (Home y Shop comparten la de customization.js)'
+    );
+    check(
+      !/[Mm]áximo 4|[Mm]áx\.?\s*4|max\.?\s*4 archivos|files\.length\s*>\s*4|length\s*>=\s*4/.test(customizationSrc),
+      'customization.js no conserva ninguna referencia funcional al antiguo máximo de 4 fotos'
+    );
+
+    function makeEl(initial) {
+      return { checked: false, disabled: false, value: '', textContent: initial, innerHTML: '', style: {}, focus() {} };
+    }
+
+    function buildPhotoLimitSandbox(pageScript, pageScriptName) {
+      const els = {
+        'custom-modal-title': makeEl(''),
+        'customization-modal': { classList: { add() {}, remove() {} } },
+        'custom-models': makeEl(''),
+        'custom-models-section': makeEl(''),
+        'custom-notes': makeEl(''),
+        'custom-files': makeEl(''),
+        'custom-file-list': makeEl(''),
+        'extra-upscale': makeEl(''),
+        'extra-qr': makeEl(''),
+        'extra-qr-message': makeEl(''),
+        'extra-adapter': makeEl(''),
+        'photo-consent': makeEl(''),
+        'custom-base-price': makeEl('0.00'),
+        'custom-total': makeEl('0.00')
+      };
+      const finalPriceEl = makeEl('€0.00');
+      const alerts = [];
+      const uploadCounts = [];
+      const modalDocumentStub = {
+        addEventListener: () => {},
+        getElementById: (id) => els[id] || null,
+        querySelector: (sel) => (sel === '[data-variant-price]' ? finalPriceEl : null),
+        querySelectorAll: () => [],
+        createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, appendChild() {}, remove() {} }),
+        body: { appendChild: () => {} }
+      };
+      const sandbox = {
+        console,
+        document: modalDocumentStub,
+        alert: (msg) => alerts.push(msg),
+        FormData,
+        AbortController,
+        setTimeout: () => {},
+        localStorage: makeLocalStorageStub(),
+        fetch: async (url, opts) => {
+          if (url.includes('/api/pricing-config')) return { ok: true, json: async () => PRICING_CONFIG_FIXTURE };
+          if (url.includes('/variant-types')) return { ok: true, json: async () => [] };
+          if (url.includes('/api/uploads/custom')) {
+            // El endpoint real (routes/uploads.js) también limita a
+            // MAX_UPLOAD_FILES=3 por petición (services/uploads-storage.js) --
+            // aquí solo se cuentan los archivos que realmente llegaron en el
+            // FormData, para comprobar que confirmCustomization() nunca envía
+            // más de los permitidos, sin reimplementar multer.
+            const count = opts.body.getAll('images').length;
+            uploadCounts.push(count);
+            return {
+              ok: true,
+              json: async () => ({
+                ok: true,
+                files: Array.from({ length: count }, (_, i) => ({ filename: `f${i}.jpg`, url: `/api/uploads/custom/preview/f${i}.jpg?t=x` }))
+              })
+            };
+          }
+          return { ok: false, json: async () => ({ ok: false }) };
+        }
+      };
+      vm.createContext(sandbox);
+      vm.runInContext(readScript('public/js/cart.js'), sandbox, { filename: 'cart.js' });
+      vm.runInContext(readScript('public/js/customization.js'), sandbox, { filename: 'customization.js' });
+      vm.runInContext(readScript(pageScript), sandbox, { filename: pageScriptName });
+      return {
+        sandbox,
+        els,
+        alerts,
+        uploadCounts,
+        maxPhotos: vm.runInContext('MAX_CUSTOMIZATION_PHOTOS', sandbox, { filename: 'read-max.js' }),
+        setFiles: (files) => {
+          sandbox.__filesFixture = files;
+          vm.runInContext('customizationState.files = __filesFixture;', sandbox, { filename: 'set-files.js' });
+        },
+        getStateFiles: () => vm.runInContext('customizationState.files', sandbox, { filename: 'get-files.js' }),
+        // openCustomization() resetea #photo-consent (resetCustomizationExtrasUI,
+        // ver bloque de consentimiento arriba) -- este helper reabre y vuelve a
+        // marcarlo, para que estos tests aíslen la regla de fotos sin quedar
+        // bloqueados por el consentimiento en cada apertura.
+        openAndAccept: async (productId) => {
+          await sandbox.openCustomization(productId);
+          els['photo-consent'].checked = true;
+        }
+      };
+    }
+
+    function fakePhoto(name) {
+      return { name, size: 1024, type: 'image/jpeg' };
+    }
+
+    for (const [pageScript, pageScriptName, label] of [
+      ['public/js/shop.js', 'shop.js', 'Shop'],
+      ['public/js/home.js', 'home.js', 'Home']
+    ]) {
+      const ctx = buildPhotoLimitSandbox(pageScript, pageScriptName);
+      check(ctx.maxPhotos === 3, `${label}: MAX_CUSTOMIZATION_PHOTOS real es 3 (regla comercial vigente)`);
+      ctx.sandbox.setCustomizationProducts([{ id: 301, nombre: 'Producto Fotos', precio: '30.00' }]);
+
+      // --- Selección simultánea: 1/2/3 fotos permitidas ---
+      for (const n of [1, 2, 3]) {
+        ctx.alerts.length = 0;
+        await ctx.openAndAccept(301);
+        ctx.sandbox.handleFileSelection({ files: Array.from({ length: n }, (_, i) => fakePhoto(`foto${i}.jpg`)) });
+        check(ctx.getStateFiles().length === n, `${label}: seleccionar ${n} foto(s) de golpe se acepta (estado=${ctx.getStateFiles().length})`);
+        check(ctx.alerts.length === 0, `${label}: seleccionar ${n} foto(s) no dispara ningún aviso`);
+      }
+
+      // --- Selección simultánea: 4/5 fotos rechazadas, con aviso claro ---
+      for (const n of [4, 5]) {
+        ctx.alerts.length = 0;
+        await ctx.openAndAccept(301);
+        ctx.sandbox.handleFileSelection({ files: Array.from({ length: n }, (_, i) => fakePhoto(`foto${i}.jpg`)) });
+        check(ctx.getStateFiles().length === 0, `${label}: seleccionar ${n} fotos de golpe NO deja ninguna foto en el estado (rechazo del lote completo, estado=${ctx.getStateFiles().length})`);
+        check(
+          ctx.alerts.length === 1 && /m[aá]ximo/i.test(ctx.alerts[0]) && /3/.test(ctx.alerts[0]),
+          `${label}: seleccionar ${n} fotos de golpe muestra un aviso claro indicando el máximo (3), no las descarta en silencio; alerts=${JSON.stringify(ctx.alerts)}`
+        );
+      }
+
+      // --- Acumulación: 2 fotos ya elegidas, el usuario reabre el selector
+      // nativo y elige 2 más. Un <input type="file" multiple> real REEMPLAZA
+      // su FileList en cada apertura del diálogo (no la acumula), así que
+      // handleFileSelection() recibe únicamente las 2 fotos nuevas. En
+      // ningún momento de la secuencia el estado supera 3 fotos.
+      {
+        ctx.alerts.length = 0;
+        await ctx.openAndAccept(301);
+        ctx.sandbox.handleFileSelection({ files: [fakePhoto('a.jpg'), fakePhoto('b.jpg')] });
+        check(ctx.getStateFiles().length === 2, `${label}: primera selección de 2 fotos se acepta`);
+
+        ctx.sandbox.handleFileSelection({ files: [fakePhoto('c.jpg'), fakePhoto('d.jpg')] });
+        check(ctx.getStateFiles().length <= 3, `${label}: tras intentar añadir 2 fotos más sobre una selección de 2, el estado final nunca supera 3 (estado=${ctx.getStateFiles().length})`);
+      }
+
+      // --- Defensa en confirmCustomization(): si el estado llega manipulado
+      // (DOM/DevTools, sin pasar por handleFileSelection) con más de 3
+      // fotos, ni la subida ni el item guardado en litum3d_cart deben
+      // superar 3 imágenes. ---
+      {
+        ctx.alerts.length = 0;
+        await ctx.openAndAccept(301);
+        ctx.setFiles([fakePhoto('1.jpg'), fakePhoto('2.jpg'), fakePhoto('3.jpg'), fakePhoto('4.jpg'), fakePhoto('5.jpg')]);
+        check(ctx.getStateFiles().length === 5, `${label}: precondición del test -- el estado manipulado directamente queda en 5`);
+
+        await ctx.sandbox.confirmCustomization();
+        check(
+          ctx.uploadCounts[ctx.uploadCounts.length - 1] === 3,
+          `${label}: confirmCustomization() nunca envía más de 3 imágenes a /api/uploads/custom aunque el estado tenga más (envió=${ctx.uploadCounts[ctx.uploadCounts.length - 1]})`
+        );
+
+        const cartItems = ctx.sandbox.getCart();
+        const lastItem = cartItems[cartItems.length - 1];
+        check(
+          Array.isArray(lastItem.images) && lastItem.images.length === 3,
+          `${label}: el item guardado en litum3d_cart nunca contiene más de 3 imágenes (contiene=${lastItem.images.length})`
+        );
+      }
+    }
+
+    // --- Las seis vistas comunican el mismo máximo (3), ninguna dice 4 ---
+    const PHOTO_LIMIT_VIEWS = [
+      ['index.html', /Fotos\s*\(máx\.?\s*3\)/],
+      ['index-de.html', /Fotos\s*\(max\.?\s*3\)/],
+      ['index-fr.html', /Photos\s*\(max\.?\s*3\)/],
+      ['shop.html', /Fotos\s*\(máx\.?\s*3\)/],
+      ['shop-de.html', /Fotos\s*\(max\.?\s*3\)/],
+      ['shop-fr.html', /Photos\s*\(max\.?\s*3\)/]
+    ];
+    for (const [view, pattern] of PHOTO_LIMIT_VIEWS) {
+      const html = readScript(`views/${view}`);
+      check(pattern.test(html), `views/${view}: el texto del modal de personalización dice máximo 3 fotos`);
+      const labelMatch = html.match(/>(?:Fotos|Photos)\s*\([^)]*\)</);
+      check(!labelMatch || !/4/.test(labelMatch[0]), `views/${view}: la etiqueta de fotos del modal no menciona 4 (encontrado=${labelMatch ? labelMatch[0] : 'n/a'})`);
+    }
+  }
+
   // EUR-ONLY-01 (sección 22): ningún script de storefront activo debe
   // contener "CHF" como etiqueta de precio hardcodeada. Comprobación de
   // texto fuente, no de ejecución -- si algún día hace falta distinguir
