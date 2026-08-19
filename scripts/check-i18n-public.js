@@ -36,6 +36,17 @@
   8) ES no se rompe: view ES sigue enlazando a /privacy-policy (no a
      ninguna variante -de/-fr), y customization.js con lang='es' (o sin
      document.documentElement) sigue produciendo el texto español de siempre.
+  9) Navegación internacional (informe de corrección de navegación): TODO
+     href interno (no /img,/css,/js,/api, no externo, no ancla) de
+     cualquier vista *-de.html/*-fr.html descubierta dinámicamente resuelve
+     a una ruta REAL registrada en routes/index.js -- nunca una URL
+     inventada como /index-de o /index-fr, que 404eaban. Y ningún enlace de
+     navegación (tienda/about/contact/gallery/cart/checkout/testimonios)
+     apunta a la página ES SALVO la opción "Español" del propio selector de
+     idioma, que debe seguir yendo a ES a propósito.
+  10) public/js/cart-page.js: el enlace "Explorar Productos" del carrito
+      vacío usa el mismo mecanismo de idioma que continueShopping()/
+      goToCheckout() del mismo archivo (antes iba siempre a /gallery, ES).
 
   Uso: node scripts/check-i18n-public.js
 */
@@ -294,6 +305,120 @@ async function checkProductosApiTranslatesWhenDataExists() {
   eq(fr[idUntranslated].nombre, 'Solo ES', 'lang=fr: SIN nombre_fr en BD, cae a español');
 }
 
+// =======================================================================
+// 9) Navegación internacional: todo href interno resuelve a una ruta real,
+//    y ningún enlace de navegación manda a la versión ES por accidente.
+// =======================================================================
+
+// Rutas GET realmente registradas en routes/index.js, extraídas del texto
+// fuente -- no una lista hardcodeada, para que un cambio real en el router
+// se refleje aquí automáticamente.
+function getRegisteredGetRoutes() {
+  const src = readFile('routes/index.js');
+  const routes = new Set();
+  const re = /router\.get\('([^']+)'/g;
+  let m;
+  while ((m = re.exec(src))) routes.add(m[1]);
+  return routes;
+}
+
+// Extrae los <a ...>, con su href y (si existe) su title, para poder
+// distinguir la opción "Español" del selector de idioma (que SÍ debe ir a
+// ES a propósito) de cualquier otro enlace de navegación.
+function extractInternalPageLinks(html) {
+  const anchorRe = /<a\s+[^>]*href="(\/[^"]*)"[^>]*>/g;
+  const links = [];
+  let m;
+  while ((m = anchorRe.exec(html))) {
+    const href = m[1];
+    if (/^\/(img|css|js|api)\//.test(href)) continue; // assets/API, no son "página"
+    const tag = m[0];
+    const titleMatch = tag.match(/title="([^"]*)"/);
+    links.push({ href, title: titleMatch ? titleMatch[1] : null });
+  }
+  return links;
+}
+
+function checkInternalLinksResolveToRealLocalizedRoutes() {
+  const registeredRoutes = getRegisteredGetRoutes();
+  ok(registeredRoutes.size >= 20, `sanity: se descubrieron ${registeredRoutes.size} rutas GET registradas en routes/index.js`);
+
+  const deViews = listViews(/-de\.html$/);
+  const frViews = listViews(/-fr\.html$/);
+
+  // Páginas de navegación con versión localizada real: un enlace DE/FR a
+  // ellas debe usar la variante -de/-fr, NUNCA la desnuda (ES), salvo que
+  // sea explícitamente la opción "Español" del selector de idioma.
+  const NAV_TARGETS_WITH_LOCALE = ['shop', 'tienda', 'about', 'contact', 'gallery', 'cart', 'checkout', 'testimonios', 'privacy-policy'];
+
+  for (const [views, suffix, langLabel] of [[deViews, '-de', 'Deutsch'], [frViews, '-fr', 'Français']]) {
+    for (const file of views) {
+      const html = readView(file);
+      const links = extractInternalPageLinks(html);
+
+      for (const { href, title } of links) {
+        // 9a) toda URL interna referenciada debe ser una ruta real (nunca inventada).
+        ok(registeredRoutes.has(href), `views/${file}: href="${href}" debe ser una ruta real registrada en routes/index.js (nunca inventada, p.ej. /index${suffix})`);
+
+        // 9b) si el destino conceptual es una de las páginas con versión
+        // localizada, el href no debe ser la variante ES desnuda -- salvo
+        // que sea la propia opción "Español" del selector de idioma.
+        const bareName = href.replace(/^\//, '');
+        const isSpanishLangOption = title === 'Español';
+        if (NAV_TARGETS_WITH_LOCALE.includes(bareName) && !isSpanishLangOption) {
+          ok(false, `views/${file}: href="${href}" manda a la versión ES en vez de mantener el idioma de la página (esperado: algo terminado en "${suffix}")`);
+        }
+      }
+    }
+  }
+}
+
+function checkShopLinksUseLocalizedRoute() {
+  const de = readView('shop-de.html');
+  const fr = readView('shop-fr.html');
+  // Autorreferencia correcta: dentro de sus propias páginas, la tienda
+  // DE/FR enlaza a sí misma (nav + footer), no a /shop ni /tienda (ES).
+  ok((de.match(/href="\/shop-de"/g) || []).length >= 2, 'shop-de.html: los enlaces de navegación a la tienda usan /shop-de (nav + footer)');
+  ok((fr.match(/href="\/shop-fr"/g) || []).length >= 2, 'shop-fr.html: los enlaces de navegación a la tienda usan /shop-fr (nav + footer)');
+}
+
+// =======================================================================
+// 10) cart-page.js: el enlace de carrito vacío ya respeta el idioma
+// =======================================================================
+function checkCartPageEmptyStateRespectsLocale() {
+  const src = readFile('public/js/cart-page.js');
+  ok(/document\.documentElement\.lang/.test(src), 'cart-page.js usa document.documentElement.lang (mismo mecanismo que continueShopping/goToCheckout)');
+  ok(!/href="\/gallery"/.test(src), 'cart-page.js ya no tiene un href="/gallery" fijo (ahora es dinámico según el idioma)');
+
+  // document.documentElement (el propio <html>) siempre existe en un
+  // navegador real -- a diferencia de customization.js#t(), que sí debe
+  // tolerar sandboxes de test sin document.documentElement, aquí solo se
+  // ejercitan valores de lang realistas.
+  for (const [lang, expected] of [['de', '/gallery-de'], ['fr', '/gallery-fr'], ['es', '/gallery']]) {
+    const registry = new Map();
+    const getEl = (id) => {
+      if (!registry.has(id)) registry.set(id, id === 'cart-items-container' ? { innerHTML: '' } : { style: {} });
+      return registry.get(id);
+    };
+    const sandbox = {
+      console,
+      document: {
+        documentElement: { lang },
+        getElementById: getEl,
+        addEventListener: () => {}
+      },
+      getCart: () => [],
+      normalizeCart: (c) => ({ cart: c, changed: false }),
+      saveCart: () => {}
+    };
+    vm.createContext(sandbox);
+    vm.runInContext(readFile('public/js/cart-page.js'), sandbox, { filename: 'cart-page.js' });
+    sandbox.renderCartItems();
+    const html = getEl('cart-items-container').innerHTML;
+    ok(html.includes(`href="${expected}"`), `carrito vacío con lang=${lang}: el enlace "Explorar Productos" apunta a ${expected}; html=${html.slice(0, 200)}`);
+  }
+}
+
 async function main() {
   console.log('Auditoría i18n público - WhatsApp (checkout-de/fr)');
   checkWhatsappTooltipLocalized();
@@ -309,6 +434,12 @@ async function main() {
   await checkHomeJsPassesLang();
   console.log('Auditoría i18n público - routes/productos.js traduce nombres/descripciones dinámicos');
   await checkProductosApiTranslatesWhenDataExists();
+  console.log('Corrección de navegación - todo href interno resuelve a una ruta real y mantiene el idioma');
+  checkInternalLinksResolveToRealLocalizedRoutes();
+  console.log('Corrección de navegación - Shop DE/FR se autorreferencia con su propia ruta');
+  checkShopLinksUseLocalizedRoute();
+  console.log('Corrección de navegación - cart-page.js: enlace de carrito vacío respeta el idioma');
+  checkCartPageEmptyStateRespectsLocale();
   console.log(`OK: ${checks} comprobaciones sobre la auditoría de i18n público DE/FR.`);
 }
 

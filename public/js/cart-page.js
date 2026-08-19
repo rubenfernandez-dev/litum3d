@@ -13,12 +13,18 @@ function renderCartItems() {
   }
 
   if (cart.length === 0) {
+    // Mismo mecanismo de idioma que continueShopping()/goToCheckout() más
+    // abajo (document.documentElement.lang): este enlace apuntaba siempre
+    // a /gallery (ES) sin importar el idioma de la página, mandando a un
+    // visitante DE/FR a la galería española.
+    const lang = document.documentElement.lang || 'es';
+    const emptyCartGalleryUrl = lang === 'de' ? '/gallery-de' : lang === 'fr' ? '/gallery-fr' : '/gallery';
     container.innerHTML = `
       <div style="text-align: center; padding: 2rem;">
         <p style="font-size: 3rem; margin: 0;">🛒</p>
         <h3 style="color: var(--gold);">Tu carrito está vacío</h3>
         <p style="opacity: 0.8;">Descubre nuestros productos y añade tus favoritos</p>
-        <a href="/gallery" style="display: inline-block; margin-top: 1rem; padding: 0.8rem 1.5rem; background: linear-gradient(135deg, var(--gold), #f0c070); color: var(--primary); border-radius: 6px; text-decoration: none; font-weight: 700;">
+        <a href="${emptyCartGalleryUrl}" style="display: inline-block; margin-top: 1rem; padding: 0.8rem 1.5rem; background: linear-gradient(135deg, var(--gold), #f0c070); color: var(--primary); border-radius: 6px; text-decoration: none; font-weight: 700;">
           Explorar Productos
         </a>
       </div>
