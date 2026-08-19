@@ -837,6 +837,31 @@
             return '';
         }
 
+        // Formatter de país SOLO para lectura/display en Admin -- códigos
+        // ISO alpha-2 admitidos hoy en checkout (config/checkout-countries.js,
+        // ES/PT/FR/CH/DE/IT). Deliberadamente NO se reutiliza esa validación
+        // aquí (es server-side/CommonJS, y este archivo es HTML estático sin
+        // bundler): esta lista es solo para nombrar un código ya persistido,
+        // nunca para decidir qué país es válido. Un código legacy/desconocido
+        // se muestra tal cual (nunca se inventa un nombre), y NULL/ausente
+        // nunca se convierte en un país por defecto.
+        const ORDER_COUNTRY_LABELS = {
+            ES: 'España', PT: 'Portugal', FR: 'Francia', CH: 'Suiza', DE: 'Alemania', IT: 'Italia'
+        };
+        function formatOrderCountry(code) {
+            if (!code) return '-';
+            const name = ORDER_COUNTRY_LABELS[code];
+            return name ? `${name} (${code})` : code;
+        }
+
+        // CP + Ciudad en una sola línea legible; cada parte que falte se
+        // omite (nunca "null"/"undefined"), y si faltan las dos se usa el
+        // mismo placeholder "-" que el resto del detalle del pedido.
+        function formatOrderZipCity(zip, city) {
+            const parts = [zip, city].filter(v => v !== null && v !== undefined && String(v).trim() !== '');
+            return parts.length ? parts.join(' ') : '-';
+        }
+
         function updateStats() {
             const total = orders.length;
             const pending = orders.filter(o => o.estado_nombre === 'Pendiente').length;
@@ -1001,6 +1026,23 @@
                         <div class="detail-row">
                             <span class="detail-label">Estado Actual</span>
                             <span class="detail-value">${data.order.estado_nombre}</span>
+                        </div>
+                        <div class="order-details" style="margin-top:12px;">
+                            <div class="detail-row" style="margin-bottom:10px;">
+                                <span class="detail-label" style="font-weight:600;">📍 Dirección de entrega</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Calle</span>
+                                <span class="detail-value">${data.order.customer_address || '-'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">CP / Ciudad</span>
+                                <span class="detail-value">${formatOrderZipCity(data.order.customer_zip, data.order.customer_city)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">País</span>
+                                <span class="detail-value">${formatOrderCountry(data.order.customer_country)}</span>
+                            </div>
                         </div>
                         <div class="order-details" style="margin-top:12px;">
                             ${itemsHtml || '<div class="detail-row"><span class="detail-label">Sin items</span><span class="detail-value">-</span></div>'}

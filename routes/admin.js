@@ -369,11 +369,19 @@ router.get('/pedidos/:id/detalle', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Cabecera del pedido
+        // Cabecera del pedido. customer_address/city/zip/country vienen
+        // EXCLUSIVAMENTE de la propia fila de `pedidos` (lo que el cliente
+        // introdujo/seleccionó al pagar ESE pedido) -- nunca de `usuarios`,
+        // a diferencia de customer_name/email de arriba: si el cliente
+        // cambia su dirección de cuenta después, este pedido debe seguir
+        // mostrando la dirección con la que se envió/facturó realmente.
+        // Funciona igual para usuario registrado, guest o usuario_id NULL,
+        // porque nunca se hace JOIN con `usuarios` para estos 4 campos.
         const [orders] = await pool.query(`
                  SELECT p.id, p.total, p.currency, p.created_at, ep.nombre AS estado_nombre,
                      COALESCE(p.customer_name, u.nombre, 'Sin nombre') AS customer_name,
-                     COALESCE(p.customer_email, u.email) AS email
+                     COALESCE(p.customer_email, u.email) AS email,
+                     p.customer_address, p.customer_city, p.customer_zip, p.customer_country
             FROM pedidos p
             JOIN estado_pedido ep ON p.estado_id = ep.id
             LEFT JOIN usuarios u ON p.usuario_id = u.id
