@@ -43,6 +43,11 @@ function makeFormStub(values = {}) {
   const fields = ['customer_name', 'customer_email', 'customer_phone', 'customer_address', 'customer_city', 'customer_zip'];
   const form = { checkValidity: () => true, reportValidity: () => {}, addEventListener() {} };
   for (const f of fields) form[f] = { value: values[f] || 'x' };
+  // customer_country: select real en el DOM (views/checkout*.html), sin
+  // opción preseleccionada -- el stub por defecto simula una selección
+  // válida ya hecha por el usuario (CH), no el placeholder vacío, para no
+  // romper los tests que no son específicamente sobre país.
+  form.customer_country = { value: values.customer_country !== undefined ? values.customer_country : 'CH' };
   const submitBtn = makeElementStub();
   form.querySelector = (sel) => (sel.includes('submit') ? submitBtn : null);
   form._submitBtn = submitBtn;
@@ -271,6 +276,74 @@ async function checkPayOrderSequencing() {
 }
 
 // =======================================================================
+// Informe de saneamiento de país: getCustomerData() lee el <select> real
+// (#customer_country) en vez de hardcodear 'CH', y handleCheckout() bloquea
+// antes de tocar el draft si llega vacío (defensa DOM manipulado -- el
+// <select required> real de views/checkout*.html ya lo impide vía
+// form.checkValidity() en el navegador).
+// =======================================================================
+async function checkCustomerCountry() {
+  // --- getCustomerData() lee el valor real del DOM, no un literal hardcodeado ---
+  {
+    const form = makeFormStub({ customer_country: 'PT' });
+    const sandbox = loadCheckoutSandbox({ form });
+    const data = runIn(sandbox, 'getCustomerData(document.getElementById("checkout-form"))');
+    eq(data.country, 'PT', 'getCustomerData() lee customer_country del DOM en vez de devolver siempre "CH"');
+  }
+
+  // --- Sin país seleccionado -> handleCheckout() bloquea ANTES del PATCH,
+  // con un mensaje claro, sin tocar Stripe en absoluto. ---
+  {
+    const form = makeFormStub({ customer_country: '' });
+    const sandbox = loadCheckoutSandbox({ form });
+    let patchCalled = false;
+    let confirmPaymentCalled = false;
+    sandbox.__confirmPaymentImpl = async () => { confirmPaymentCalled = true; return { error: null, paymentIntent: { status: 'succeeded' } }; };
+    sandbox.fetch = async (url) => {
+      if (String(url).includes('/api/checkout-draft/customer-data')) patchCalled = true;
+      return { ok: true, json: async () => ({ ok: true }) };
+    };
+    runIn(sandbox, `
+      currentBreakdown = { totals: { totalCents: 1000 }, currency: 'eur' };
+      clientSecret = 'cs_test';
+      currentAttempt = { idempotencyKey: 'k'.repeat(4), accessToken: 'a'.repeat(64) };
+      stripe = { confirmPayment: __confirmPaymentImpl };
+      elements = {};
+    `);
+    await runIn(sandbox, 'handleCheckout({ preventDefault(){} })');
+    ok(!patchCalled, 'sin país seleccionado: el PATCH de customer-data NUNCA se llama');
+    ok(!confirmPaymentCalled, 'sin país seleccionado: stripe.confirmPayment() NUNCA se llama');
+    const statusDiv = sandbox.document._registry.get('payment-status');
+    ok(statusDiv && /país/i.test(statusDiv.textContent), `sin país seleccionado: se muestra un mensaje de error claro; obtenido="${statusDiv ? statusDiv.textContent : 'n/a'}"`);
+  }
+
+  // --- Cualquiera de los seis países soportados viaja tal cual en el body del PATCH ---
+  for (const country of ['ES', 'PT', 'FR', 'CH', 'DE', 'IT']) {
+    const form = makeFormStub({ customer_country: country });
+    const sandbox = loadCheckoutSandbox({ form });
+    let patchBody = null;
+    sandbox.__confirmPaymentImpl = async () => ({ error: null, paymentIntent: { status: 'requires_action' } });
+    sandbox.fetch = async (url, opts) => {
+      if (String(url).includes('/api/checkout-draft/customer-data')) {
+        patchBody = JSON.parse(opts.body);
+        return { ok: true, json: async () => ({ ok: true }) };
+      }
+      return { ok: false, json: async () => ({ ok: false }) };
+    };
+    runIn(sandbox, `
+      currentBreakdown = { totals: { totalCents: 1000 }, currency: 'eur' };
+      clientSecret = 'cs_test';
+      currentAttempt = { idempotencyKey: 'k'.repeat(4), accessToken: 'a'.repeat(64) };
+      stripe = { confirmPayment: __confirmPaymentImpl };
+      elements = {};
+    `);
+    await runIn(sandbox, 'handleCheckout({ preventDefault(){} })');
+    ok(patchBody, `country="${country}": el PATCH de customer-data debe haberse llamado`);
+    eq(patchBody.customerData.country, country, `country="${country}": el body del PATCH incluye exactamente el país seleccionado, no se descarta`);
+  }
+}
+
+// =======================================================================
 // Sección 39 - El breakdown mostrado viene del servidor, nunca de localStorage
 // =======================================================================
 async function checkBreakdownAuthority() {
@@ -454,7 +527,8 @@ async function main() {
   await checkCanceledPaymentIntentInvalidatesAttempt();
   await checkReconcilePaymentCleansUpBeforeRedirectOnBackendSuccess();
   await checkReconcilePaymentKeepsCartOnBackendFailure();
-  console.log(`OK: ${checks} comprobaciones sobre public/js/checkout.js (serializador, selectionSchemaVersion, checkout attempt, orden de pago, breakdown autoritativo, succeeded/canceled, reconciliación por payment_intent, cleanup pre-redirect).`);
+  await checkCustomerCountry();
+  console.log(`OK: ${checks} comprobaciones sobre public/js/checkout.js (serializador, selectionSchemaVersion, checkout attempt, orden de pago, breakdown autoritativo, succeeded/canceled, reconciliación por payment_intent, cleanup pre-redirect, país del cliente).`);
 }
 
 main().catch(err => {

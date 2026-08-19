@@ -81,9 +81,11 @@ async function checkRouteLayerHttpMapping() {
     }), res);
     eq(res.statusCode, 400, 'customer-data: campo extra en el body -> 400');
   }
-  // country dentro de customerData: lo rechaza el propio checkoutDrafts
-  // (validateCustomerData), no el allowlist del body -- se comprueba en el
-  // grupo B (end-to-end) para probar el rechazo real.
+  // country dentro de customerData: SÍ se admite en el allowlist del body
+  // (ya no es "campo extra") -- qué códigos concretos se aceptan lo decide
+  // el propio checkoutDrafts (validateCustomerData) contra la allowlist de
+  // config/checkout-countries.js, no este allowlist de nombres de campo. Se
+  // comprueba en el grupo B (end-to-end) tanto el país válido como el inválido.
 
   // --- paymentIntentId con formato inválido ---
   {
@@ -403,15 +405,23 @@ async function checkEndToEndViaRealServices() {
     const patchRes = makeRes();
     await handlers.updateCustomerDataHandler(makeReq({
       accessToken,
-      customerData: { name: 'Ana Muster', email: 'ana@example.com', phone: '+41791234567', address: 'Bahnhofstrasse 1', city: 'Zürich', zip: '8001' }
+      customerData: { name: 'Ana Muster', email: 'ana@example.com', phone: '+41791234567', address: 'Bahnhofstrasse 1', city: 'Zürich', zip: '8001', country: 'CH' }
     }), patchRes);
-    eq(patchRes.statusCode, 200, 'happy path: PATCH customer-data -> 200');
+    eq(patchRes.statusCode, 200, 'happy path: PATCH customer-data -> 200 (país válido, CH)');
     eq(Object.keys(patchRes.body).sort().join(','), 'ok', 'PATCH customer-data responde SOLO {ok:true}, sin snapshot/customerData');
 
-    // country en customerData -> rechazado por checkoutDrafts (no admitido, B3).
-    const patchCountryRes = makeRes();
-    await handlers.updateCustomerDataHandler(makeReq({ accessToken, customerData: { name: 'A', email: 'a@b.com', phone: '1', address: '2', city: '3', zip: '4', country: 'CH' } }), patchCountryRes);
-    eq(patchCountryRes.statusCode, 400, 'customerData.country debe rechazarse (nunca lo admite el draft)');
+    // country con un código de la allowlist (informe de saneamiento de país)
+    // -> aceptado end-to-end vía el handler HTTP real.
+    const patchOtherCountryRes = makeRes();
+    await handlers.updateCustomerDataHandler(makeReq({ accessToken, customerData: { name: 'A', email: 'a@b.com', phone: '1', address: '2', city: '3', zip: '4', country: 'PT' } }), patchOtherCountryRes);
+    eq(patchOtherCountryRes.statusCode, 200, 'customerData.country="PT" (allowlist soportada) debe aceptarse end-to-end');
+
+    // country fuera de la allowlist server-side -> rechazado por checkoutDrafts
+    // (validateCustomerData contra config/checkout-countries.js), no basta con
+    // confiar en el <select> del frontend.
+    const patchInvalidCountryRes = makeRes();
+    await handlers.updateCustomerDataHandler(makeReq({ accessToken, customerData: { name: 'A', email: 'a@b.com', phone: '1', address: '2', city: '3', zip: '4', country: 'US' } }), patchInvalidCountryRes);
+    eq(patchInvalidCountryRes.statusCode, 400, 'customerData.country="US" (fuera de la allowlist ES/PT/FR/CH/DE/IT) debe rechazarse end-to-end');
 
     services.stripe._setStatus(paymentIntentId, 'succeeded');
     const confirmRes = makeRes();

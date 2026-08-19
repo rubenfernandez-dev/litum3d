@@ -73,11 +73,14 @@ class ImageReferenceValidationError extends Error {
 // (que exige todos los campos no vacíos: esa es la validación del endpoint de
 // actualización explícita, sección 14) — solo se filtra a las claves
 // permitidas y se completan con '' las ausentes, igual que el snapshot vacío
-// de ejemplo ya documentado en checkout-drafts.js.
-const CUSTOMER_DATA_FIELDS = ['name', 'email', 'phone', 'address', 'city', 'zip'];
+// de ejemplo ya documentado en checkout-drafts.js. "country" se filtra/tipa
+// igual que el resto aquí (sin comprobar todavía que pertenezca a la
+// allowlist -- eso es exclusivamente responsabilidad de
+// checkout-drafts#validateCustomerData, ver informe de saneamiento de país).
+const CUSTOMER_DATA_FIELDS = ['name', 'email', 'phone', 'address', 'city', 'zip', 'country'];
 
 function normalizeInitialCustomerData(raw) {
-  const empty = { name: '', email: '', phone: '', address: '', city: '', zip: '' };
+  const empty = { name: '', email: '', phone: '', address: '', city: '', zip: '', country: '' };
   if (raw === undefined || raw === null) return empty;
   if (typeof raw !== 'object' || Array.isArray(raw)) {
     throw new CheckoutPaymentError('customerData debe ser un objeto', { field: 'customerData' });

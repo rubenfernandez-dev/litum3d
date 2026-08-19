@@ -23,10 +23,6 @@ const { DRAFT_STATUS } = checkoutDrafts;
 const { validatePaymentIntentForDraft, PaymentIntentValidationError } = require('./checkout-payment');
 const { extractPersistableImageRuta } = require('./uploads-storage');
 
-// Server-controlled temporary checkout country.
-// Revisit with international shipping/tax implementation.
-const CHECKOUT_COUNTRY_CODE = 'CH';
-
 // estado 1 = Pendiente / "Pedido recibido, pendiente de confirmación"
 // (ver estado_pedido seed). TODO(B-futuro): revisar si un pedido creado con
 // el pago ya succeeded debería nacer en otro estado; P0E-B4A NO cambia esto
@@ -285,7 +281,19 @@ async function finalizePaidCheckout(paymentIntent, options = {}) {
           lockedSnapshot.customerData?.address || null,
           lockedSnapshot.customerData?.city || null,
           lockedSnapshot.customerData?.zip || null,
-          CHECKOUT_COUNTRY_CODE,
+          // El país viene del customerData YA VALIDADO del draft
+          // (services/checkout-drafts.js#validateCustomerData garantiza,
+          // para cualquier draft que pasó por el PATCH real de checkout,
+          // que es uno de config/checkout-countries.js#ALLOWED_CHECKOUT_COUNTRIES
+          // -- nunca se revalida aquí, igual que name/email/phone tampoco
+          // se re-comprueban en este punto). Un draft legacy creado ANTES
+          // de esta corrección (o cualquier snapshot sin customerData.country
+          // por la razón que sea) persiste NULL, nunca un país inventado o
+          // asumido: pedidos.customer_country ya es nullable (sin NOT NULL
+          // en database/schema.sql), así que NULL es una representación
+          // honesta de "país desconocido", no un dato incorrecto -- no se
+          // convierten silenciosamente pedidos legacy en CH.
+          lockedSnapshot.customerData?.country || null,
           `Checkout draft #${draft.id}`,
           paymentIntent.id,
           // ISO 4217 en mayúsculas para persistencia (Stripe/config exigen
@@ -380,7 +388,6 @@ function isDuplicatePaymentIntentEntry(err) {
 module.exports = {
   CentsRangeError,
   FinalizationIntegrityError,
-  CHECKOUT_COUNTRY_CODE,
   assertFitsDecimal10_2,
   centsToDecimalString,
   finalizePaidCheckout

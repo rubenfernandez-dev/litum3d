@@ -219,12 +219,21 @@ async function checkSnapshot() {
 
   const emptyCustomerSnapshot = await buildCanonicalCheckoutSnapshot([{ productId: 8, quantity: 1 }], null, options);
   eq(emptyCustomerSnapshot.customerData.name, '', 'customerData inicial vacío debe permitirse (draft puede crearse antes del formulario)');
-  eq(Object.keys(emptyCustomerSnapshot.customerData).sort().join(','), 'address,city,email,name,phone,zip', 'customerData debe tener exactamente los 6 campos, sin country');
+  eq(emptyCustomerSnapshot.customerData.country, '', 'customerData.country inicial vacío debe permitirse igual que el resto de campos (el país llega más tarde, vía PATCH)');
+  eq(Object.keys(emptyCustomerSnapshot.customerData).sort().join(','), 'address,city,country,email,name,phone,zip', 'customerData debe tener exactamente los 7 campos, país incluido (ver informe de saneamiento de país)');
+
+  // "country" ya NO es un campo no permitido en la creación inicial del
+  // draft (sección 5 del informe de saneamiento de país): se filtra/tipa
+  // igual que el resto, sin validar todavía contra la allowlist -- esa
+  // comprobación es exclusiva de checkout-drafts#validateCustomerData
+  // (PATCH explícito), no de esta construcción inicial opcional.
+  const snapshotWithCountry = await buildCanonicalCheckoutSnapshot([{ productId: 8, quantity: 1 }], { country: 'CH' }, options);
+  eq(snapshotWithCountry.customerData.country, 'CH', 'customerData.country se acepta y se conserva al construir el snapshot inicial');
 
   await rejects(
-    () => buildCanonicalCheckoutSnapshot([{ productId: 8, quantity: 1 }], { country: 'CH' }, options),
+    () => buildCanonicalCheckoutSnapshot([{ productId: 8, quantity: 1 }], { country: 5 }, options),
     CheckoutPaymentError,
-    'customerData con un campo no permitido (country) debe rechazarse al construir el snapshot'
+    'customerData.country con un tipo no-string debe rechazarse igual que cualquier otro campo'
   );
 
   // Caso crítico: retry del mismo draft debe usar el snapshot persistido,
@@ -457,7 +466,7 @@ async function checkCustomerDataGuard() {
 
   const prepared = await prepareCanonicalCheckout({ idempotencyKey, accessToken, selections: sampleSelections() }, options);
 
-  const customerData = { name: 'Ana Muster', email: 'ana@example.com', phone: '+41791234567', address: 'Calle 1', city: 'Zürich', zip: '8001' };
+  const customerData = { name: 'Ana Muster', email: 'ana@example.com', phone: '+41791234567', address: 'Calle 1', city: 'Zürich', zip: '8001', country: 'CH' };
 
   // payment_pending (PI creado, requires_payment_method) -> permitido.
   const updated = await updateCheckoutCustomerData({ accessToken, customerData }, options);
@@ -490,6 +499,36 @@ async function checkCustomerDataGuard() {
 }
 
 // =======================================================================
+// Informe de saneamiento de país, secciones 12/14: PAÍS y MONEDA son
+// conceptos independientes. Para cada uno de los seis países soportados
+// (ES/PT/FR/CH/DE/IT), seleccionarlo NUNCA debe cambiar la moneda del
+// PaymentIntent -- config/pricing.js#currency ('eur') es la única fuente,
+// nunca CHF ni ninguna conversión. Recorre el flujo real: prepare -> PATCH
+// customer-data con ese país -> el PaymentIntent (ya creado por Stripe)
+// sigue en 'eur'.
+// =======================================================================
+async function checkCountryNeverChangesCurrency() {
+  for (const country of ['ES', 'PT', 'FR', 'CH', 'DE', 'IT']) {
+    const options = baseOptions();
+    const accessToken = generateAccessToken();
+
+    const prepared = await prepareCanonicalCheckout(
+      { idempotencyKey: `currency-${country}`, accessToken, selections: sampleSelections() },
+      options
+    );
+    eq(prepared.snapshot.currency, 'eur', `país="${country}": snapshot.currency debe ser 'eur' ANTES de seleccionar país (config/pricing.js, sin relación con country)`);
+
+    const customerData = { name: 'Cliente', email: 'c@example.com', phone: '+41 79 000 00 00', address: 'Calle 1', city: 'Ciudad', zip: '0000', country };
+    const updated = await updateCheckoutCustomerData({ accessToken, customerData }, options);
+    eq(updated.snapshot.customerData.country, country, `país="${country}": customerData.country se guarda tal cual`);
+    eq(updated.snapshot.currency, 'eur', `país="${country}": snapshot.currency SIGUE siendo 'eur' después de seleccionar el país (país y moneda son independientes)`);
+
+    const pi = await options.stripe.paymentIntents.retrieve(prepared.paymentIntentId);
+    eq(pi.currency, 'eur', `país="${country}": el PaymentIntent de Stripe ya creado sigue en currency='eur', nunca 'chf'`);
+  }
+}
+
+// =======================================================================
 async function main() {
   console.log('P0E-B4A - snapshot canónico');
   await checkSnapshot();
@@ -501,6 +540,8 @@ async function main() {
   await checkAmbiguousStripeFailure();
   console.log('P0E-B4A - customerData con guard de Stripe');
   await checkCustomerDataGuard();
+  console.log('Informe de saneamiento de país - los 6 países soportados nunca cambian la moneda (siempre EUR)');
+  await checkCountryNeverChangesCurrency();
   console.log(`OK: ${checks} comprobaciones sobre orquestación checkout+Stripe (services/checkout-payment.js).`);
 }
 

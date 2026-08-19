@@ -17,7 +17,6 @@ const assert = require('assert');
 const {
   CentsRangeError,
   FinalizationIntegrityError,
-  CHECKOUT_COUNTRY_CODE,
   assertFitsDecimal10_2,
   centsToDecimalString,
   finalizePaidCheckout
@@ -174,7 +173,7 @@ function buildSnapshot(overrides = {}) {
   return Object.assign({
     schemaVersion: 1,
     currency: 'eur',
-    customerData: { name: 'Ana Muster', email: 'ana@example.com', phone: '+41791234567', address: 'Bahnhofstrasse 1', city: 'Zürich', zip: '8001' },
+    customerData: { name: 'Ana Muster', email: 'ana@example.com', phone: '+41791234567', address: 'Bahnhofstrasse 1', city: 'Zürich', zip: '8001', country: 'CH' },
     items: [{
       productId: 8, productName: 'Litofanía Circular',
       basePriceCents: 5000, modelId: 3, modelName: 'Modelo Redondo', modelDeltaCents: 500,
@@ -274,7 +273,7 @@ async function checkFinalizationHappyPathAndValidation() {
   const orderRow = pool._state.pedidos.get(result.orderId);
   eq(orderRow.total, centsToDecimalStringLocal(draft.snapshot.totals.totalCents), 'pedidos.total debe venir del snapshot, no de ningún input externo');
   eq(orderRow.customer_name, 'Ana Muster', 'customer_name debe venir de snapshot.customerData');
-  eq(orderRow.customer_country, CHECKOUT_COUNTRY_CODE, 'customer_country debe ser el valor controlado por servidor (CH), no del cliente');
+  eq(orderRow.customer_country, 'CH', 'customer_country debe venir de snapshot.customerData.country (ya validado por checkout-drafts#validateCustomerData), no de un valor forzado');
   eq(orderRow.stripe_payment_intent_id, 'pi_ok', 'stripe_payment_intent_id debe guardarse en pedidos');
   eq(orderRow.estado_id, 1, 'estado_id debe seguir siendo 1 (comportamiento actual sin cambios en B4A)');
   eq(orderRow.currency, 'EUR', 'pedidos.currency debe persistirse en mayúsculas ISO desde snapshot.currency (EUR-ONLY-01)');
@@ -458,6 +457,38 @@ async function checkConvertedWithoutOrderIsIntegrityError() {
 }
 
 // =======================================================================
+// =======================================================================
+// País (informe de saneamiento de país, secciones 7/12): viaja desde
+// snapshot.customerData.country hasta pedidos.customer_country tal cual,
+// para cualquiera de los seis países soportados; un draft legacy sin
+// country persiste NULL, nunca un país asumido/inventado.
+// =======================================================================
+async function checkCountryPersistence() {
+  const pool = makeFakePool();
+
+  for (const country of ['ES', 'PT', 'FR', 'CH', 'DE', 'IT']) {
+    const snapshot = buildSnapshot({
+      customerData: { name: 'Ana Muster', email: 'ana@example.com', phone: '+41791234567', address: 'Bahnhofstrasse 1', city: 'Zürich', zip: '8001', country }
+    });
+    const draft = seedValidDraft(pool, { paymentIntentId: `pi_country_${country}`, snapshot });
+    const pi = buildPaymentIntent({ id: `pi_country_${country}`, draftId: draft.id, amount: draft.snapshot.totals.totalCents, status: 'succeeded' });
+    const result = await finalizePaidCheckout(pi, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) });
+    const orderRow = pool._state.pedidos.get(result.orderId);
+    eq(orderRow.customer_country, country, `country="${country}": pedidos.customer_country debe coincidir EXACTAMENTE con el país seleccionado`);
+  }
+
+  // Legacy (sección 7): un draft/snapshot creado ANTES de esta corrección,
+  // sin customerData.country, debe persistir NULL -- nunca CH ni ningún
+  // otro país asumido silenciosamente.
+  const legacySnapshot = buildSnapshot();
+  delete legacySnapshot.customerData.country;
+  const legacyDraft = seedValidDraft(pool, { paymentIntentId: 'pi_legacy_no_country', snapshot: legacySnapshot });
+  const legacyPi = buildPaymentIntent({ id: 'pi_legacy_no_country', draftId: legacyDraft.id, amount: legacyDraft.snapshot.totals.totalCents, status: 'succeeded' });
+  const legacyResult = await finalizePaidCheckout(legacyPi, { pool, draftsDataAccess: makeDraftsDataAccessView(pool) });
+  const legacyOrderRow = pool._state.pedidos.get(legacyResult.orderId);
+  eq(legacyOrderRow.customer_country, null, 'draft legacy sin customerData.country debe persistir NULL, nunca CH ni otro país asumido silenciosamente');
+}
+
 async function main() {
   console.log('P0E-B4A - conversión rappen -> DECIMAL(10,2)');
   checkDecimalConversion();
@@ -473,6 +504,8 @@ async function main() {
   await checkRevalidatesAgainstLockedDraft();
   console.log('P0E-B4A - finalización: converted sin pedido asociado es error de integridad');
   await checkConvertedWithoutOrderIsIntegrityError();
+  console.log('Informe de saneamiento de país - persistencia de customer_country (6 países + legacy)');
+  await checkCountryPersistence();
   console.log(`OK: ${checks} comprobaciones sobre finalización de checkout (services/checkout-finalization.js).`);
 }
 

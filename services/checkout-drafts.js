@@ -14,6 +14,7 @@
 
 const crypto = require('crypto');
 const { pool: defaultPool } = require('../config/db');
+const { ALLOWED_CHECKOUT_COUNTRIES, isAllowedCheckoutCountry } = require('../config/checkout-countries');
 
 // --- Estados -------------------------------------------------------------
 
@@ -337,11 +338,14 @@ function computeSelectionsFingerprint(selections) {
 
 // --- Validación de customerData ---------------------------------------------
 
-// Mismos 6 campos que envía hoy public/js/checkout.js (getCustomerData) y
+// Mismos 7 campos que envía hoy public/js/checkout.js (getCustomerData) y
 // mismos límites que las columnas customer_* ya existentes en `pedidos`
-// (database/schema.sql). Deliberadamente NO se admite "country" (ver ticket #13).
-const CUSTOMER_DATA_FIELDS = ['name', 'email', 'phone', 'address', 'city', 'zip'];
-const CUSTOMER_FIELD_LIMITS = { name: 150, email: 150, phone: 30, address: 255, city: 120, zip: 20 };
+// (database/schema.sql). "country" SÍ se admite (ver informe de saneamiento
+// de país que retiró la restricción del antiguo ticket #13): el límite de
+// 2 caracteres es solo un tope de longitud defensivo -- la validación real
+// de qué códigos se aceptan es la allowlist de abajo, no este límite.
+const CUSTOMER_DATA_FIELDS = ['name', 'email', 'phone', 'address', 'city', 'zip', 'country'];
+const CUSTOMER_FIELD_LIMITS = { name: 150, email: 150, phone: 30, address: 255, city: 120, zip: 20, country: 2 };
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateCustomerData(raw) {
@@ -370,6 +374,16 @@ function validateCustomerData(raw) {
   }
   if (!EMAIL_REGEX.test(normalized.email)) {
     throw new DraftValidationError('customerData.email no tiene un formato válido', { field: 'email' });
+  }
+  // No basta con confiar en el <select> del frontend (sección 2 del informe
+  // de saneamiento de país): esta es la ÚNICA comprobación real de qué
+  // países se aceptan. Código ISO alpha-2 exacto (mayúsculas, sin alias de
+  // nombre como "España") y perteneciente a la allowlist server-side.
+  if (!isAllowedCheckoutCountry(normalized.country)) {
+    throw new DraftValidationError(
+      `customerData.country debe ser uno de: ${ALLOWED_CHECKOUT_COUNTRIES.join(', ')}`,
+      { field: 'country' }
+    );
   }
   return normalized;
 }

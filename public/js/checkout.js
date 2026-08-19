@@ -471,9 +471,19 @@ async function handleCheckout(e) {
     return;
   }
 
-  // country NUNCA se envía al draft: B3/B4A no lo admite en customerData (es
-  // server-controlled, ver services/checkout-finalization.js#CHECKOUT_COUNTRY_CODE).
-  const { country, ...customerDataForDraft } = getCustomerData(form);
+  // El país seleccionado por el cliente viaja tal cual hasta el pedido (ver
+  // informe de saneamiento de país): #customer_country es un <select>
+  // required sin opción preseleccionada (views/checkout*.html), así que
+  // form.checkValidity() de arriba ya garantiza una selección real antes de
+  // llegar aquí. Defensa adicional por si llega vacío de todos modos (DOM
+  // manipulado): bloquear aquí, en el único punto que construye el payload
+  // real, evita un error menos claro para el usuario en el PATCH.
+  const customerDataForDraft = getCustomerData(form);
+  if (!customerDataForDraft.country) {
+    statusDiv.className = 'status error';
+    statusDiv.textContent = '✗ Selecciona un país de envío.';
+    return;
+  }
 
   submitBtn.disabled = true;
   submitBtn.textContent = 'Procesando...';
@@ -538,7 +548,7 @@ function getCustomerData(form) {
     address: form?.customer_address?.value || '',
     city: form?.customer_city?.value || '',
     zip: form?.customer_zip?.value || '',
-    country: 'CH'
+    country: form?.customer_country?.value || ''
   };
 }
 

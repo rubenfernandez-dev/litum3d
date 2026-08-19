@@ -83,7 +83,18 @@
             Código Postal *
             <input type="text" name="customer_zip" required />
           </label>
-          <input type="hidden" name="customer_country" value="CH" />
+          <label>
+            País *
+            <select name="customer_country" id="customer_country" required>
+              <option value="" selected disabled>Selecciona tu país</option>
+              <option value="ES">España</option>
+              <option value="PT">Portugal</option>
+              <option value="FR">Francia</option>
+              <option value="CH">Suiza</option>
+              <option value="DE">Alemania</option>
+              <option value="IT">Italia</option>
+            </select>
+          </label>
 
           <h3 style="color: var(--gold); margin-top: 2rem;">Datos de Pago</h3>
 

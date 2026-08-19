@@ -156,7 +156,7 @@ function sampleSnapshot(overrides = {}) {
   return Object.assign({
     schemaVersion: 1,
     currency: 'eur',
-    customerData: { name: '', email: '', phone: '', address: '', city: '', zip: '' },
+    customerData: { name: '', email: '', phone: '', address: '', city: '', zip: '', country: '' },
     items: [],
     totals: {}
   }, overrides);
@@ -169,7 +169,8 @@ function sampleCustomerData(overrides = {}) {
     phone: '+41 79 123 45 67',
     address: 'Bahnhofstrasse 1',
     city: 'Zürich',
-    zip: '8001'
+    zip: '8001',
+    country: 'CH'
   }, overrides);
 }
 
@@ -564,11 +565,38 @@ async function checkCustomerData() {
     DraftValidationError,
     'zip vacío debe rechazarse'
   );
+  // País (sección 5 del informe de saneamiento de país): "country" ya es un
+  // campo admitido y obligatorio -- ausente, vacío, no-string o fuera de la
+  // allowlist server-side (config/checkout-countries.js) se rechaza igual
+  // que cualquier otro campo obligatorio; no basta con confiar en el
+  // <select> del frontend.
   await rejects(
-    () => updateCustomerDataByAccessToken(draftForValidation.accessToken, { ...sampleCustomerData(), country: 'CH' }, { dataAccess }),
+    () => updateCustomerDataByAccessToken(draftForValidation.accessToken, sampleCustomerData({ country: '' }), { dataAccess }),
     DraftValidationError,
-    'un campo inesperado como "country" debe rechazarse (no se admite selector de país)'
+    'country vacío debe rechazarse'
   );
+  for (const invalidCountry of ['US', 'GB', 'XX', 'España', 'ch', 'CHE']) {
+    await rejects(
+      () => updateCustomerDataByAccessToken(draftForValidation.accessToken, sampleCustomerData({ country: invalidCountry }), { dataAccess }),
+      DraftValidationError,
+      `country="${invalidCountry}" (fuera de la allowlist ES/PT/FR/CH/DE/IT) debe rechazarse`
+    );
+  }
+  await rejects(
+    () => updateCustomerDataByAccessToken(draftForValidation.accessToken, { ...sampleCustomerData(), country: undefined }, { dataAccess }),
+    DraftValidationError,
+    'country ausente (undefined) debe rechazarse igual que cualquier otro campo obligatorio faltante'
+  );
+  await rejects(
+    () => updateCustomerDataByAccessToken(draftForValidation.accessToken, sampleCustomerData({ country: null }), { dataAccess }),
+    DraftValidationError,
+    'country=null debe rechazarse'
+  );
+
+  for (const validCountry of ['ES', 'PT', 'FR', 'CH', 'DE', 'IT']) {
+    const result = await updateCustomerDataByAccessToken(draftForValidation.accessToken, sampleCustomerData({ country: validCountry }), { dataAccess });
+    eq(result.snapshot.customerData.country, validCountry, `country="${validCountry}" (allowlist soportada) debe aceptarse y conservarse exactamente`);
+  }
 }
 
 // =======================================================================
