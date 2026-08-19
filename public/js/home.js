@@ -2,8 +2,7 @@
 // La lógica del modal de personalización (customizationState, pricingConfig,
 // openCustomization, cálculo de precio, extras, confirmCustomization, etc.)
 // vive en public/js/customization.js, compartida con /shop -- no duplicarla
-// aquí. Este archivo solo gestiona Destacados/FAQ/newsletter/reseñas,
-// propios de la Home.
+// aquí. Este archivo solo gestiona Destacados/FAQ/reseñas, propios de la Home.
 let featuredProductsCache = [];
 
 async function loadFeaturedProducts() {
@@ -102,37 +101,6 @@ function toggleFAQ(button) {
   if (!isActive) {
     faqItem.classList.add('active');
   }
-}
-
-// Newsletter subscription
-function subscribeNewsletter(event) {
-  event.preventDefault();
-  const form = event.target;
-  const email = form.querySelector('input[type="email"]').value;
-  const button = form.querySelector('button');
-
-  const originalText = button.textContent;
-  button.textContent = '⏳ Suscribiendo...';
-  button.disabled = true;
-
-  // Store in localStorage (or send to backend if you add an endpoint)
-  const subscribers = JSON.parse(localStorage.getItem('newsletter_subscribers') || '[]');
-  if (!subscribers.includes(email)) {
-    subscribers.push(email);
-    localStorage.setItem('newsletter_subscribers', JSON.stringify(subscribers));
-  }
-
-  setTimeout(() => {
-    button.textContent = '✓ Suscrito!';
-    button.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
-
-    setTimeout(() => {
-      form.reset();
-      button.textContent = originalText;
-      button.style.background = '';
-      button.disabled = false;
-    }, 2000);
-  }, 500);
 }
 
 // Cargar reseñas destacadas en la página de inicio
