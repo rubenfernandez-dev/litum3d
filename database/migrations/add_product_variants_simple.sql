@@ -75,20 +75,30 @@ ALTER TABLE detalle_pedidos ADD COLUMN combination_id INT;
 ALTER TABLE detalle_pedidos ADD INDEX idx_combination_id (combination_id);
 ALTER TABLE detalle_pedidos ADD FOREIGN KEY (combination_id) REFERENCES product_variant_combinations(id) ON DELETE SET NULL;
 
--- EJEMPLO DE DATOS - DESCOMENTA PARA PROBAR
-INSERT INTO product_variant_types (product_id, nombre, descripcion, is_required, display_order) 
-VALUES 
-  (1, 'Base', 'Tipo de base del producto', TRUE, 1),
-  (1, 'Forma', 'Forma del producto', TRUE, 2);
-
-INSERT INTO product_variant_options (variant_type_id, nombre, descripcion, price_delta, stock, display_order) 
-VALUES 
-  (1, 'Madera', 'Base de madera natural', 5.00, 20, 1),
-  (1, 'Plástico', 'Base de plástico reforzado', 2.00, 30, 2),
-  (1, 'Metal', 'Base de metal cromado', 8.00, 15, 3);
-
-INSERT INTO product_variant_options (variant_type_id, nombre, descripcion, price_delta, stock, display_order) 
-VALUES 
-  (2, 'Cilíndrica', 'Forma cilíndrica estándar', 0.00, 25, 1),
-  (2, 'Cuadrada', 'Forma cuadrada moderna', 3.00, 20, 2),
-  (2, 'Hexagonal', 'Forma hexagonal única', 4.50, 15, 3);
+-- EJEMPLO DE DATOS - SOLO DOCUMENTACIÓN, NO EJECUTABLE.
+-- ===================================================================
+-- Igual que en add_product_variants.sql (ver ese archivo para el detalle
+-- del incidente INCIDENT-01/INCIDENT-02): product_variant_options no tiene
+-- UNIQUE(variant_type_id, nombre), así que un INSERT sin guardas aquí crea
+-- filas nuevas cada vez que se reejecuta esta migración. Además, la forma
+-- "Cuadrada" del ejemplo original quedó retirada de la oferta comercial
+-- (ver sección 1 del informe de retirada) -- sembrarla de nuevo en un
+-- entorno recién creado reintroduciría una opción que ya no debe ofrecerse.
+-- Si en el futuro se necesitan datos de ejemplo, insértalos a mano una vez
+-- vía el panel de admin, no reactivando estos INSERT.
+--
+-- INSERT INTO product_variant_types (product_id, nombre, descripcion, is_required, display_order)
+-- VALUES
+--   (1, 'Base', 'Tipo de base del producto', TRUE, 1),
+--   (1, 'Forma', 'Forma del producto', TRUE, 2);
+--
+-- INSERT INTO product_variant_options (variant_type_id, nombre, descripcion, price_delta, stock, display_order)
+-- VALUES
+--   (1, 'Madera', 'Base de madera natural', 5.00, 20, 1),
+--   (1, 'Plástico', 'Base de plástico reforzado', 2.00, 30, 2),
+--   (1, 'Metal', 'Base de metal cromado', 8.00, 15, 3);
+--
+-- INSERT INTO product_variant_options (variant_type_id, nombre, descripcion, price_delta, stock, display_order)
+-- VALUES
+--   (2, 'Cilíndrica', 'Forma cilíndrica estándar', 0.00, 25, 1);
+-- ===================================================================

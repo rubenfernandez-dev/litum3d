@@ -8,7 +8,14 @@
   migraciones (ver INCIDENT-01/INCIDENT-02) creó filas duplicadas reales.
   Los INSERT se convirtieron en comentarios/documentación no ejecutable.
 
-  Este test evita que vuelvan a colarse como SQL ejecutable: parsea el
+  database/migrations/add_product_variants_simple.sql es la migración
+  gemela (variante MySQL 5.7) del mismo alta de variantes: tenía el mismo
+  problema (sin guarda alguna, ni siquiera INSERT IGNORE) y además sembraba
+  la forma "Cuadrada", retirada de la oferta comercial (ver sección 1 del
+  informe de retirada) -- se neutralizó con el mismo tratamiento al
+  detectarlo durante esa retirada, y queda cubierta por el mismo guard.
+
+  Este test evita que vuelvan a colarse como SQL ejecutable: parsea cada
   archivo quitando comentarios de línea y de bloque estilo C, de forma
   consciente de comillas simples (para no confundir un "--" dentro de un
   literal de texto con el inicio de un comentario), y falla si el SQL
@@ -21,7 +28,11 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const MIGRATION_PATH = path.join(__dirname, '..', 'database', 'migrations', 'add_product_variants.sql');
+const MIGRATIONS_DIR = path.join(__dirname, '..', 'database', 'migrations');
+const MIGRATION_PATHS = [
+  path.join(MIGRATIONS_DIR, 'add_product_variants.sql'),
+  path.join(MIGRATIONS_DIR, 'add_product_variants_simple.sql')
+];
 const FORBIDDEN_TABLES = ['product_variant_types', 'product_variant_options'];
 
 // Quita comentarios de bloque y de línea, consciente de comillas simples,
@@ -87,16 +98,19 @@ function main() {
     'un "--" dentro de un literal de texto NO debe cortar la sentencia SQL (falso comentario)'
   );
 
-  // --- Comprobación real sobre el archivo de migración ---
-  const sql = fs.readFileSync(MIGRATION_PATH, 'utf8');
-  for (const table of FORBIDDEN_TABLES) {
-    ok(
-      !findExecutableInsertsInto(sql, table),
-      `database/migrations/add_product_variants.sql NO debe contener un INSERT ejecutable sobre ${table} (datos de ejemplo deben quedar solo como comentario/documentación)`
-    );
+  // --- Comprobación real sobre cada archivo de migración ---
+  for (const migrationPath of MIGRATION_PATHS) {
+    const relPath = path.relative(path.join(__dirname, '..'), migrationPath).replace(/\\/g, '/');
+    const sql = fs.readFileSync(migrationPath, 'utf8');
+    for (const table of FORBIDDEN_TABLES) {
+      ok(
+        !findExecutableInsertsInto(sql, table),
+        `${relPath} NO debe contener un INSERT ejecutable sobre ${table} (datos de ejemplo deben quedar solo como comentario/documentación)`
+      );
+    }
   }
 
-  console.log(`OK: ${checks} comprobaciones sobre ausencia de INSERT de demo ejecutables en add_product_variants.sql.`);
+  console.log(`OK: ${checks} comprobaciones sobre ausencia de INSERT de demo ejecutables en las migraciones de variantes.`);
 }
 
 main();
