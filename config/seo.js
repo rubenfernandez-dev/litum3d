@@ -12,7 +12,7 @@ const seoConfig = {
   contact: {
     phone: '+41772186229',
     email: 'contact@example.com',
-    address: 'Berna, Suiza',
+    address: 'Lüscherz, Suiza',
     hours: 'Monday-Friday 9:00-18:00'
   },
 

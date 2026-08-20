@@ -2,7 +2,9 @@
   LITUM3D - Test de regresión: identificación legal del operador (informe
   "cerrar identificación legal del operador de LITUM3D", 2026-08-20) +
   correcciones finales de ubicación/jurisdicción (informe "correcciones
-  finales antes del push", 2026-08-20).
+  finales antes del push", 2026-08-20) + eliminación de la última
+  inconsistencia de ubicación en checkout/cart (informe "eliminar última
+  inconsistencia de ubicación", 2026-08-20).
 
   LITUM3D es actualmente una marca/nombre comercial, NO una sociedad
   constituida: el operador real es una persona física (Ruben Fernandez).
@@ -22,8 +24,9 @@
     - Terms: la cláusula de Jurisdicción ya NO fija Madrid/Zúrich como foro
       -- cláusula neutral, sin foro exclusivo ni arbitraje obligatorio.
     - Footer: la ubicación informal "Berna/Bern/Berne" se corrigió a
-      "Lüscherz" en todas las páginas públicas ES/DE/FR, EXCEPTO checkout/
-      cart (fuera de alcance explícito -- ver informe final).
+      "Lüscherz" en TODAS las páginas públicas ES/DE/FR, incluidos
+      checkout/cart (la exclusión previa se levantó exclusivamente para
+      esta línea de ubicación).
     - Sin ninguna grafía incorrecta de "Ruben Fernandez"/"Lüscherz"
       ("Fernnadez", "Lüscerz", "Luscherz").
 
@@ -183,39 +186,29 @@ function checkJurisdictionClauseIsNeutral() {
 
 // =======================================================================
 // 8) Footer: ubicación informal corregida de "Berna/Bern/Berne" a
-//    "Lüscherz" en todas las páginas públicas ES/DE/FR donde aparecía,
-//    EXCEPTO checkout/cart (NO TOCAR explícito del informe -- se documenta
-//    aquí como excepción deliberada, no como un olvido).
+//    "Lüscherz" en TODAS las páginas públicas ES/DE/FR donde aparecía --
+//    incluidos checkout/cart (informe "eliminar última inconsistencia de
+//    ubicación", 2026-08-20: la exclusión previa de checkout/cart se
+//    levantó exclusivamente para esta línea de ubicación).
 // =======================================================================
 const FOOTER_LOCATION_PAGES = {
-  '': { pages: ['about.html', 'contact.html', 'gallery.html', 'index.html', 'shop.html'], location: 'Lüscherz, Suiza' },
-  '-de': { pages: ['about-de.html', 'contact-de.html', 'gallery-de.html', 'index-de.html', 'shop-de.html'], location: 'Lüscherz, Schweiz' },
-  '-fr': { pages: ['about-fr.html', 'contact-fr.html', 'gallery-fr.html', 'index-fr.html', 'shop-fr.html'], location: 'Lüscherz, Suisse' }
+  '': { pages: ['about.html', 'cart.html', 'checkout.html', 'contact.html', 'gallery.html', 'index.html', 'shop.html'], location: 'Lüscherz, Suiza' },
+  '-de': { pages: ['about-de.html', 'cart-de.html', 'checkout-de.html', 'contact-de.html', 'gallery-de.html', 'index-de.html', 'shop-de.html'], location: 'Lüscherz, Schweiz' },
+  '-fr': { pages: ['about-fr.html', 'cart-fr.html', 'checkout-fr.html', 'contact-fr.html', 'gallery-fr.html', 'index-fr.html', 'shop-fr.html'], location: 'Lüscherz, Suisse' }
 };
-const CHECKOUT_CART_OUT_OF_SCOPE = ['checkout.html', 'checkout-de.html', 'checkout-fr.html', 'cart.html', 'cart-de.html', 'cart-fr.html'];
 
 function checkFooterLocationUpdatedToLuscherz() {
+  const inScope = new Set(Object.values(FOOTER_LOCATION_PAGES).flatMap(({ pages }) => pages));
   for (const { pages, location } of Object.values(FOOTER_LOCATION_PAGES)) {
     for (const file of pages) {
       const html = readView(file);
       ok(html.includes(`📍 ${location}`), `views/${file}: footer muestra la ubicación informal corregida "${location}"`);
     }
   }
-
-  const inScope = new Set(Object.values(FOOTER_LOCATION_PAGES).flatMap(({ pages }) => pages));
   for (const file of listPublicViews()) {
-    if (CHECKOUT_CART_OUT_OF_SCOPE.includes(file)) continue;
     if (!inScope.has(file)) continue;
     const html = readView(file);
     ok(!/Berna, Suiza|Bern, Schweiz|Berne, Suisse/.test(html), `views/${file}: ya no muestra "Berna/Bern/Berne" como ubicación informal`);
-  }
-
-  // checkout/cart quedan deliberadamente fuera de alcance (informe, sección
-  // "NO TOCAR": checkout, cart) -- se documentan aquí para que la excepción
-  // sea visible y no se confunda con un olvido en una futura revisión.
-  for (const file of CHECKOUT_CART_OUT_OF_SCOPE) {
-    const html = readView(file);
-    ok(/Berna, Suiza|Bern, Schweiz|Berne, Suisse/.test(html), `views/${file}: conserva deliberadamente "Berna/Bern/Berne" (checkout/cart fuera de alcance de esta corrección)`);
   }
 }
 
@@ -232,6 +225,19 @@ function checkNoMisspelledIdentityAnywhere() {
   }
 }
 
+// =======================================================================
+// 10) config/seo.js: el dato de contacto.address ya no es "Berna, Suiza"
+//     -- corregido a la ubicación real (informe "eliminar última
+//     inconsistencia de ubicación", 2026-08-20, sección 2). No se toca
+//     ningún otro campo SEO.
+// =======================================================================
+function checkSeoConfigAddressUpdated() {
+  delete require.cache[require.resolve('../config/seo')];
+  const seoConfig = require('../config/seo');
+  ok(seoConfig.contact.address === 'Lüscherz, Suiza', 'config/seo.js: contact.address es exactamente "Lüscherz, Suiza"');
+  ok(seoConfig.contact.address !== 'Berna, Suiza', 'config/seo.js: contact.address ya no es la ubicación desactualizada "Berna, Suiza"');
+}
+
 function main() {
   checkContactPagesShowOperatorIdentity();
   checkTermsPagesIdentifySeller();
@@ -242,8 +248,9 @@ function main() {
   checkJurisdictionClauseIsNeutral();
   checkFooterLocationUpdatedToLuscherz();
   checkNoMisspelledIdentityAnywhere();
+  checkSeoConfigAddressUpdated();
 
-  console.log(`OK: ${checks} comprobaciones sobre la identificación legal del operador de LITUM3D (Contact/Terms/Privacy ES/DE/FR, jurisdicción neutral, ubicación de footer corregida, sin forma societaria/número fiscal/grafías incorrectas).`);
+  console.log(`OK: ${checks} comprobaciones sobre la identificación legal del operador de LITUM3D (Contact/Terms/Privacy ES/DE/FR, jurisdicción neutral, ubicación de footer corregida en todo el sitio público, config/seo.js, sin forma societaria/número fiscal/grafías incorrectas).`);
 }
 
 main();
