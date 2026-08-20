@@ -486,9 +486,6 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
     `;
     }).join('');
 
-    const subtotal = total / 1.21;
-    const tax = total - subtotal;
-
     // Email to customer
     const customerEmailHTML = `
       <div style="background:#0f172a; padding:32px 16px; font-family:'Segoe UI',Arial,sans-serif; color:#e5e7eb;">
@@ -509,12 +506,6 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
 
             <div style="margin:18px 0; padding:14px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px;">
               <div style="font-weight:700; font-size:14px; color:#f8fafc;">Resumen de pago</div>
-              <div style="margin-top:8px; display:flex; justify-content:space-between; color:#cbd5f5; font-size:14px;">
-                <span>Base (sin IVA)</span><span>${symbol}${subtotal.toFixed(2)}</span>
-              </div>
-              <div style="margin-top:4px; display:flex; justify-content:space-between; color:#cbd5f5; font-size:14px;">
-                <span>IVA (21%)</span><span>${symbol}${tax.toFixed(2)}</span>
-              </div>
               <div style="margin-top:10px; display:flex; justify-content:space-between; font-weight:800; font-size:16px; color:#e0ad61;">
                 <span>TOTAL</span><span>${symbol}${total.toFixed(2)}</span>
               </div>
@@ -600,8 +591,6 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
         </table>
 
         <div style="text-align: right; margin-top: 20px;">
-          <p><strong>Base (sin IVA):</strong> ${symbol}${subtotal.toFixed(2)}</p>
-          <p><strong>IVA (21%):</strong> ${symbol}${tax.toFixed(2)}</p>
           <p style="font-size: 18px; color: #e0ad61;"><strong>TOTAL: ${symbol}${total.toFixed(2)}</strong></p>
         </div>
 

@@ -419,16 +419,8 @@ function renderOrderSummaryFromBreakdown(breakdown, cart) {
   summary.innerHTML = `
     ${rows}
     <div class="cart-summary-row">
-      <span>Base (sin IVA):</span>
-      <span>${formatCurrency(t.netCents, currency)}</span>
-    </div>
-    <div class="cart-summary-row">
       <span>Envío:</span>
       <span style="color: #90ee90;">${t.shippingCents > 0 ? formatCurrency(t.shippingCents, currency) : 'Gratis'}</span>
-    </div>
-    <div class="cart-summary-row">
-      <span>IVA:</span>
-      <span>${formatCurrency(t.taxCents, currency)}</span>
     </div>
     <div class="cart-summary-row total">
       <span>TOTAL:</span>

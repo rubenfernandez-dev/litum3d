@@ -130,7 +130,10 @@ async function main() {
     check(r3.totals.totalCents === 14985, 'Cantidad 3: totalCents = lineSubtotal (sin descuento)');
   }
 
-  // --- IVA (caso íntegro, línea compuesta) --------------------------
+  // --- Sin desglose fiscal (caso íntegro, línea compuesta) --------------
+  // LITUM3D no desglosa IVA (VAT_PERCENT=0, ver config/pricing.js): con
+  // este valor netCents === totalCents y taxCents === 0 siempre, para
+  // cualquier combinación de modelo/variantes/extras/cantidad.
   {
     const result = await price([{
       productId: 8, quantity: 2, modelId: 3, variantOptionIds: [7],
@@ -141,8 +144,8 @@ async function main() {
     check(line.lineSubtotalCents === 14190, 'lineSubtotal = 7095*2, sin descuento');
     check(result.totals.subtotalCents === 14190, 'subtotalCents');
     check(result.totals.totalCents === 14190, 'totalCents = subtotalCents (sin descuento)');
-    check(result.totals.netCents === 11727, 'IVA: netCents = round(14190*100/121) = 11727');
-    check(result.totals.taxCents === 2463, 'IVA: taxCents = 14190-11727 = 2463');
+    check(result.totals.netCents === result.totals.totalCents, 'Sin IVA: netCents === totalCents');
+    check(result.totals.taxCents === 0, 'Sin IVA: taxCents === 0');
   }
 
   // --- Seguridad: campos económicos heredados se rechazan, no se ignoran ---

@@ -25,7 +25,11 @@ module.exports = {
     adapter: 400
   },
 
-  // Porcentaje de IVA ya incluido en los precios almacenados (precio bruto).
-  // Entero para poder calcular en rappen sin depender del literal 1.21.
-  VAT_PERCENT: 21
+  // No VAT is currently itemized by LITUM3D. Product totals are final
+  // catalog amounts; destination import taxes/duties are outside the
+  // current pricing engine. VAT_PERCENT se mantiene en 0 (en vez de
+  // eliminar la propiedad) porque services/pricing.js sigue calculando
+  // netCents/taxCents a partir de ella (contrato interno existente); con 0,
+  // netCents === totalCents y taxCents === 0, sin desglose fiscal alguno.
+  VAT_PERCENT: 0
 };

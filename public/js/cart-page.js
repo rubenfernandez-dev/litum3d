@@ -70,20 +70,14 @@ function renderCartItems() {
   // Render summary
   const total = calculateCartTotalDisplay(cart, currency);
   const count = getCartCount();
-  const base = total / 1.21;
-  const iva = total - base;
   document.getElementById('summary-content').innerHTML = `
     <div class="cart-summary-row">
-      <span>Base (sin IVA) · ${count} artículos:</span>
-      <span>${currency.symbol} ${base.toFixed(2)}</span>
+      <span>Productos · ${count} artículos:</span>
+      <span>${currency.symbol} ${total.toFixed(2)}</span>
     </div>
     <div class="cart-summary-row">
       <span>Envío:</span>
       <span style="color: #90ee90;">Gratis</span>
-    </div>
-    <div class="cart-summary-row">
-      <span>IVA (21%):</span>
-      <span>${currency.symbol} ${iva.toFixed(2)}</span>
     </div>
     <div class="cart-summary-row total">
       <span>TOTAL:</span>

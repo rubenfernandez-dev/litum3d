@@ -175,20 +175,23 @@ function checkOnlyRealSwissPhone() {
 }
 
 // =======================================================================
-// 8) Guardas fiscales/pricing/checkout: NADA de esto se ha tocado aquí
+// 8) Guardas de checkout/pricing fuera de alcance de esta tarea de
+//    contenido: currency y países de checkout intactos. VAT_PERCENT=0 y el
+//    texto "IVA (21%)" ya no aparece porque un saneamiento fiscal técnico
+//    posterior eliminó ese desglose incorrecto (ver
+//    scripts/check-legal-consumer-corrections.js y
+//    scripts/check-pricing-engine.js para la cobertura de ese cambio).
 // =======================================================================
 function checkFiscalAndCheckoutUntouched() {
   const pricingConfig = require('../config/pricing');
-  ok(pricingConfig.VAT_PERCENT === 21, 'config/pricing.js: VAT_PERCENT sigue siendo 21 -- el cambio fiscal NO se aplica en esta tarea, solo se propuso');
+  ok(pricingConfig.VAT_PERCENT === 0, 'config/pricing.js: VAT_PERCENT es 0 (sin desglose de IVA)');
   ok(pricingConfig.currency === 'eur', "config/pricing.js: currency sigue siendo 'eur'");
 
   const { ALLOWED_CHECKOUT_COUNTRIES } = require('../config/checkout-countries');
   assert.deepStrictEqual([...ALLOWED_CHECKOUT_COUNTRIES], ['ES', 'PT', 'FR', 'CH', 'DE', 'IT'], 'config/checkout-countries.js: allowlist de países intacta');
   checks++;
 
-  // Los textos "IVA (21%)" siguen ahí a propósito (no se aplicó el cambio
-  // fiscal): esto es una comprobación de que NO se tocó, no de que esté bien.
-  ok(/IVA \(21%\)/.test(readView('terms-conditions.html')), 'terms-conditions.html: "IVA (21%)" sigue intacto (cambio fiscal NO aplicado en esta tarea)');
+  ok(!/IVA \(21%\)/.test(readView('terms-conditions.html')), 'terms-conditions.html: "IVA (21%)" ya no aparece (saneamiento fiscal técnico)');
 }
 
 function main() {
