@@ -29,7 +29,6 @@
 
 const express = require('express');
 const Stripe = require('stripe');
-const nodemailer = require('nodemailer');
 const path = require('path');
 const pricingConfig = require('../config/pricing');
 const defaultCheckoutPayment = require('../services/checkout-payment');
@@ -37,19 +36,22 @@ const defaultCheckoutFinalization = require('../services/checkout-finalization')
 const checkoutDrafts = require('../services/checkout-drafts');
 const { PricingValidationError } = require('../services/pricing');
 const uploadsStorage = require('../services/uploads-storage');
+const { getTransporter, getFromAddress } = require('../services/mailer');
+const { buildOrderConfirmationEmail, buildAdminNewOrderEmail } = require('../services/order-emails');
+const { SUPPORT_INFO } = require('../services/email-template');
 
 const defaultStripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
-// Email transporter configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER || 'admin@example.com',
-    pass: process.env.SMTP_PASS || ''
-  }
-});
+// Transporter capturado UNA VEZ al cargar este módulo (igual que el código
+// legacy que sustituye) -- scripts/check-admin-order-photos-retention.js
+// depende de este orden exacto: instala un nodemailer falso, borra este
+// módulo de require.cache y lo vuelve a requerir (capturando el fake AQUÍ,
+// de forma síncrona), y solo entonces restaura el nodemailer real -- el
+// envío real ocurre después, reusando este `transporter` ya creado. Llamar
+// a getTransporter() de forma perezosa dentro de sendConfirmationEmails
+// (en vez de aquí) haría que ese envío tardío viera el nodemailer YA
+// restaurado, rompiendo ese test.
+const transporter = getTransporter();
 
 // --- Validación de body HTTP (allowlist estricta) -----------------------------
 
@@ -190,6 +192,12 @@ function snapshotItemToEmailCartItem(item) {
   return {
     name: item.productName,
     modelName: item.modelName,
+    // Saneamiento de emails: variantes ("Base: Madera") y extras
+    // (upscale/qr/adapter) que la plantilla unificada (services/order-emails.js)
+    // ya sabe mostrar -- campo aditivo, no rompe el contrato existente de
+    // este adapter (name/modelName/notes/images/quantity/price).
+    variantSelections: item.variantSelections,
+    extras: item.extras,
     notes: item.notes,
     images: item.images,
     quantity: item.quantity,
@@ -203,7 +211,7 @@ function makeSendConfirmationEmailAdapter(sendConfirmationEmailsFn) {
   return async function sendConfirmationEmailAdapter({ orderId, snapshot, paymentIntent }) {
     const cartLikeItems = snapshot.items.map(snapshotItemToEmailCartItem);
     const totalDecimal = snapshot.totals.totalCents / 100;
-    await sendConfirmationEmailsFn(orderId, snapshot.customerData, cartLikeItems, totalDecimal, snapshot.currency);
+    await sendConfirmationEmailsFn(orderId, snapshot.customerData, cartLikeItems, totalDecimal, snapshot.currency, snapshot.totals.shippingCents);
   };
 }
 
@@ -453,173 +461,38 @@ function createStripeWebhookRouter(deps = {}) {
   return router;
 }
 
-// --- Email real (sin cambios de diseño respecto al sistema legacy) ------------
+// --- Email real (plantilla única, ver services/order-emails.js) ---------------
+//
+// Saneamiento del sistema de emails: el HTML/text de ambos correos (cliente
+// y Admin) ya no se construye aquí -- vive en services/order-emails.js sobre
+// la capa visual compartida services/email-template.js (mismo logo/colores
+// reales de LITUM3D, mismo footer con enlaces legales, mismo bloque de
+// soporte). Esta función solo adapta el shape legacy (cart/total en
+// decimal) al que esperan esos builders y sigue siendo la única responsable
+// de construir los attachments reales (fotos del pedido) -- eso NO cambia.
 
-async function sendConfirmationEmails(orderId, customerData, cart, total, selectedCurrency) {
+async function sendConfirmationEmails(orderId, customerData, cart, total, selectedCurrency, shippingCents = 0) {
   try {
-    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.BASE_URL || 'https://litum3d.com';
-    const logoUrl = process.env.LOGO_URL
-      ? process.env.LOGO_URL
-      : `${baseUrl.replace(/\/$/, '')}/img/logos/lineal.logo.png`;
-    const symbol = selectedCurrency === 'eur' ? '€' : selectedCurrency.toUpperCase();
-    // P0-FOTOS-01: cartHTML (compartido por el email de cliente Y el de
-    // admin) YA NO construye ningún enlace directo a la foto. item.images[].url
-    // es ahora una referencia privada (capability token de un solo archivo,
-    // ver services/uploads-storage.js) que dejaría de servir nada en cuanto
-    // caducara/rotara, y publicarla en un email (bandeja que puede
-    // reenviarse, indexarse, quedar en un backup) es exactamente la
-    // exposición que este ticket cierra. El admin ve las fotos desde el
-    // panel autenticado (enlace más abajo, en adminEmailHTML); el cliente ya
-    // tiene sus propias fotos en su dispositivo.
-    const cartHTML = cart.map(item => {
-      return `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">
-          ${escapeHtml(item.name)}${item.modelName ? ' · ' + escapeHtml(item.modelName) : ''}
-          ${item.notes ? `<br><small style="color:#666;">Notas: ${escapeHtml(item.notes)}</small>` : ''}
-          ${Array.isArray(item.images) && item.images.length ? `<br><small style="color:#666;">Imágenes: ${item.images.length}</small>` : ''}
-        </td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${symbol}${item.price.toFixed(2)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${symbol}${(item.price * item.quantity).toFixed(2)}</td>
-      </tr>
-    `;
-    }).join('');
+    const orderDate = new Date();
+    const items = cart.map(item => ({
+      productName: item.name,
+      modelName: item.modelName,
+      variantSelections: item.variantSelections,
+      extras: item.extras,
+      notes: item.notes,
+      quantity: item.quantity,
+      unitPriceCents: Math.round(item.price * 100)
+    }));
+    const totals = { shippingCents, totalCents: Math.round(total * 100) };
 
-    // Email to customer
-    const customerEmailHTML = `
-      <div style="background:#0f172a; padding:32px 16px; font-family:'Segoe UI',Arial,sans-serif; color:#e5e7eb;">
-        <div style="max-width:680px; margin:0 auto; background:#111827; border:1px solid rgba(255,255,255,0.08); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.45); overflow:hidden;">
-          <div style="background:linear-gradient(135deg,#0b1020,#1a1a2e); padding:18px 24px; display:flex; align-items:center; gap:12px;">
-            <div style="background:#ffffff; padding:6px 10px; border-radius:10px; display:flex; align-items:center;">
-              <img src="${logoUrl}" alt="LITUM3D" style="height:36px; width:auto; display:block;" />
-            </div>
-            <div>
-              <div style="font-size:18px; font-weight:700; color:#fff;">Pedido confirmado</div>
-              <div style="opacity:0.8; font-size:13px; color:#cbd5f5;">#${orderId} · Pago recibido</div>
-            </div>
-          </div>
-
-          <div style="padding:24px; line-height:1.6;">
-            <p style="margin:0 0 8px 0; font-size:15px; color:#e5e7eb;">Hola <strong>${escapeHtml(customerData.name)}</strong>,</p>
-            <p style="margin:0; color:#b6c2d9;">Gracias por tu compra en LITUM3D. Estamos preparando tu pedido.</p>
-
-            <div style="margin:18px 0; padding:14px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px;">
-              <div style="font-weight:700; font-size:14px; color:#f8fafc;">Resumen de pago</div>
-              <div style="margin-top:10px; display:flex; justify-content:space-between; font-weight:800; font-size:16px; color:#e0ad61;">
-                <span>TOTAL</span><span>${symbol}${total.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div style="margin-top:16px;">
-              <div style="font-weight:700; font-size:14px; color:#f8fafc; margin-bottom:10px;">Detalles del pedido</div>
-              <table style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.08);">
-                <thead>
-                  <tr style="background:rgba(255,255,255,0.04); border-bottom:1px solid rgba(255,255,255,0.08);">
-                    <th style="padding:10px; text-align:left; font-size:12px; color:#cbd5f5;">Producto</th>
-                    <th style="padding:10px; text-align:center; font-size:12px; color:#cbd5f5;">Cant.</th>
-                    <th style="padding:10px; text-align:right; font-size:12px; color:#cbd5f5;">Precio</th>
-                    <th style="padding:10px; text-align:right; font-size:12px; color:#cbd5f5;">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${cartHTML}
-                </tbody>
-              </table>
-            </div>
-
-            <div style="margin-top:18px; padding:12px 14px; background:rgba(224,173,97,0.08); border:1px solid rgba(224,173,97,0.35); border-radius:12px;">
-              <div style="font-weight:700; color:#f0c070; font-size:14px;">Datos de envío</div>
-              <div style="margin-top:6px; color:#d0d5e0; font-size:14px; line-height:1.5;">
-                ${escapeHtml(customerData.name)}<br>
-                ${escapeHtml(customerData.address)}<br>
-                ${escapeHtml(customerData.zip)} ${escapeHtml(customerData.city)}<br>
-                Teléfono: ${escapeHtml(customerData.phone)}
-              </div>
-            </div>
-
-            <p style="margin-top:18px; color:#b6c2d9; font-size:13px;">Si tienes dudas, responde a este correo o contáctanos y te ayudaremos.</p>
-
-            <div style="margin-top:14px;">
-              <a href="${baseUrl}" style="display:inline-block; padding:12px 18px; background:linear-gradient(135deg,#e0ad61,#f0c070); color:#1a1a2e; border-radius:10px; text-decoration:none; font-weight:800; font-size:14px;">Ir a LITUM3D</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    // Email to admin
-    const debugLines = cart.map(i => `${escapeHtml(i.name)} x${i.quantity} = ${(i.price * i.quantity).toFixed(2)}`).join(' | ');
-    const hasAnyImages = cart.some(item => Array.isArray(item.images) && item.images.length > 0);
-    // P0-FOTOS-01: el email de admin YA NO enlaza directamente a ninguna
-    // foto (ver cartHTML arriba). En su lugar, enlaza al panel Admin
-    // (requiere login) -- sin sesión, sin acceso. La vía oficial sigue
-    // siendo: correo avisa -> Admin autenticado -> pedido -> fotos. Las
-    // imágenes también siguen adjuntas directamente a este correo (ver
-    // bloque de attachments más abajo, sin cambios de comportamiento: ya
-    // leía el archivo real del disco, nunca dependió de la URL pública).
-    const adminPanelNotice = hasAnyImages
-      ? `<p style="margin-top: 16px;"><a href="${baseUrl}/admin" style="color:#1a1a2e; font-weight:700;">Ver imágenes del pedido en el panel Admin →</a></p>`
-      : '';
-    const adminEmailHTML = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1a1a2e;">¡Nuevo Pedido Pagado! #${orderId}</h2>
-        ${adminPanelNotice}
-
-        <h3 style="color: #e0ad61;">Cliente</h3>
-        <p>
-          Nombre: <strong>${escapeHtml(customerData.name)}</strong><br>
-          Email: <strong>${escapeHtml(customerData.email)}</strong><br>
-          Teléfono: ${escapeHtml(customerData.phone)}<br>
-          Dirección: ${escapeHtml(customerData.address)}<br>
-          ${escapeHtml(customerData.zip)} ${escapeHtml(customerData.city)}
-        </p>
-
-        <h3 style="margin-top: 20px; color: #e0ad61;">Artículos</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background-color: #f0f0f0;">
-              <th style="padding: 10px; text-align: left;">Producto</th>
-              <th style="padding: 10px; text-align: center;">Cantidad</th>
-              <th style="padding: 10px; text-align: right;">Precio</th>
-              <th style="padding: 10px; text-align: right;">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${cartHTML}
-          </tbody>
-        </table>
-
-        <div style="text-align: right; margin-top: 20px;">
-          <p style="font-size: 18px; color: #e0ad61;"><strong>TOTAL: ${symbol}${total.toFixed(2)}</strong></p>
-        </div>
-
-        <p style="margin-top: 12px; color: #888; background:#f6f6f6; padding:8px; border-radius:6px;">
-          <small><strong>DEBUG:</strong> Moneda=${selectedCurrency.toUpperCase()} | Líneas: ${debugLines} | Suma líneas=${total.toFixed(2)}</small>
-        </p>
-
-        <p style="margin-top: 20px; color: #666; background-color: #f9f9f9; padding: 10px;">
-          <small><strong>Acción necesaria:</strong> Prepara el envío y actualiza el estado del pedido.</small>
-        </p>
-      </div>
-    `;
-
-    // Send customer email
-    await transporter.sendMail({
-      from: process.env.SMTP_USER || 'noreply@litum3d.com',
-      to: customerData.email,
-      subject: `Confirmación de Pedido #${orderId} - LITUM3D`,
-      html: customerEmailHTML
-    });
-
-    // Build attachments for admin (uploaded images). P0-FOTOS-01: se
-    // resuelve el nombre físico con la MISMA validación segura que el resto
-    // del sistema (uploadsStorage.resolveCustomUploadPath -- basename +
-    // charset + contención de raíz + resolución de symlinks), en vez de
-    // construir el path a mano desde un valor que en última instancia viene
-    // del snapshot del cliente. img.filename (metadata, nunca autoridad de
-    // filesystem) es la fuente preferida; si faltara, se deriva del propio
-    // img.url/img (compatibilidad con snapshots ya existentes).
+    // P0-FOTOS-01: se resuelve el nombre físico con la MISMA validación
+    // segura que el resto del sistema (uploadsStorage.resolveCustomUploadPath
+    // -- basename + charset + contención de raíz + resolución de symlinks),
+    // en vez de construir el path a mano desde un valor que en última
+    // instancia viene del snapshot del cliente. img.filename (metadata,
+    // nunca autoridad de filesystem) es la fuente preferida; si faltara, se
+    // deriva del propio img.url/img (compatibilidad con snapshots ya
+    // existentes).
     //
     // P1 Admin Pedidos/Fotos/Retención: este adjunto se lee y se envía AQUÍ,
     // en el momento del pago -- es una COPIA independiente que Nodemailer
@@ -648,13 +521,38 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
         }
       }
     }
+    const hasPhotos = attachments.length > 0;
 
-    // Send admin email (with attachments)
+    const customerEmail = buildOrderConfirmationEmail({
+      // El idioma real del comprador no se persiste hoy en ningún sitio
+      // fiable (ver services/order-emails.js, cabecera, y el informe de
+      // saneamiento de emails, sección "ES/DE/FR"): fallback explícito y
+      // previsible a 'es', NUNCA inferido del país de envío.
+      locale: 'es',
+      orderId, orderDate, customerData, items, totals, currency: selectedCurrency
+    });
+    const adminEmail = buildAdminNewOrderEmail({
+      orderId, orderDate, customerData, items, totals, currency: selectedCurrency, hasPhotos
+    });
+
+    // Reply-To (sección 10 del informe): el cliente responde -> llega a
+    // soporte de LITUM3D. Admin responde -> llega directamente al cliente.
     await transporter.sendMail({
-      from: process.env.SMTP_USER || 'noreply@example.com',
+      from: getFromAddress(),
+      to: customerData.email,
+      replyTo: SUPPORT_INFO.email,
+      subject: customerEmail.subject,
+      html: customerEmail.html,
+      text: customerEmail.text
+    });
+
+    await transporter.sendMail({
+      from: getFromAddress(),
       to: process.env.ADMIN_EMAIL || 'admin@example.com',
-      subject: `Nuevo Pedido Pagado #${orderId} - ${customerData.name}`,
-      html: adminEmailHTML,
+      replyTo: customerData.email,
+      subject: adminEmail.subject,
+      html: adminEmail.html,
+      text: adminEmail.text,
       attachments
     });
 
@@ -665,17 +563,6 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
     console.error('❌ Email sending error:', err.message);
     console.error('Detalles:', err);
   }
-}
-
-function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
 const router = createPaymentsRouter();

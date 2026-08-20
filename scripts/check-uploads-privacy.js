@@ -669,30 +669,29 @@ async function checkEmailDoesNotExposeImageUrls() {
   // el sendConfirmationEmailAdapter real, igual que hacen los tests de
   // checkout-routes/webhook, pero interceptando nodemailer.createTransport
   // no es viable sin tocar el módulo real de transporte. En su lugar, se
-  // reutiliza buildHandlers() con checkoutFinalization real para producir un
-  // pedido, y se verifica el HTML que sendConfirmationEmailAdapter generaría
-  // inspeccionando directamente snapshotItemToEmailCartItem + el propio
-  // sendConfirmationEmails vía su transporter inyectado no existe -- así que
-  // se prueba el contrato más fuerte disponible sin tocar red real: se llama
-  // a payments.snapshotItemToEmailCartItem (exportado) y se confirma que el
-  // objeto que llega a cartHTML nunca incluye una URL utilizable como enlace
-  // público, y que el código fuente de sendConfirmationEmails ya no contiene
-  // ningún template literal que construya un <a href> a partir de item.images.
-  const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'payments.js'), 'utf8');
-  const fnStart = src.indexOf('async function sendConfirmationEmails');
-  const fnEnd = src.indexOf('\nfunction escapeHtml', fnStart);
-  const fnSource = src.slice(fnStart, fnEnd);
+  // prueba el contrato más fuerte disponible sin tocar red real: se llama a
+  // payments.snapshotItemToEmailCartItem (exportado) y se confirma que el
+  // HTML/text de ambos emails (que desde el saneamiento de emails vive en
+  // services/order-emails.js, plantilla única) nunca incluye una URL
+  // utilizable como enlace público a una foto, y que el bloque de
+  // attachments (que SÍ sigue en routes/payments.js#sendConfirmationEmails)
+  // resuelve el archivo de forma segura.
+  const paymentsSrc = fs.readFileSync(path.join(__dirname, '..', 'routes', 'payments.js'), 'utf8');
+  const fnStart = paymentsSrc.indexOf('async function sendConfirmationEmails');
+  const fnEnd = paymentsSrc.indexOf('\nconst router = createPaymentsRouter', fnStart);
+  const fnSource = paymentsSrc.slice(fnStart, fnEnd);
+  const orderEmailsSrc = fs.readFileSync(path.join(__dirname, '..', 'services', 'order-emails.js'), 'utf8');
 
-  ok(!/href="\$\{url\}"/.test(fnSource) && !/Ver imagen/.test(fnSource), 'el email (cliente+admin, cartHTML compartido) ya no construye ningún <a href> directo a la foto');
-  ok(/\/admin/.test(fnSource) && /adminPanelNotice/.test(fnSource), 'el email de admin incluye un enlace al panel Admin (requiere login) en vez de la foto');
-  ok(!/token permanente/i.test(fnSource), 'no se introduce ningún token permanente de imagen en el email');
+  ok(!/href="\$\{url\}"/.test(orderEmailsSrc) && !/Ver imagen/.test(orderEmailsSrc), 'el email (cliente+admin, plantilla única de services/order-emails.js) no construye ningún <a href> directo a la foto');
+  ok(/\/admin/.test(orderEmailsSrc) && /hasPhotos/.test(orderEmailsSrc), 'el email de admin incluye un enlace al panel Admin (requiere login) en vez de la foto');
+  ok(!/token permanente/i.test(orderEmailsSrc) && !/token permanente/i.test(fnSource), 'no se introduce ningún token permanente de imagen en el email');
   // Sección 22 del hardening: los attachments siguen enviándose (adjuntos
   // reales al email interno de admin), pero resolviendo el archivo con el
   // helper seguro -- nunca concatenando "/uploads/custom/" a mano ni
   // incluyendo el capability token (?t=) en ningún sitio del email.
   ok(/resolveCustomUploadPath/.test(fnSource), 'el bloque de attachments sigue resolviendo el archivo vía uploadsStorage.resolveCustomUploadPath (helper seguro), no un path construido a mano');
   ok(!/'\/uploads\/custom\/'\s*\+/.test(fnSource) && !fnSource.includes("path.join(__dirname, '..', 'uploads', 'custom', raw)"), 'el bloque de attachments ya no concatena "/uploads/custom/" + un valor del cliente a mano');
-  ok(!fnSource.includes('?t='), 'el código fuente del email nunca referencia el query param del capability token');
+  ok(!fnSource.includes('?t=') && !orderEmailsSrc.includes('?t='), 'ni el bloque de attachments ni la plantilla de email referencian el query param del capability token');
 
   // El adapter de email sigue produciendo el shape esperado (sin romper contrato B4B).
   const item = paymentsModule.snapshotItemToEmailCartItem({ productName: 'X', modelName: null, notes: '', images: [{ url: '/api/uploads/custom/preview/x.jpg?t=y' }], quantity: 1, unitPriceCents: 1000 });

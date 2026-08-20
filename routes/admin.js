@@ -12,6 +12,9 @@ const { csrfProtection, generateCsrfToken } = require('../middleware/csrf');
 const { loginLimiter } = require('../middleware/rateLimiters');
 const { requireSameOrigin } = require('../middleware/sameOrigin');
 const { verifyAdminPassword } = require('../services/adminAuth');
+const { getTransporter, getFromAddress } = require('../services/mailer');
+const { buildStatusChangeEmail } = require('../services/order-emails');
+const { SUPPORT_INFO } = require('../services/email-template');
 
 // POST /admin/variantes - Crear nueva opción de variante (base o forma)
 router.post('/variantes', requireAuth, csrfProtection, async (req, res) => {
@@ -549,71 +552,31 @@ router.post('/logout', requireAuth, csrfProtection, (req, res) => {
     });
 });
 
-// Función para enviar email de cambio de estado
+// Función para enviar email de cambio de estado. Plantilla unificada (ver
+// services/order-emails.js#buildStatusChangeEmail + services/email-template.js):
+// mismo logo/colores reales de LITUM3D y el mismo footer/soporte que el
+// resto de emails, en vez del degradado azul/morado genérico anterior sin
+// relación con la identidad visual del sitio.
+//
+// getTransporter() se llama AQUÍ DENTRO (no una sola vez al cargar el
+// módulo): scripts/check-admin-order-photos-retention.js intercepta
+// nodemailer sustituyendo require.cache['nodemailer'] DESPUÉS de cargar
+// este router, así que el require perezoso (dentro de services/mailer.js)
+// es lo que permite que el fake se aplique a cada envío real de este test.
 async function sendStatusChangeEmail(orderId, customerEmail, customerName, newStatus) {
-    const nodemailer = require('nodemailer');
+    const transporter = getTransporter();
 
-    const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        }
-    });
-
-    const statusMessages = {
-        'Pendiente': 'Tu pedido está en espera de confirmación',
-        'Confirmado': 'Tu pedido ha sido confirmado y comenzaremos a prepararlo',
-        'Preparando': 'Tu pedido está siendo preparado en nuestros talleres',
-        'Enviado': 'Tu pedido ha sido enviado y está en camino 📦',
-        'Entregado': 'Tu pedido ha sido entregado. ¡Gracias por tu compra! ✓',
-        'Cancelado': 'Tu pedido ha sido cancelado'
-    };
+    // Locale del comprador no persistido hoy (ver services/order-emails.js,
+    // cabecera): fallback explícito a 'es', nunca inferido del país.
+    const { subject, html, text } = buildStatusChangeEmail({ locale: 'es', orderId, customerName, newStatus });
 
     const mailOptions = {
-        from: process.env.SMTP_USER,
+        from: getFromAddress(),
         to: customerEmail,
-        subject: `Actualización de tu Pedido #${orderId} - LITUM 3D`,
-        html: `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #64c8ff 0%, #9664ff 100%); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
-                    .content { background: #f5f5f5; padding: 20px; border-radius: 0 0 10px 10px; }
-                    .status-badge { display: inline-block; padding: 10px 20px; border-radius: 20px; font-weight: bold; margin: 20px 0; }
-                    .status-preparando { background: rgba(150, 100, 255, 0.2); color: #b366ff; }
-                    .status-enviado { background: rgba(100, 255, 150, 0.2); color: #66ff99; }
-                    .status-entregado { background: rgba(100, 255, 100, 0.2); color: #66ff66; }
-                    .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>🔔 Actualización de tu Pedido</h1>
-                    </div>
-                    <div class="content">
-                        <p>¡Hola ${customerName || 'Cliente'}!</p>
-                        <p>${statusMessages[newStatus] || 'Tu pedido ha sido actualizado'}</p>
-                        <div class="status-badge status-${newStatus.toLowerCase()}">
-                            ${newStatus.toUpperCase()}
-                        </div>
-                        <p><strong>Número de Pedido:</strong> #${orderId}</p>
-                        <p>Si tienes preguntas sobre tu pedido, no dudes en contactarnos.</p>
-                        <p>¡Gracias por elegir LITUM 3D! 🎨</p>
-                    </div>
-                    <div class="footer">
-                        <p>© 2024 LITUM 3D - Impresión 3D de Calidad</p>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `
+        replyTo: SUPPORT_INFO.email,
+        subject,
+        html,
+        text
     };
 
     try {

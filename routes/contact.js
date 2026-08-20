@@ -1,8 +1,9 @@
 const express = require('express');
-const nodemailer = require('nodemailer');
 const { pool } = require('../config/db');
 const requireAuth = require('../middleware/requireAuth');
 const { csrfProtection } = require('../middleware/csrf');
+const { getTransporter, getFromAddress, sanitizeHeaderValue } = require('../services/mailer');
+const { escapeHtml } = require('../services/email-template');
 
 const router = express.Router();
 
@@ -48,23 +49,18 @@ router.post('/api/contact', async (req, res) => {
     // Enviar email si está configurado
     if (process.env.SMTP_HOST && process.env.SMTP_USER) {
       try {
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: Number(process.env.SMTP_PORT || 587),
-          secure: String(process.env.SMTP_SECURE) === 'true',
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-        });
+        const transporter = getTransporter();
 
+        // Reply-To = email del visitante (sección 10 del informe de
+        // saneamiento de emails): LITUM3D pulsa "Responder" -> responde
+        // directamente al cliente, nunca a sí mismo.
         await transporter.sendMail({
-          from: `LITUM3D Contact <${process.env.SMTP_USER}>`,
+          from: getFromAddress('LITUM3D Contact'),
           to: process.env.CONTACT_TO,
-          subject: `Nuevo mensaje de ${name}`,
+          subject: `Nuevo mensaje de ${sanitizeHeaderValue(name)}`,
           replyTo: email,
           text: message,
-          html: `<p><strong>Nombre:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Asunto:</strong> ${asunto}</p><p>${message}</p>`,
+          html: `<p><strong>Nombre:</strong> ${escapeHtml(name)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Asunto:</strong> ${escapeHtml(asunto)}</p><p>${escapeHtml(message)}</p>`,
         });
       } catch (emailErr) {
         console.warn('Email no enviado:', emailErr.message);
