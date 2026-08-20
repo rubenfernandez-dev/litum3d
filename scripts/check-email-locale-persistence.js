@@ -1,10 +1,11 @@
 /*
   LITUM3D - Test de regresión: persistencia del locale del comprador para
-  emails transaccionales (informe "persistir locale del comprador").
+  emails transaccionales (informe "persistir locale del comprador" +
+  "añadir locale EN").
 
   Cubre el flujo completo:
     document.documentElement.lang (public/js/checkout.js)
-      -> customerData.locale (normalizado, allowlist es/de/fr)
+      -> customerData.locale (normalizado, allowlist es/de/fr/en)
       -> services/checkout-drafts.js#validateCustomerData (persistido en
          checkout_drafts.snapshot_json, SIN migración de schema)
       -> email de confirmación inmediato (routes/payments.js)
@@ -14,7 +15,7 @@
 
   El país de envío NUNCA determina el idioma (CH es DE/FR/IT; un FR puede
   comprar estando en CH): se prueba explícitamente con combinaciones
-  locale/country cruzadas.
+  locale/country cruzadas, incluido EN (que no tiene ningún país "propio").
 
   Uso: node scripts/check-email-locale-persistence.js
 */
@@ -40,11 +41,11 @@ const { buildOrderConfirmationEmail } = require('../services/order-emails');
 // =======================================================================
 function checkCentralNormalizeLocale() {
   eq(DEFAULT_LOCALE, 'es', 'DEFAULT_LOCALE es "es"');
-  assert.deepStrictEqual([...ALLOWED_LOCALES], ['es', 'de', 'fr'], 'ALLOWED_LOCALES es exactamente es/de/fr');
-  for (const loc of ['es', 'de', 'fr']) {
+  assert.deepStrictEqual([...ALLOWED_LOCALES], ['es', 'de', 'fr', 'en'], 'ALLOWED_LOCALES es exactamente es/de/fr/en');
+  for (const loc of ['es', 'de', 'fr', 'en']) {
     eq(normalizeLocale(loc), loc, `normalizeLocale("${loc}") pasa tal cual`);
   }
-  eq(normalizeLocale('en'), 'es', 'normalizeLocale("en") -> fallback "es" (no soportado)');
+  eq(normalizeLocale('it'), 'es', 'normalizeLocale("it") -> fallback "es" (italiano no soportado)');
   eq(normalizeLocale('DE'), 'es', 'normalizeLocale("DE") -> fallback "es" (case-sensitive, no normaliza mayúsculas)');
   eq(normalizeLocale(undefined), 'es', 'normalizeLocale(undefined) -> fallback "es"');
   eq(normalizeLocale(null), 'es', 'normalizeLocale(null) -> fallback "es"');
@@ -97,7 +98,8 @@ function checkFrontendAddsNormalizedLocaleToCustomerData() {
     { lang: 'de', expected: 'de' },
     { lang: 'fr', expected: 'fr' },
     { lang: 'es', expected: 'es' },
-    { lang: 'en', expected: 'es' },
+    { lang: 'en', expected: 'en' },
+    { lang: 'it', expected: 'es' },
     { lang: '', expected: 'es' },
     { lang: undefined, expected: 'es' }
   ];
@@ -118,12 +120,12 @@ function checkFrontendAddsNormalizedLocaleToCustomerData() {
 function checkValidateCustomerDataPersistsLocale() {
   const BASE = { name: 'Ana', email: 'ana@example.com', phone: '+41791234567', address: 'Calle 1', city: 'Bern', zip: '3000', country: 'CH' };
 
-  for (const loc of ['es', 'de', 'fr']) {
+  for (const loc of ['es', 'de', 'fr', 'en']) {
     const normalized = validateCustomerData({ ...BASE, locale: loc });
     eq(normalized.locale, loc, `validateCustomerData persiste locale="${loc}" tal cual`);
   }
 
-  eq(validateCustomerData({ ...BASE, locale: 'en' }).locale, 'es', 'locale no soportado ("en") se normaliza a "es", sin rechazar todo el customerData');
+  eq(validateCustomerData({ ...BASE, locale: 'it' }).locale, 'es', 'locale no soportado ("it") se normaliza a "es", sin rechazar todo el customerData');
   eq(validateCustomerData({ ...BASE }).locale, 'es', 'customerData SIN locale (cliente/draft anterior a este cambio) -> "es", NUNCA "obligatorio"');
 
   // Los otros 7 campos siguen siendo estrictamente obligatorios (regresión:
@@ -172,7 +174,12 @@ function checkConfirmationEmailLocaleNeverFromCountry() {
   const CASES = [
     { locale: 'de', country: 'CH', expectSubjectPart: 'Bestellbestätigung' },
     { locale: 'fr', country: 'CH', expectSubjectPart: 'Confirmation de commande' },
-    { locale: 'es', country: 'DE', expectSubjectPart: 'Confirmación de pedido' }
+    { locale: 'es', country: 'DE', expectSubjectPart: 'Confirmación de pedido' },
+    // EN (informe "añadir locale EN"): sin país "propio" -- se prueba
+    // explícitamente cruzado con CH/DE/FR, exactamente como pide el informe.
+    { locale: 'en', country: 'CH', expectSubjectPart: 'Order confirmation' },
+    { locale: 'en', country: 'DE', expectSubjectPart: 'Order confirmation' },
+    { locale: 'en', country: 'FR', expectSubjectPart: 'Order confirmation' }
   ];
   for (const { locale, country, expectSubjectPart } of CASES) {
     const customerData = { name: 'Cliente', email: 'c@example.com', phone: '+1', address: 'Addr 1', city: 'City', zip: '1', country, locale };
@@ -268,13 +275,21 @@ async function checkAdminStatusChangeRecoversLocaleFromOriginalDraft() {
     // Pedido reciente: SÍ tiene stripe_payment_intent_id -> debe recuperar locale='de' del draft.
     { id: 601, estado_id: 2, stripe_payment_intent_id: 'pi_de_601', email: 'cliente-de@example.com', nombre: 'Kunde DE', total: '49.95' },
     // Pedido legacy (anterior a este cambio, o draft ya no localizable): sin PI -> debe caer a 'es'.
-    { id: 602, estado_id: 2, stripe_payment_intent_id: null, email: 'cliente-legacy@example.com', nombre: 'Cliente Legacy', total: '49.95' }
+    { id: 602, estado_id: 2, stripe_payment_intent_id: null, email: 'cliente-legacy@example.com', nombre: 'Cliente Legacy', total: '49.95' },
+    // EN (informe "añadir locale EN"): mismo mecanismo, locale='en' persistido en el draft original.
+    { id: 603, estado_id: 2, stripe_payment_intent_id: 'pi_en_603', email: 'customer-en@example.com', nombre: 'EN Customer', total: '49.95' }
   ];
   const drafts = [
     {
       id: 9, stripe_payment_intent_id: 'pi_de_601', status: 'converted',
       snapshot_json: JSON.stringify({ currency: 'eur', items: [], totals: { totalCents: 4995, shippingCents: 0 }, customerData: { name: 'Kunde DE', locale: 'de', country: 'CH' } }),
       idempotency_key: 'idem-601', selections_fingerprint: 'f'.repeat(64), access_token_hash: 'a'.repeat(64),
+      created_at: new Date(), updated_at: new Date(), expires_at: null
+    },
+    {
+      id: 10, stripe_payment_intent_id: 'pi_en_603', status: 'converted',
+      snapshot_json: JSON.stringify({ currency: 'eur', items: [], totals: { totalCents: 4995, shippingCents: 0 }, customerData: { name: 'EN Customer', locale: 'en', country: 'DE' } }),
+      idempotency_key: 'idem-603', selections_fingerprint: 'f'.repeat(64), access_token_hash: 'a'.repeat(64),
       created_at: new Date(), updated_at: new Date(), expires_at: null
     }
   ];
@@ -318,6 +333,21 @@ async function checkAdminStatusChangeRecoversLocaleFromOriginalDraft() {
     const mailLegacy = sentMails.find(m => m.to === 'cliente-legacy@example.com');
     ok(mailLegacy, 'B) el email de cambio de estado del pedido legacy se envió');
     ok(mailLegacy.subject.includes('Actualización de tu pedido'), 'B) pedido legacy sin stripe_payment_intent_id -> fallback ES coherente (nunca infiere DE/FR de la nada)');
+
+    // C) Pedido 603 (EN, país DE en el draft): el cambio de estado posterior
+    // debe salir en inglés, recuperado del draft original -- ni ES por
+    // defecto ni DE inferido del país de envío.
+    const resEn = await fetch(`${base}/admin/pedidos/603/estado`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'test-csrf-token' },
+      body: JSON.stringify({ estado: 'Enviado' })
+    });
+    eq(resEn.status, 200, 'C) PUT /pedidos/603/estado -> 200');
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const mailEn = sentMails.find(m => m.to === 'customer-en@example.com');
+    ok(mailEn, 'C) el email de cambio de estado del pedido 603 se envió');
+    ok(mailEn.subject.includes('Order update'), 'C) el cambio de estado sale en EN (recuperado del draft original), no en ES ni en DE (país de envío)');
   } finally {
     restoreNodemailer();
     server.close();

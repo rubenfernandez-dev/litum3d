@@ -15,7 +15,7 @@
 // memoria (ver services/order-emails.js#COPY / email-template.js#LEGAL_PATHS):
 // el valor normalizado NUNCA debe usarse para construir rutas de
 // filesystem, requires dinámicos ni nombres de plantilla.
-const ALLOWED_LOCALES = Object.freeze(['es', 'de', 'fr']);
+const ALLOWED_LOCALES = Object.freeze(['es', 'de', 'fr', 'en']);
 const DEFAULT_LOCALE = 'es';
 
 function normalizeLocale(value) {

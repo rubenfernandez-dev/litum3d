@@ -7,8 +7,9 @@
   totals.shippingCents que ya calculó services/pricing.js (VAT_PERCENT=0,
   ver informe de saneamiento fiscal). Sin desglose fiscal de ningún tipo.
 
-  Locale (informe "persistir locale del comprador"): document.documentElement.lang
-  (public/js/checkout.js) se normaliza a es/de/fr y viaja como
+  Locale (informe "persistir locale del comprador" + "añadir locale EN"):
+  document.documentElement.lang (public/js/checkout.js) se normaliza a
+  es/de/fr/en y viaja como
   customerData.locale -> PATCH /api/checkout-draft/customer-data ->
   services/checkout-drafts.js#validateCustomerData (normalizado con
   config/locales.js#normalizeLocale) -> snapshot_json persistido en
@@ -41,9 +42,10 @@ function formatMoney(cents, currency) {
   return currency === 'eur' ? `${formatted} €` : `${formatted} ${String(currency).toUpperCase()}`;
 }
 
+const DATE_FORMAT_LOCALES = { es: 'es-ES', de: 'de-CH', fr: 'fr-CH', en: 'en-GB' };
 function formatDate(date, locale) {
   try {
-    return new Intl.DateTimeFormat(locale === 'de' ? 'de-CH' : locale === 'fr' ? 'fr-CH' : 'es-ES', {
+    return new Intl.DateTimeFormat(DATE_FORMAT_LOCALES[locale] || DATE_FORMAT_LOCALES.es, {
       year: 'numeric', month: 'long', day: 'numeric'
     }).format(date);
   } catch (e) {
@@ -158,6 +160,36 @@ const COPY = {
       'Cancelado': 'Votre commande a été annulée.'
     },
     statusFallback: 'Votre commande a été mise à jour.'
+  },
+  en: {
+    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Order confirmation`,
+    confirmationTitle: 'Order confirmed',
+    confirmationPreheader: (orderId) => `We've received your order #${orderId}. Thank you for trusting LITUM3D.`,
+    greeting: (name) => `Hi ${name},`,
+    intro: 'Thank you for your purchase at LITUM3D. We are preparing your order.',
+    orderNumberLabel: 'Order number',
+    dateLabel: 'Date',
+    shippingAddressLabel: 'Shipping details',
+    phoneLabel: 'Phone',
+    tableHeaders: { product: 'Product', qty: 'Qty', price: 'Price', subtotal: 'Subtotal' },
+    shippingLabel: 'Shipping',
+    freeShipping: 'Free',
+    totalLabel: 'TOTAL',
+    ctaText: 'Go to LITUM3D',
+    adapterLabel: 'USB adapter',
+    statusSubject: (orderId) => `[LITUM3D #${orderId}] Order update`,
+    statusTitle: 'Order update',
+    statusPreheader: (orderId) => `There's news about your order #${orderId}.`,
+    statusIntro: (name) => `Hi ${name || 'there'},`,
+    statusMessages: {
+      'Pendiente': 'Your order is awaiting confirmation.',
+      'Confirmado': 'Your order has been confirmed and we will start preparing it.',
+      'Preparando': 'Your order is being prepared in our workshop.',
+      'Enviado': 'Your order has been shipped and is on its way.',
+      'Entregado': 'Your order has been delivered. Thank you for your purchase!',
+      'Cancelado': 'Your order has been cancelled.'
+    },
+    statusFallback: 'Your order has been updated.'
   }
 };
 

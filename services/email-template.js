@@ -55,17 +55,24 @@ function getLogoUrl() {
 }
 
 // Rutas legales reales por idioma (ver routes/index.js / views/terms-conditions*.html).
+// "en" (informe "añadir locale EN"): NO existen páginas legales públicas en
+// inglés (auditado: sin /privacy-policy-en, /terms-conditions-en ni
+// /contact-en en routes/index.js/views) -- se apunta a las mismas rutas
+// canónicas ES, que SÍ son válidas y responden, en vez de inventar rutas
+// que devolverían 404. Ver informe final, sección "Legal footer EN".
 const LEGAL_PATHS = {
   es: { privacy: '/privacy-policy', terms: '/terms-conditions', contact: '/contact' },
   de: { privacy: '/privacy-policy-de', terms: '/terms-conditions-de', contact: '/contact-de' },
-  fr: { privacy: '/privacy-policy-fr', terms: '/terms-conditions-fr', contact: '/contact-fr' }
+  fr: { privacy: '/privacy-policy-fr', terms: '/terms-conditions-fr', contact: '/contact-fr' },
+  en: { privacy: '/privacy-policy', terms: '/terms-conditions', contact: '/contact' }
 };
 
-// Copys del footer, idénticos a los ya usados en views/success*.html.
+// Copys del footer, idénticos a los ya usados en views/success*.html (es/de/fr).
 const FOOTER_COPY = {
   es: { tagline: 'Premium 3D Litofanías', privacy: 'Política de Privacidad', terms: 'Términos de Servicio', contact: 'Contacto', copyright: (y) => `© ${y} LITUM3D. Todos los derechos reservados.` },
   de: { tagline: 'Premium 3D-Lithophane', privacy: 'Datenschutz', terms: 'Nutzungsbedingungen', contact: 'Kontakt', copyright: (y) => `© ${y} LITUM3D. Alle Rechte vorbehalten.` },
-  fr: { tagline: 'Lithophanies 3D premium', privacy: 'Politique de confidentialité', terms: 'Conditions d’utilisation', contact: 'Contact', copyright: (y) => `© ${y} LITUM3D. Tous droits réservés.` }
+  fr: { tagline: 'Lithophanies 3D premium', privacy: 'Politique de confidentialité', terms: 'Conditions d’utilisation', contact: 'Contact', copyright: (y) => `© ${y} LITUM3D. Tous droits réservés.` },
+  en: { tagline: 'Premium 3D Lithophanes', privacy: 'Privacy Policy', terms: 'Terms of Service', contact: 'Contact', copyright: (y) => `© ${y} LITUM3D. All rights reserved.` }
 };
 
 const SUPPORT_BLOCK_COPY = {
@@ -80,6 +87,10 @@ const SUPPORT_BLOCK_COPY = {
   fr: {
     title: 'Besoin d’aide concernant cette commande ?',
     body: (ref) => `Si vous avez besoin d’aide, rencontrez un problème ou souhaitez poser une question ou une réclamation concernant cette commande, répondez directement à cet e-mail en indiquant la référence #${ref}.`
+  },
+  en: {
+    title: 'Need help with this order?',
+    body: (ref) => `If you need help, have an issue, or want to make an enquiry or complaint about this order, reply directly to this email quoting reference #${ref}.`
   }
 };
 

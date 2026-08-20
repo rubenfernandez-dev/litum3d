@@ -31,9 +31,13 @@ function getLang() {
 // no hay build/bundler compartido entre cliente y servidor en este proyecto,
 // así que esta es la copia cliente de esa MISMA fuente de verdad -- igual
 // que config/checkout-countries.js se refleja a mano en los <option> de los
-// 3 checkout.html. Cualquier valor fuera de es/de/fr cae a 'es', nunca se
+// 3 checkout.html. Cualquier valor fuera de es/de/fr/en cae a 'es', nunca se
 // deriva del país de envío (CH es DE/FR/IT; un FR puede comprar desde CH).
-const ALLOWED_CUSTOMER_LOCALES = ['es', 'de', 'fr'];
+// "en" se añadió tras la decisión posterior de incorporar inglés (ver
+// config/locales.js#ALLOWED_LOCALES): todavía no existe checkout/navegación
+// EN público, pero el frontend queda preparado para cuando document.documentElement.lang
+// pueda valer "en" sin requerir ningún otro cambio aquí.
+const ALLOWED_CUSTOMER_LOCALES = ['es', 'de', 'fr', 'en'];
 function normalizeCustomerLocale(lang) {
   return ALLOWED_CUSTOMER_LOCALES.includes(lang) ? lang : 'es';
 }

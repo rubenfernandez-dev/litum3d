@@ -68,7 +68,7 @@ function checkSupportInfoMatchesRealPublicData() {
 // 3) Footer: URLs legales absolutas, por idioma, coherentes con routes/index.js
 // =======================================================================
 function checkFooterLegalLinksAreAbsoluteAndLocalized() {
-  for (const locale of ['es', 'de', 'fr']) {
+  for (const locale of ['es', 'de', 'fr', 'en']) {
     const { html, text } = emailTemplate.renderLitumEmail({ locale, title: 'T', contentHtml: '<p>x</p>', contentText: 'x' });
     const paths = emailTemplate.LEGAL_PATHS[locale];
     const baseUrl = emailTemplate.getBaseUrl();
@@ -78,6 +78,17 @@ function checkFooterLegalLinksAreAbsoluteAndLocalized() {
       ok(text.includes(absoluteUrl), `footer text (${locale}): incluye la URL absoluta de ${key}`);
     }
   }
+
+  // EN (informe "añadir locale EN", sección "Legal footer EN"): NO existen
+  // páginas legales públicas en inglés -- se reutilizan a propósito las
+  // mismas rutas canónicas ES (únicas que responden 200 hoy), nunca rutas
+  // EN inventadas.
+  assert.deepStrictEqual(emailTemplate.LEGAL_PATHS.en, emailTemplate.LEGAL_PATHS.es,
+    'LEGAL_PATHS.en reutiliza deliberadamente las rutas canónicas ES (sin páginas legales EN todavía)');
+  const indexRoutesSrc = readFile('routes/index.js');
+  ok(!/'\/privacy-policy-en'|"\/privacy-policy-en"/.test(indexRoutesSrc) && !/'\/terms-conditions-en'|"\/terms-conditions-en"/.test(indexRoutesSrc) && !/'\/contact-en'|"\/contact-en"/.test(indexRoutesSrc),
+    'routes/index.js: sigue sin existir ninguna ruta legal EN inventada (sanity de la limitación reportada)');
+  checks++;
 }
 
 // =======================================================================
@@ -92,6 +103,12 @@ function checkSupportBlockToggle() {
 
   const withoutSupport = emailTemplate.renderLitumEmail({ locale: 'es', title: 'T', contentHtml: '<p>x</p>', contentText: 'x', orderId: 4242, showSupport: false });
   ok(!withoutSupport.html.includes('¿Necesitas ayuda con este pedido?'), 'showSupport:false suprime el bloque de soporte (email interno de Admin)');
+
+  // EN (informe "añadir locale EN"): texto exacto pedido para el bloque de soporte.
+  const withOrderEn = emailTemplate.renderLitumEmail({ locale: 'en', title: 'T', contentHtml: '<p>x</p>', contentText: 'x', orderId: 4242 });
+  ok(withOrderEn.html.includes('Need help with this order?'), 'EN: título del bloque de soporte');
+  ok(withOrderEn.html.includes('If you need help, have an issue, or want to make an enquiry or complaint about this order, reply directly to this email quoting reference #4242.'),
+    'EN: texto exacto del bloque de soporte pedido en el informe');
 }
 
 // =======================================================================
@@ -123,7 +140,8 @@ function checkOrderConfirmationEmail() {
   const SUBJECTS = {
     es: '[LITUM3D #501] Confirmación de pedido',
     de: '[LITUM3D #501] Bestellbestätigung',
-    fr: '[LITUM3D #501] Confirmation de commande'
+    fr: '[LITUM3D #501] Confirmation de commande',
+    en: '[LITUM3D #501] Order confirmation'
   };
   const customerData = { name: 'Ruben Fernandez', email: 'ruben@example.com', phone: '+41791234567', address: 'Bahnhofstrasse 1', city: 'Bern', zip: '3000', country: 'CH' };
   const items = [
@@ -131,7 +149,7 @@ function checkOrderConfirmationEmail() {
   ];
   const totals = { shippingCents: 0, totalCents: 14190 };
 
-  for (const locale of ['es', 'de', 'fr']) {
+  for (const locale of ['es', 'de', 'fr', 'en']) {
     const result = orderEmails.buildOrderConfirmationEmail({ locale, orderId: 501, orderDate: new Date('2026-03-01T12:00:00Z'), customerData, items, totals, currency: 'eur' });
     eq(result.subject, SUBJECTS[locale], `confirmación (${locale}): subject exacto con #pedido`);
     ok(result.subject.includes('#501'), `confirmación (${locale}): subject incluye la referencia #pedido`);
@@ -139,7 +157,7 @@ function checkOrderConfirmationEmail() {
     ok(result.html.includes('141,90') || result.html.includes('141,90 €'), `confirmación (${locale}): TOTAL mostrado es exactamente el importe recibido (14190 cents), sin recalcular`);
     ok(result.html.includes('Madera'), `confirmación (${locale}): muestra la variante seleccionada (Base: Madera)`);
     ok(result.html.includes('Upscale'), `confirmación (${locale}): muestra los extras seleccionados`);
-    ok(result.html.includes('Gratis') || result.html.includes('Kostenlos') || result.html.includes('Gratuite'), `confirmación (${locale}): envío se muestra como gratis (shippingCents=0), nunca inventado`);
+    ok(result.html.includes('Gratis') || result.html.includes('Kostenlos') || result.html.includes('Gratuite') || result.html.includes('Free'), `confirmación (${locale}): envío se muestra como gratis (shippingCents=0), nunca inventado`);
     ok(result.text.length > 0 && result.text.includes('501'), `confirmación (${locale}): existe versión text con la referencia del pedido`);
     ok(result.html.includes(customerData.address), `confirmación (${locale}): dirección de envío real presente`);
   }
@@ -174,14 +192,15 @@ function checkStatusChangeEmail() {
   const SUBJECTS = {
     es: '[LITUM3D #900] Actualización de tu pedido',
     de: '[LITUM3D #900] Aktualisierung deiner Bestellung',
-    fr: '[LITUM3D #900] Mise à jour de votre commande'
+    fr: '[LITUM3D #900] Mise à jour de votre commande',
+    en: '[LITUM3D #900] Order update'
   };
-  for (const locale of ['es', 'de', 'fr']) {
+  for (const locale of ['es', 'de', 'fr', 'en']) {
     const result = orderEmails.buildStatusChangeEmail({ locale, orderId: 900, customerName: 'Ana', newStatus: 'Enviado' });
     eq(result.subject, SUBJECTS[locale], `cambio de estado (${locale}): subject exacto con #pedido`);
     ok(!NO_VAT_PATTERN.test(result.html), `cambio de estado (${locale}): sin IVA`);
     ok(result.html.includes('#900'), `cambio de estado (${locale}): referencia de pedido visible`);
-    ok(result.html.includes('¿Necesitas ayuda con este pedido?') || result.html.includes('Brauchst du Hilfe') || result.html.includes('Besoin d’aide'), `cambio de estado (${locale}): bloque de soporte presente`);
+    ok(result.html.includes('¿Necesitas ayuda con este pedido?') || result.html.includes('Brauchst du Hilfe') || result.html.includes('Besoin d’aide') || result.html.includes('Need help with this order?'), `cambio de estado (${locale}): bloque de soporte presente`);
   }
 
   const unknown = orderEmails.buildStatusChangeEmail({ locale: 'es', orderId: 901, customerName: 'Ana', newStatus: 'EstadoInventado' });
