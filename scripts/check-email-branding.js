@@ -37,10 +37,11 @@ function checkBrandingUsesRealAssets() {
   const logoUrl = emailTemplate.getLogoUrl();
   ok(logoUrl.startsWith('https://'), `getLogoUrl() produce una URL HTTPS absoluta (no relativa): ${logoUrl}`);
   ok(!logoUrl.startsWith('/'), 'getLogoUrl() nunca empieza por "/" (una ruta relativa no carga en un cliente de email)');
-  ok(logoUrl.includes('/img/logos/lineal.logo.png'), 'getLogoUrl() reutiliza el logo REAL ya servido en el header público del sitio');
+  ok(logoUrl.includes('/img/logos/logo.png'), 'getLogoUrl() usa el logo OFICIAL de email (logo.png)');
+  ok(!logoUrl.includes('lineal.logo.png'), 'getLogoUrl() ya NO usa lineal.logo.png (informe "refinar branding", sección 1)');
 
-  const logoFileOnDisk = path.join(ROOT, 'public', 'img', 'logos', 'lineal.logo.png');
-  ok(fs.existsSync(logoFileOnDisk), 'el archivo del logo referenciado existe realmente en public/img/logos/');
+  const logoFileOnDisk = path.join(ROOT, 'public', 'img', 'logos', 'logo.png');
+  ok(fs.existsSync(logoFileOnDisk), 'el archivo del logo oficial referenciado existe realmente en public/img/logos/');
 
   // Colores reales del sitio (public/css/styles.css --primary/--gold), no inventados.
   const stylesCss = readFile('public/css/styles.css');
@@ -138,10 +139,10 @@ function checkHtmlEscaping() {
 // =======================================================================
 function checkOrderConfirmationEmail() {
   const SUBJECTS = {
-    es: '[LITUM3D #501] Confirmación de pedido',
-    de: '[LITUM3D #501] Bestellbestätigung',
-    fr: '[LITUM3D #501] Confirmation de commande',
-    en: '[LITUM3D #501] Order confirmation'
+    es: '[LITUM3D #501] Pedido recibido',
+    de: '[LITUM3D #501] Bestellung erhalten',
+    fr: '[LITUM3D #501] Commande reçue',
+    en: '[LITUM3D #501] Order received'
   };
   const customerData = { name: 'Ruben Fernandez', email: 'ruben@example.com', phone: '+41791234567', address: 'Bahnhofstrasse 1', city: 'Bern', zip: '3000', country: 'CH' };
   const items = [
@@ -189,18 +190,30 @@ function checkAdminNewOrderEmail() {
 // 8) Cambio de estado: subject/mensaje por idioma, fallback desconocido
 // =======================================================================
 function checkStatusChangeEmail() {
-  const SUBJECTS = {
-    es: '[LITUM3D #900] Actualización de tu pedido',
-    de: '[LITUM3D #900] Aktualisierung deiner Bestellung',
-    fr: '[LITUM3D #900] Mise à jour de votre commande',
-    en: '[LITUM3D #900] Order update'
+  const SHIPPED_SUBJECTS = {
+    es: '[LITUM3D #900] Tu pedido ha sido enviado',
+    de: '[LITUM3D #900] Deine Bestellung wurde versendet',
+    fr: '[LITUM3D #900] Votre commande a été expédiée',
+    en: '[LITUM3D #900] Your order has been shipped'
   };
+  const DELIVERED_SUBJECTS = {
+    es: '[LITUM3D #900] Tu pedido ha sido entregado',
+    de: '[LITUM3D #900] Deine Bestellung wurde zugestellt',
+    fr: '[LITUM3D #900] Votre commande a été livrée',
+    en: '[LITUM3D #900] Your order has been delivered'
+  };
+  const STATUS_LABEL_PREFIX = { es: 'Estado del pedido', de: 'Bestellstatus', fr: 'Statut de la commande', en: 'Order status' };
   for (const locale of ['es', 'de', 'fr', 'en']) {
-    const result = orderEmails.buildStatusChangeEmail({ locale, orderId: 900, customerName: 'Ana', newStatus: 'Enviado' });
-    eq(result.subject, SUBJECTS[locale], `cambio de estado (${locale}): subject exacto con #pedido`);
-    ok(!NO_VAT_PATTERN.test(result.html), `cambio de estado (${locale}): sin IVA`);
-    ok(result.html.includes('#900'), `cambio de estado (${locale}): referencia de pedido visible`);
-    ok(result.html.includes('¿Necesitas ayuda con este pedido?') || result.html.includes('Brauchst du Hilfe') || result.html.includes('Besoin d’aide') || result.html.includes('Need help with this order?'), `cambio de estado (${locale}): bloque de soporte presente`);
+    const shipped = orderEmails.buildStatusChangeEmail({ locale, orderId: 900, customerName: 'Ana', newStatus: 'Enviado' });
+    eq(shipped.subject, SHIPPED_SUBJECTS[locale], `Enviado (${locale}): subject exacto propio del evento`);
+    ok(!NO_VAT_PATTERN.test(shipped.html), `Enviado (${locale}): sin IVA`);
+    ok(shipped.html.includes('#900'), `Enviado (${locale}): referencia de pedido visible`);
+    ok(shipped.html.includes(STATUS_LABEL_PREFIX[locale]), `Enviado (${locale}): etiqueta clara "${STATUS_LABEL_PREFIX[locale]}: ..." presente (informe sección 3)`);
+    ok(shipped.html.includes('¿Necesitas ayuda con este pedido?') || shipped.html.includes('Brauchst du Hilfe') || shipped.html.includes('Besoin d’aide') || shipped.html.includes('Need help with this order?'), `Enviado (${locale}): bloque de soporte presente`);
+
+    const delivered = orderEmails.buildStatusChangeEmail({ locale, orderId: 900, customerName: 'Ana', newStatus: 'Entregado' });
+    eq(delivered.subject, DELIVERED_SUBJECTS[locale], `Entregado (${locale}): subject exacto propio del evento`);
+    ok(delivered.html.includes(STATUS_LABEL_PREFIX[locale]), `Entregado (${locale}): etiqueta clara "${STATUS_LABEL_PREFIX[locale]}: ..." presente`);
   }
 
   const unknown = orderEmails.buildStatusChangeEmail({ locale: 'es', orderId: 901, customerName: 'Ana', newStatus: 'EstadoInventado' });

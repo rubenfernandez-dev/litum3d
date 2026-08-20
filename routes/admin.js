@@ -18,6 +18,19 @@ const { SUPPORT_INFO } = require('../services/email-template');
 const checkoutDrafts = require('../services/checkout-drafts');
 const { normalizeLocale } = require('../config/locales');
 
+// Allowlist de EVENTOS NOTIFICABLES al cliente por cambio de estado Admin
+// (informe "refinar branding y notificaciones", secciones 5/6): usa los
+// mismos nombres canónicos ya sembrados en estado_pedido.nombre (ver
+// database/schema.sql -- Pendiente/Confirmado/Preparando/Enviado/Entregado/
+// Cancelado), que es la fuente de verdad real ya usada en todo este archivo
+// (p.ej. `estado === 'Entregado'` más abajo para el borrado de fotos) --
+// nunca IDs, que son autoincrementales y no estables entre entornos. Estados
+// operativos intermedios (Pendiente/Confirmado/Preparando/Cancelado) NUNCA
+// deben generar email al cliente: solo Enviado y Entregado. La confirmación
+// inicial de pedido pertenece al flujo de pago (routes/payments.js), no a
+// este cambio de estado.
+const NOTIFIABLE_STATUSES = ['Enviado', 'Entregado'];
+
 // POST /admin/variantes - Crear nueva opción de variante (base o forma)
 router.post('/variantes', requireAuth, csrfProtection, async (req, res) => {
     try {
@@ -345,14 +358,18 @@ router.put('/pedidos/:id/estado', requireAuth, csrfProtection, async (req, res) 
             const updateQuery = 'UPDATE pedidos SET estado_id = ?, updated_at = NOW() WHERE id = ?';
             await pool.query(updateQuery, [nuevoEstadoId, id]);
 
-            // Enviar email notificando cambio de estado si hay email del cliente.
-            // Locale (informe "persistir locale del comprador"): se recupera
-            // del draft original vía stripe_payment_intent_id -- el draft
-            // nunca se borra al convertirse en pedido, solo cambia de status
-            // -- NUNCA se infiere de customer_country (CH es DE/FR/IT).
-            // Pedidos legacy sin stripe_payment_intent_id, o sin draft/locale
-            // recuperable, caen a 'es' (normalizeLocale tolera undefined).
-            if (order.email) {
+            // Enviar email notificando cambio de estado SOLO si el estado
+            // destino es un evento notificable (NOTIFIABLE_STATUSES arriba):
+            // el cliente NO debe recibir un email por cada estado interno
+            // (Pendiente/Confirmado/Preparando/Cancelado), solo por Enviado y
+            // Entregado (informe, secciones 5/6). Locale (informe "persistir
+            // locale del comprador"): se recupera del draft original vía
+            // stripe_payment_intent_id -- el draft nunca se borra al
+            // convertirse en pedido, solo cambia de status -- NUNCA se
+            // infiere de customer_country (CH es DE/FR/IT). Pedidos legacy
+            // sin stripe_payment_intent_id, o sin draft/locale recuperable,
+            // caen a 'es' (normalizeLocale tolera undefined).
+            if (order.email && NOTIFIABLE_STATUSES.includes(estado)) {
                 const draft = await checkoutDrafts.getDraftByPaymentIntentId(order.stripe_payment_intent_id, { pool });
                 const locale = normalizeLocale(draft?.snapshot?.customerData?.locale);
                 sendStatusChangeEmail(order.id, order.email, order.nombre, estado, locale);

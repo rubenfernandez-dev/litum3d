@@ -172,14 +172,14 @@ function checkConfirmationEmailLocaleNeverFromCountry() {
   const orderDate = new Date('2026-03-01T10:00:00Z');
 
   const CASES = [
-    { locale: 'de', country: 'CH', expectSubjectPart: 'Bestellbestätigung' },
-    { locale: 'fr', country: 'CH', expectSubjectPart: 'Confirmation de commande' },
-    { locale: 'es', country: 'DE', expectSubjectPart: 'Confirmación de pedido' },
+    { locale: 'de', country: 'CH', expectSubjectPart: 'Bestellung erhalten' },
+    { locale: 'fr', country: 'CH', expectSubjectPart: 'Commande reçue' },
+    { locale: 'es', country: 'DE', expectSubjectPart: 'Pedido recibido' },
     // EN (informe "añadir locale EN"): sin país "propio" -- se prueba
     // explícitamente cruzado con CH/DE/FR, exactamente como pide el informe.
-    { locale: 'en', country: 'CH', expectSubjectPart: 'Order confirmation' },
-    { locale: 'en', country: 'DE', expectSubjectPart: 'Order confirmation' },
-    { locale: 'en', country: 'FR', expectSubjectPart: 'Order confirmation' }
+    { locale: 'en', country: 'CH', expectSubjectPart: 'Order received' },
+    { locale: 'en', country: 'DE', expectSubjectPart: 'Order received' },
+    { locale: 'en', country: 'FR', expectSubjectPart: 'Order received' }
   ];
   for (const { locale, country, expectSubjectPart } of CASES) {
     const customerData = { name: 'Cliente', email: 'c@example.com', phone: '+1', address: 'Addr 1', city: 'City', zip: '1', country, locale };
@@ -317,8 +317,8 @@ async function checkAdminStatusChangeRecoversLocaleFromOriginalDraft() {
 
     const mailDe = sentMails.find(m => m.to === 'cliente-de@example.com');
     ok(mailDe, 'A) el email de cambio de estado del pedido 601 se envió');
-    ok(mailDe.subject.includes('Aktualisierung deiner Bestellung'), 'A) el cambio de estado sale en DE (recuperado del draft original vía stripe_payment_intent_id), no en ES por defecto');
-    ok(!/Actualización de tu pedido/.test(mailDe.subject), 'A) NUNCA se queda en español solo porque el país de envío (CH) también hablaría español... (no lo hace) -- confirma que no hay fallback silencioso a ES habiendo un locale real');
+    ok(mailDe.subject.includes('Deine Bestellung wurde versendet'), 'A) el cambio de estado sale en DE (recuperado del draft original vía stripe_payment_intent_id), no en ES por defecto');
+    ok(!/Tu pedido ha sido enviado/.test(mailDe.subject), 'A) NUNCA se queda en español solo porque el país de envío (CH) también hablaría español... (no lo hace) -- confirma que no hay fallback silencioso a ES habiendo un locale real');
 
     // B) Pedido 602: legacy, sin stripe_payment_intent_id -> ningún draft
     // que consultar -> fallback coherente a ES, nunca un error ni un 500.
@@ -332,7 +332,7 @@ async function checkAdminStatusChangeRecoversLocaleFromOriginalDraft() {
 
     const mailLegacy = sentMails.find(m => m.to === 'cliente-legacy@example.com');
     ok(mailLegacy, 'B) el email de cambio de estado del pedido legacy se envió');
-    ok(mailLegacy.subject.includes('Actualización de tu pedido'), 'B) pedido legacy sin stripe_payment_intent_id -> fallback ES coherente (nunca infiere DE/FR de la nada)');
+    ok(mailLegacy.subject.includes('Tu pedido ha sido enviado'), 'B) pedido legacy sin stripe_payment_intent_id -> fallback ES coherente (nunca infiere DE/FR de la nada)');
 
     // C) Pedido 603 (EN, país DE en el draft): el cambio de estado posterior
     // debe salir en inglés, recuperado del draft original -- ni ES por
@@ -347,7 +347,7 @@ async function checkAdminStatusChangeRecoversLocaleFromOriginalDraft() {
 
     const mailEn = sentMails.find(m => m.to === 'customer-en@example.com');
     ok(mailEn, 'C) el email de cambio de estado del pedido 603 se envió');
-    ok(mailEn.subject.includes('Order update'), 'C) el cambio de estado sale en EN (recuperado del draft original), no en ES ni en DE (país de envío)');
+    ok(mailEn.subject.includes('Your order has been shipped'), 'C) el cambio de estado sale en EN (recuperado del draft original), no en ES ni en DE (país de envío)');
   } finally {
     restoreNodemailer();
     server.close();

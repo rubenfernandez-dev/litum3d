@@ -72,7 +72,7 @@ function describeExtras(extras, qrLabel) {
 
 const COPY = {
   es: {
-    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Confirmación de pedido`,
+    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Pedido recibido`,
     confirmationTitle: 'Pedido confirmado',
     confirmationPreheader: (orderId) => `Hemos recibido tu pedido #${orderId}. Gracias por confiar en LITUM3D.`,
     greeting: (name) => `Hola ${name},`,
@@ -87,8 +87,17 @@ const COPY = {
     totalLabel: 'TOTAL',
     ctaText: 'Ir a LITUM3D',
     adapterLabel: 'Adaptador USB',
+    orderStatusLabel: 'Estado del pedido',
+    statusNameLabels: {
+      'Pendiente': 'Pendiente', 'Confirmado': 'Confirmado', 'Preparando': 'En preparación',
+      'Enviado': 'Enviado', 'Entregado': 'Entregado', 'Cancelado': 'Cancelado'
+    },
     statusSubject: (orderId) => `[LITUM3D #${orderId}] Actualización de tu pedido`,
     statusTitle: 'Actualización de tu pedido',
+    statusEvents: {
+      'Enviado': { subject: (orderId) => `[LITUM3D #${orderId}] Tu pedido ha sido enviado`, title: 'Tu pedido ha sido enviado' },
+      'Entregado': { subject: (orderId) => `[LITUM3D #${orderId}] Tu pedido ha sido entregado`, title: 'Tu pedido ha sido entregado' }
+    },
     statusPreheader: (orderId) => `Hay novedades sobre tu pedido #${orderId}.`,
     statusIntro: (name) => `Hola ${name || 'cliente'},`,
     statusMessages: {
@@ -102,7 +111,7 @@ const COPY = {
     statusFallback: 'Tu pedido ha sido actualizado.'
   },
   de: {
-    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Bestellbestätigung`,
+    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Bestellung erhalten`,
     confirmationTitle: 'Bestellung bestätigt',
     confirmationPreheader: (orderId) => `Wir haben deine Bestellung #${orderId} erhalten. Danke, dass du LITUM3D vertraust.`,
     greeting: (name) => `Hallo ${name},`,
@@ -117,8 +126,17 @@ const COPY = {
     totalLabel: 'GESAMT',
     ctaText: 'Zu LITUM3D',
     adapterLabel: 'USB-Adapter',
+    orderStatusLabel: 'Bestellstatus',
+    statusNameLabels: {
+      'Pendiente': 'Ausstehend', 'Confirmado': 'Bestätigt', 'Preparando': 'In Vorbereitung',
+      'Enviado': 'Versendet', 'Entregado': 'Zugestellt', 'Cancelado': 'Storniert'
+    },
     statusSubject: (orderId) => `[LITUM3D #${orderId}] Aktualisierung deiner Bestellung`,
     statusTitle: 'Aktualisierung deiner Bestellung',
+    statusEvents: {
+      'Enviado': { subject: (orderId) => `[LITUM3D #${orderId}] Deine Bestellung wurde versendet`, title: 'Deine Bestellung wurde versendet' },
+      'Entregado': { subject: (orderId) => `[LITUM3D #${orderId}] Deine Bestellung wurde zugestellt`, title: 'Deine Bestellung wurde zugestellt' }
+    },
     statusPreheader: (orderId) => `Es gibt Neuigkeiten zu deiner Bestellung #${orderId}.`,
     statusIntro: (name) => `Hallo ${name || 'Kunde'},`,
     statusMessages: {
@@ -132,7 +150,7 @@ const COPY = {
     statusFallback: 'Deine Bestellung wurde aktualisiert.'
   },
   fr: {
-    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Confirmation de commande`,
+    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Commande reçue`,
     confirmationTitle: 'Commande confirmée',
     confirmationPreheader: (orderId) => `Nous avons bien reçu votre commande #${orderId}. Merci de votre confiance envers LITUM3D.`,
     greeting: (name) => `Bonjour ${name},`,
@@ -147,8 +165,17 @@ const COPY = {
     totalLabel: 'TOTAL',
     ctaText: 'Aller sur LITUM3D',
     adapterLabel: 'Adaptateur USB',
+    orderStatusLabel: 'Statut de la commande',
+    statusNameLabels: {
+      'Pendiente': 'En attente', 'Confirmado': 'Confirmée', 'Preparando': 'En préparation',
+      'Enviado': 'Expédiée', 'Entregado': 'Livrée', 'Cancelado': 'Annulée'
+    },
     statusSubject: (orderId) => `[LITUM3D #${orderId}] Mise à jour de votre commande`,
     statusTitle: 'Mise à jour de votre commande',
+    statusEvents: {
+      'Enviado': { subject: (orderId) => `[LITUM3D #${orderId}] Votre commande a été expédiée`, title: 'Votre commande a été expédiée' },
+      'Entregado': { subject: (orderId) => `[LITUM3D #${orderId}] Votre commande a été livrée`, title: 'Votre commande a été livrée' }
+    },
     statusPreheader: (orderId) => `Il y a du nouveau concernant votre commande #${orderId}.`,
     statusIntro: (name) => `Bonjour ${name || 'client'},`,
     statusMessages: {
@@ -162,7 +189,7 @@ const COPY = {
     statusFallback: 'Votre commande a été mise à jour.'
   },
   en: {
-    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Order confirmation`,
+    confirmationSubject: (orderId) => `[LITUM3D #${orderId}] Order received`,
     confirmationTitle: 'Order confirmed',
     confirmationPreheader: (orderId) => `We've received your order #${orderId}. Thank you for trusting LITUM3D.`,
     greeting: (name) => `Hi ${name},`,
@@ -177,8 +204,17 @@ const COPY = {
     totalLabel: 'TOTAL',
     ctaText: 'Go to LITUM3D',
     adapterLabel: 'USB adapter',
+    orderStatusLabel: 'Order status',
+    statusNameLabels: {
+      'Pendiente': 'Pending', 'Confirmado': 'Confirmed', 'Preparando': 'Preparing',
+      'Enviado': 'Shipped', 'Entregado': 'Delivered', 'Cancelado': 'Cancelled'
+    },
     statusSubject: (orderId) => `[LITUM3D #${orderId}] Order update`,
     statusTitle: 'Order update',
+    statusEvents: {
+      'Enviado': { subject: (orderId) => `[LITUM3D #${orderId}] Your order has been shipped`, title: 'Your order has been shipped' },
+      'Entregado': { subject: (orderId) => `[LITUM3D #${orderId}] Your order has been delivered`, title: 'Your order has been delivered' }
+    },
     statusPreheader: (orderId) => `There's news about your order #${orderId}.`,
     statusIntro: (name) => `Hi ${name || 'there'},`,
     statusMessages: {
@@ -410,13 +446,22 @@ function buildStatusChangeEmail({ locale = 'es', orderId, customerName, newStatu
   const loc = normalizeLocale(locale);
   const c = COPY[loc];
   const message = c.statusMessages[newStatus] || c.statusFallback;
+  const statusNameLabel = c.statusNameLabels[newStatus] || newStatus;
+  // Eventos notificables (Enviado/Entregado, ver informe sección 5/6): tienen
+  // subject y título de header propios. Cualquier otro estado (defensivo,
+  // este builder no debería recibirlo -- routes/admin.js ya filtra por la
+  // allowlist NOTIFIABLE_STATUSES antes de llamar) cae al subject/título
+  // genérico anterior, nunca revienta.
+  const event = c.statusEvents[newStatus];
+  const subject = event ? event.subject(orderId) : c.statusSubject(orderId);
+  const title = event ? event.title : c.statusTitle;
 
   const contentHtml = `
     <p style="margin:0 0 8px 0; color:#e5e7eb;">${escapeHtml(c.statusIntro(customerName))}</p>
     <p style="margin:0 0 16px 0; color:#b6c2d9;">${escapeHtml(message)}</p>
     <div style="padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; font-size:13px; color:#cbd5f5;">
       <div>${escapeHtml(c.orderNumberLabel)}: <strong>#${escapeHtml(String(orderId))}</strong></div>
-      <div style="margin-top:4px;">${escapeHtml(newStatus)}</div>
+      <div style="margin-top:4px;">${escapeHtml(c.orderStatusLabel)}: <strong>${escapeHtml(statusNameLabel)}</strong></div>
     </div>
   `;
 
@@ -425,19 +470,19 @@ function buildStatusChangeEmail({ locale = 'es', orderId, customerName, newStatu
     message,
     '',
     `${c.orderNumberLabel}: #${orderId}`,
-    newStatus
+    `${c.orderStatusLabel}: ${statusNameLabel}`
   ].join('\n');
 
   const { html, text } = renderLitumEmail({
     locale: loc,
     preheader: c.statusPreheader(orderId),
-    title: c.statusTitle,
+    title,
     contentHtml,
     contentText,
     orderId
   });
 
-  return { subject: c.statusSubject(orderId), html, text };
+  return { subject, html, text };
 }
 
 module.exports = {

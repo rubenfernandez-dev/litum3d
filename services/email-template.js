@@ -47,11 +47,12 @@ function getBaseUrl() {
 
 // El logo de un email SIEMPRE necesita una URL HTTPS absoluta (los clientes
 // de correo no resuelven "/img/..." contra ningún host): se reutiliza el
-// logo real ya servido en el header público del sitio (views/*.html),
-// nunca uno inventado. LOGO_URL permite sobreescribirlo si algún día se aloja
-// en un CDN de emails dedicado (p.ej. para mejorar la entregabilidad).
+// logo OFICIAL real ya publicado en public/img/logos/logo.png (nunca el
+// lineal.logo.png, pensado para otros usos, ni uno inventado). LOGO_URL
+// permite sobreescribirlo si algún día se aloja en un CDN de emails
+// dedicado (p.ej. para mejorar la entregabilidad).
 function getLogoUrl() {
-  return process.env.LOGO_URL || `${getBaseUrl()}/img/logos/lineal.logo.png`;
+  return process.env.LOGO_URL || `${getBaseUrl()}/img/logos/logo.png`;
 }
 
 // Rutas legales reales por idioma (ver routes/index.js / views/terms-conditions*.html).
@@ -69,10 +70,10 @@ const LEGAL_PATHS = {
 
 // Copys del footer, idénticos a los ya usados en views/success*.html (es/de/fr).
 const FOOTER_COPY = {
-  es: { tagline: 'Premium 3D Litofanías', privacy: 'Política de Privacidad', terms: 'Términos de Servicio', contact: 'Contacto', copyright: (y) => `© ${y} LITUM3D. Todos los derechos reservados.` },
-  de: { tagline: 'Premium 3D-Lithophane', privacy: 'Datenschutz', terms: 'Nutzungsbedingungen', contact: 'Kontakt', copyright: (y) => `© ${y} LITUM3D. Alle Rechte vorbehalten.` },
-  fr: { tagline: 'Lithophanies 3D premium', privacy: 'Politique de confidentialité', terms: 'Conditions d’utilisation', contact: 'Contact', copyright: (y) => `© ${y} LITUM3D. Tous droits réservés.` },
-  en: { tagline: 'Premium 3D Lithophanes', privacy: 'Privacy Policy', terms: 'Terms of Service', contact: 'Contact', copyright: (y) => `© ${y} LITUM3D. All rights reserved.` }
+  es: { tagline: 'Litofanías 3D personalizadas', privacy: 'Política de Privacidad', terms: 'Términos de Servicio', contact: 'Contacto', copyright: (y) => `© ${y} LITUM3D. Todos los derechos reservados.` },
+  de: { tagline: 'Personalisierte 3D-Lithophanien', privacy: 'Datenschutz', terms: 'Nutzungsbedingungen', contact: 'Kontakt', copyright: (y) => `© ${y} LITUM3D. Alle Rechte vorbehalten.` },
+  fr: { tagline: 'Lithophanies 3D personnalisées', privacy: 'Politique de confidentialité', terms: 'Conditions d’utilisation', contact: 'Contact', copyright: (y) => `© ${y} LITUM3D. Tous droits réservés.` },
+  en: { tagline: 'Personalised 3D lithophanes', privacy: 'Privacy Policy', terms: 'Terms of Service', contact: 'Contact', copyright: (y) => `© ${y} LITUM3D. All rights reserved.` }
 };
 
 const SUPPORT_BLOCK_COPY = {
@@ -147,15 +148,15 @@ function renderFooterHtml(locale) {
   return `
     <div style="padding:20px 24px; border-top:1px solid rgba(255,255,255,0.08); text-align:center;">
       <div style="font-weight:700; color:${BRAND.textLight}; font-size:13px;">LITUM3D</div>
-      <div style="color:${BRAND.textMuted}; font-size:12px; margin-top:2px;">${escapeHtml(copy.tagline)}</div>
-      <div style="margin-top:10px; font-size:12px;">
+      <div style="color:${BRAND.textMuted}; font-size:13px; margin-top:3px;">${escapeHtml(copy.tagline)}</div>
+      <div style="margin-top:10px; font-size:13px;">
         <a href="${baseUrl}${paths.privacy}" style="color:${BRAND.gold}; text-decoration:none;">${escapeHtml(copy.privacy)}</a>
         <span style="color:${BRAND.textMuted};"> · </span>
         <a href="${baseUrl}${paths.terms}" style="color:${BRAND.gold}; text-decoration:none;">${escapeHtml(copy.terms)}</a>
         <span style="color:${BRAND.textMuted};"> · </span>
         <a href="${baseUrl}${paths.contact}" style="color:${BRAND.gold}; text-decoration:none;">${escapeHtml(copy.contact)}</a>
       </div>
-      <div style="color:${BRAND.textMuted}; font-size:11px; margin-top:10px;">${escapeHtml(copy.copyright(year))}</div>
+      <div style="color:${BRAND.textMuted}; font-size:12px; margin-top:10px;">${escapeHtml(copy.copyright(year))}</div>
     </div>
   `;
 }
@@ -205,15 +206,9 @@ function renderLitumEmail({ locale = 'es', preheader = '', title, contentHtml, c
       ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; opacity:0;">${escapeHtml(preheader)}</div>` : ''}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:0 auto; background:${BRAND.panel}; border:1px solid rgba(255,255,255,0.08); border-radius:16px; overflow:hidden;">
         <tr>
-          <td style="background:linear-gradient(135deg,${BRAND.primaryDarker},${BRAND.primary}); padding:18px 24px;">
-            <table role="presentation" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="background:#ffffff; padding:6px 10px; border-radius:10px;">
-                  <img src="${logoUrl}" alt="LITUM3D" height="32" style="height:32px; width:auto; display:block; border:0;" />
-                </td>
-                <td style="padding-left:14px; font-size:16px; font-weight:700; color:#ffffff;">${escapeHtml(title || 'LITUM3D')}</td>
-              </tr>
-            </table>
+          <td style="background:linear-gradient(135deg,${BRAND.primaryDarker},${BRAND.primary}); padding:28px 24px; text-align:center;">
+            <img src="${logoUrl}" alt="LITUM3D" width="180" style="width:180px; max-width:180px; height:auto; display:block; margin:0 auto; border:0;" />
+            <div style="margin-top:16px; font-size:18px; font-weight:700; color:#ffffff;">${escapeHtml(title || 'LITUM3D')}</div>
           </td>
         </tr>
         <tr>
