@@ -150,8 +150,20 @@ function checkSuccessLegalFooterLinksAreReal() {
 }
 
 // =======================================================================
-// 6) Identidad: no se ha añadido ninguna forma societaria/UID/NIF ficticia
+// 6) Identidad: no se ha añadido ninguna forma societaria/UID/NIF ficticia.
+//    La dirección real (informe "cerrar identificación legal del operador",
+//    2026-08-20) SÍ está ahora aprobada y publicada, pero EXCLUSIVAMENTE en
+//    Contact/Terms/Privacy ES/DE/FR (ver
+//    scripts/check-legal-operator-identity.js para la cobertura completa de
+//    esa identidad) -- en cualquier otra vista pública sigue sin aparecer,
+//    para que el footer y el resto del sitio permanezcan limpios.
 // =======================================================================
+const OPERATOR_ADDRESS_APPROVED_FILES = new Set([
+  'contact.html', 'contact-de.html', 'contact-fr.html',
+  'terms-conditions.html', 'terms-conditions-de.html', 'terms-conditions-fr.html',
+  'privacy-policy.html', 'privacy-policy-de.html', 'privacy-policy-fr.html'
+]);
+
 function checkNoFabricatedLegalIdentity() {
   const LEGAL_AND_FOOTERS = listPublicViews();
   for (const file of LEGAL_AND_FOOTERS) {
@@ -160,7 +172,11 @@ function checkNoFabricatedLegalIdentity() {
       `views/${file}: no afirma ninguna forma societaria (no existe sociedad constituida)`);
     ok(!/\bUID-CHE|CHE-\d{3}\.\d{3}\.\d{3}|\bNIF\b|\bCIF\b|VAT[- ]?number/i.test(html),
       `views/${file}: no contiene ningún UID/NIF/CIF/VAT number inventado`);
-    ok(!/Hauptstrasse 50/i.test(html), `views/${file}: no publica la dirección no aprobada`);
+    if (OPERATOR_ADDRESS_APPROVED_FILES.has(file)) {
+      ok(/Hauptstrasse 50/i.test(html), `views/${file}: publica la dirección real aprobada del operador (identificación legal)`);
+    } else {
+      ok(!/Hauptstrasse 50/i.test(html), `views/${file}: no publica la dirección del operador fuera de Contact/Terms/Privacy (footer limpio)`);
+    }
   }
 }
 
