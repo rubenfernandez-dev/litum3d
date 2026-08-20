@@ -1,10 +1,12 @@
 /*
   LITUM3D - Test de regresión: identificación legal del operador (informe
-  "cerrar identificación legal del operador de LITUM3D", 2026-08-20).
+  "cerrar identificación legal del operador de LITUM3D", 2026-08-20) +
+  correcciones finales de ubicación/jurisdicción (informe "correcciones
+  finales antes del push", 2026-08-20).
 
   LITUM3D es actualmente una marca/nombre comercial, NO una sociedad
   constituida: el operador real es una persona física (Ruben Fernandez).
-  Este test cubre EXACTAMENTE lo que pidió el informe:
+  Este test cubre:
     - Contact ES/DE/FR muestra con claridad marca + "Operado por/Betreiber/
       Exploité par" + Ruben Fernandez + dirección real + contacto.
     - Terms ES/DE/FR identifica al vendedor/operador con los mismos datos.
@@ -17,6 +19,13 @@
       global se mantiene limpio, sin bloque legal nuevo).
     - ES/DE/FR: "Operado por"/"Betreiber"/"Exploité par", país sin traducir
       el nombre/dirección (Suiza/Schweiz/Suisse).
+    - Terms: la cláusula de Jurisdicción ya NO fija Madrid/Zúrich como foro
+      -- cláusula neutral, sin foro exclusivo ni arbitraje obligatorio.
+    - Footer: la ubicación informal "Berna/Bern/Berne" se corrigió a
+      "Lüscherz" en todas las páginas públicas ES/DE/FR, EXCEPTO checkout/
+      cart (fuera de alcance explícito -- ver informe final).
+    - Sin ninguna grafía incorrecta de "Ruben Fernandez"/"Lüscherz"
+      ("Fernnadez", "Lüscerz", "Luscherz").
 
   Uso: node scripts/check-legal-operator-identity.js
 */
@@ -151,6 +160,78 @@ function checkIdentityNeverTranslatedOnlyLabelAndCountry() {
   }
 }
 
+// =======================================================================
+// 7) Jurisdicción: Terms ES/DE/FR ya no fijan Madrid/Zúrich como foro --
+//    cláusula neutral, sin foro exclusivo ni arbitraje obligatorio.
+// =======================================================================
+const NEUTRAL_JURISDICTION_HEADING = {
+  '': 'Derecho Aplicable y Jurisdicción',
+  '-de': 'Anwendbares Recht und Gerichtsstand',
+  '-fr': 'Droit Applicable et Juridiction'
+};
+
+function checkJurisdictionClauseIsNeutral() {
+  for (const locale of LOCALES) {
+    const html = readView(`terms-conditions${locale}.html`);
+    ok(!/Madrid/i.test(html), `terms-conditions${locale}.html: sin Madrid como foro contractual`);
+    ok(!/Z[üu]rich/i.test(html), `terms-conditions${locale}.html: sin Zúrich/Zurich/Zürich como foro contractual`);
+    ok(html.includes(NEUTRAL_JURISDICTION_HEADING[locale]), `terms-conditions${locale}.html: incluye la cláusula neutral "${NEUTRAL_JURISDICTION_HEADING[locale]}"`);
+    ok(!/foro exclusivo|fuero exclusivo|exklusiver Gerichtsstand|juridiction exclusive|arbitraje obligatorio|obligatorische[a-zäöü]* Schiedsverfahren|arbitrage obligatoire|renuncia[a-zá]* al (tribunal|fuero)/i.test(html),
+      `terms-conditions${locale}.html: sin foro exclusivo, arbitraje obligatorio ni renuncia de derechos inventados`);
+  }
+}
+
+// =======================================================================
+// 8) Footer: ubicación informal corregida de "Berna/Bern/Berne" a
+//    "Lüscherz" en todas las páginas públicas ES/DE/FR donde aparecía,
+//    EXCEPTO checkout/cart (NO TOCAR explícito del informe -- se documenta
+//    aquí como excepción deliberada, no como un olvido).
+// =======================================================================
+const FOOTER_LOCATION_PAGES = {
+  '': { pages: ['about.html', 'contact.html', 'gallery.html', 'index.html', 'shop.html'], location: 'Lüscherz, Suiza' },
+  '-de': { pages: ['about-de.html', 'contact-de.html', 'gallery-de.html', 'index-de.html', 'shop-de.html'], location: 'Lüscherz, Schweiz' },
+  '-fr': { pages: ['about-fr.html', 'contact-fr.html', 'gallery-fr.html', 'index-fr.html', 'shop-fr.html'], location: 'Lüscherz, Suisse' }
+};
+const CHECKOUT_CART_OUT_OF_SCOPE = ['checkout.html', 'checkout-de.html', 'checkout-fr.html', 'cart.html', 'cart-de.html', 'cart-fr.html'];
+
+function checkFooterLocationUpdatedToLuscherz() {
+  for (const { pages, location } of Object.values(FOOTER_LOCATION_PAGES)) {
+    for (const file of pages) {
+      const html = readView(file);
+      ok(html.includes(`📍 ${location}`), `views/${file}: footer muestra la ubicación informal corregida "${location}"`);
+    }
+  }
+
+  const inScope = new Set(Object.values(FOOTER_LOCATION_PAGES).flatMap(({ pages }) => pages));
+  for (const file of listPublicViews()) {
+    if (CHECKOUT_CART_OUT_OF_SCOPE.includes(file)) continue;
+    if (!inScope.has(file)) continue;
+    const html = readView(file);
+    ok(!/Berna, Suiza|Bern, Schweiz|Berne, Suisse/.test(html), `views/${file}: ya no muestra "Berna/Bern/Berne" como ubicación informal`);
+  }
+
+  // checkout/cart quedan deliberadamente fuera de alcance (informe, sección
+  // "NO TOCAR": checkout, cart) -- se documentan aquí para que la excepción
+  // sea visible y no se confunda con un olvido en una futura revisión.
+  for (const file of CHECKOUT_CART_OUT_OF_SCOPE) {
+    const html = readView(file);
+    ok(/Berna, Suiza|Bern, Schweiz|Berne, Suisse/.test(html), `views/${file}: conserva deliberadamente "Berna/Bern/Berne" (checkout/cart fuera de alcance de esta corrección)`);
+  }
+}
+
+// =======================================================================
+// 9) Sin ninguna grafía incorrecta de "Ruben Fernandez" / "Lüscherz" en
+//    ninguna página pública.
+// =======================================================================
+function checkNoMisspelledIdentityAnywhere() {
+  for (const file of listPublicViews()) {
+    const html = readView(file);
+    ok(!/Fernnadez/i.test(html), `views/${file}: sin la grafía incorrecta "Fernnadez"`);
+    ok(!/Lüscerz\b/i.test(html), `views/${file}: sin la grafía incorrecta "Lüscerz"`);
+    ok(!/\bLuscherz\b/.test(html), `views/${file}: sin la grafía incorrecta "Luscherz" (sin diéresis)`);
+  }
+}
+
 function main() {
   checkContactPagesShowOperatorIdentity();
   checkTermsPagesIdentifySeller();
@@ -158,8 +239,11 @@ function main() {
   checkNoFabricatedCorporateFormOrTaxId();
   checkAddressNeverLeaksOutsideIdentityPages();
   checkIdentityNeverTranslatedOnlyLabelAndCountry();
+  checkJurisdictionClauseIsNeutral();
+  checkFooterLocationUpdatedToLuscherz();
+  checkNoMisspelledIdentityAnywhere();
 
-  console.log(`OK: ${checks} comprobaciones sobre la identificación legal del operador de LITUM3D (Contact/Terms/Privacy ES/DE/FR, sin forma societaria ni número fiscal inventado).`);
+  console.log(`OK: ${checks} comprobaciones sobre la identificación legal del operador de LITUM3D (Contact/Terms/Privacy ES/DE/FR, jurisdicción neutral, ubicación de footer corregida, sin forma societaria/número fiscal/grafías incorrectas).`);
 }
 
 main();

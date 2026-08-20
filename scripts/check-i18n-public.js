@@ -429,12 +429,15 @@ function checkCartPageEmptyStateRespectsLocale() {
 const LEGAL_DOCS = [
   // esH2/esH3 actualizados tras fix(legal): correct consumer and policy
   // inconsistencies (consolidación §13/§16 -> -1 h2; reescritura de la
-  // cláusula de desistimiento en 2 h3 nuevos en vez de 1 -> +1 h3), y de
-  // nuevo tras fix(legal): identify Litum3D operator (informe "cerrar
-  // identificación legal del operador", 2026-08-20): +1 h2 nueva sección
-  // "Identificación del Vendedor / Operador", añadida por igual en ES/DE/FR
-  // (ver scripts/check-legal-operator-identity.js para su contenido).
-  { key: 'terms-conditions', esFile: 'terms-conditions.html', esH2: 16, esH3: 24, name: 'Terms' },
+  // cláusula de desistimiento en 2 h3 nuevos en vez de 1 -> +1 h3); tras
+  // fix(legal): identify Litum3D operator (informe "cerrar identificación
+  // legal del operador", 2026-08-20): +1 h2 nueva sección "Identificación
+  // del Vendedor / Operador"; y tras fix(legal): align location and
+  // jurisdiction (informe "correcciones finales antes del push",
+  // 2026-08-20): la cláusula de Jurisdicción (Madrid/Zúrich) se fusiona con
+  // Derecho Aplicable en un único h3 neutral -> -1 h3, aplicado por igual en
+  // ES/DE/FR (ver scripts/check-legal-operator-identity.js para su contenido).
+  { key: 'terms-conditions', esFile: 'terms-conditions.html', esH2: 16, esH3: 23, name: 'Terms' },
   { key: 'cookies-policy', esFile: 'cookies-policy.html', esH2: 8, esH3: 8, name: 'Cookies' }
 ];
 
