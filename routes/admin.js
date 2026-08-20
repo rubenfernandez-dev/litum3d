@@ -15,6 +15,8 @@ const { verifyAdminPassword } = require('../services/adminAuth');
 const { getTransporter, getFromAddress } = require('../services/mailer');
 const { buildStatusChangeEmail } = require('../services/order-emails');
 const { SUPPORT_INFO } = require('../services/email-template');
+const checkoutDrafts = require('../services/checkout-drafts');
+const { normalizeLocale } = require('../config/locales');
 
 // POST /admin/variantes - Crear nueva opción de variante (base o forma)
 router.post('/variantes', requireAuth, csrfProtection, async (req, res) => {
@@ -307,9 +309,13 @@ router.put('/pedidos/:id/estado', requireAuth, csrfProtection, async (req, res) 
 
         const nuevoEstadoId = statusRows[0].id;
 
-        // Obtener información del pedido incluyendo estado actual
+        // Obtener información del pedido incluyendo estado actual.
+        // p.stripe_payment_intent_id (informe "persistir locale del
+        // comprador"): permite recuperar más abajo el draft/snapshot
+        // original del pedido -- y con él, customerData.locale -- aunque
+        // este cambio de estado ocurra días después del pago.
         const orderQuery = `
-                 SELECT p.id, p.usuario_id, p.estado_id,
+                 SELECT p.id, p.usuario_id, p.estado_id, p.stripe_payment_intent_id,
                      COALESCE(p.customer_email, u.email) AS email,
                      COALESCE(p.customer_name, u.nombre) AS nombre,
                      p.total
@@ -339,9 +345,17 @@ router.put('/pedidos/:id/estado', requireAuth, csrfProtection, async (req, res) 
             const updateQuery = 'UPDATE pedidos SET estado_id = ?, updated_at = NOW() WHERE id = ?';
             await pool.query(updateQuery, [nuevoEstadoId, id]);
 
-            // Enviar email notificando cambio de estado si hay email del cliente
+            // Enviar email notificando cambio de estado si hay email del cliente.
+            // Locale (informe "persistir locale del comprador"): se recupera
+            // del draft original vía stripe_payment_intent_id -- el draft
+            // nunca se borra al convertirse en pedido, solo cambia de status
+            // -- NUNCA se infiere de customer_country (CH es DE/FR/IT).
+            // Pedidos legacy sin stripe_payment_intent_id, o sin draft/locale
+            // recuperable, caen a 'es' (normalizeLocale tolera undefined).
             if (order.email) {
-                sendStatusChangeEmail(order.id, order.email, order.nombre, estado);
+                const draft = await checkoutDrafts.getDraftByPaymentIntentId(order.stripe_payment_intent_id, { pool });
+                const locale = normalizeLocale(draft?.snapshot?.customerData?.locale);
+                sendStatusChangeEmail(order.id, order.email, order.nombre, estado, locale);
             }
         }
 
@@ -563,12 +577,15 @@ router.post('/logout', requireAuth, csrfProtection, (req, res) => {
 // nodemailer sustituyendo require.cache['nodemailer'] DESPUÉS de cargar
 // este router, así que el require perezoso (dentro de services/mailer.js)
 // es lo que permite que el fake se aplique a cada envío real de este test.
-async function sendStatusChangeEmail(orderId, customerEmail, customerName, newStatus) {
+async function sendStatusChangeEmail(orderId, customerEmail, customerName, newStatus, locale = 'es') {
     const transporter = getTransporter();
 
-    // Locale del comprador no persistido hoy (ver services/order-emails.js,
-    // cabecera): fallback explícito a 'es', nunca inferido del país.
-    const { subject, html, text } = buildStatusChangeEmail({ locale: 'es', orderId, customerName, newStatus });
+    // locale ya viene normalizado (es/de/fr) por el llamante -- ver el
+    // handler PUT /pedidos/:id/estado más arriba, que lo recupera del draft
+    // original vía stripe_payment_intent_id. buildStatusChangeEmail
+    // normaliza de nuevo internamente, así que un valor ausente/corrupto
+    // sigue cayendo a 'es' sin lanzar.
+    const { subject, html, text } = buildStatusChangeEmail({ locale, orderId, customerName, newStatus });
 
     const mailOptions = {
         from: getFromAddress(),

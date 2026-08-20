@@ -18,6 +18,7 @@
   API principal: renderLitumEmail({ locale, preheader, title, contentHtml,
   contentText, orderId, showSupport }) -> { html, text }.
 */
+const { normalizeLocale } = require('../config/locales');
 
 // --- Marca ------------------------------------------------------------------
 
@@ -82,9 +83,11 @@ const SUPPORT_BLOCK_COPY = {
   }
 };
 
-function normalizeLocale(locale) {
-  return LEGAL_PATHS[locale] ? locale : 'es';
-}
+// Reexportado desde config/locales.js (normalizador central, ver
+// config/locales.js#normalizeLocale): antes este archivo tenía su propia
+// copia local (LEGAL_PATHS[locale] ? locale : 'es'), y services/order-emails.js
+// otra distinta -- ambas coincidían en los mismos 3 idiomas, así que ahora
+// hay una única fuente de verdad.
 
 // --- Escape HTML compartido --------------------------------------------------
 // Único helper autorizado para escapar datos dinámicos (nombre, email,

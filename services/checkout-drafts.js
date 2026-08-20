@@ -15,6 +15,7 @@
 const crypto = require('crypto');
 const { pool: defaultPool } = require('../config/db');
 const { ALLOWED_CHECKOUT_COUNTRIES, isAllowedCheckoutCountry } = require('../config/checkout-countries');
+const { normalizeLocale } = require('../config/locales');
 
 // --- Estados -------------------------------------------------------------
 
@@ -114,6 +115,18 @@ function defaultDataAccess(pool) {
     },
     async findByAccessTokenHash(accessTokenHash) {
       const [rows] = await pool.query('SELECT * FROM checkout_drafts WHERE access_token_hash = ? LIMIT 1', [accessTokenHash]);
+      return rows[0] || null;
+    },
+    // Informe "persistir locale del comprador": único punto de acceso que
+    // permite recuperar el snapshot (y por tanto customerData.locale) de un
+    // pedido YA finalizado, días después, a partir de
+    // pedidos.stripe_payment_intent_id (misma columna UNIQUE que
+    // checkout_drafts.stripe_payment_intent_id -- ver
+    // services/checkout-finalization.js). El draft nunca se borra al
+    // convertirse (solo cambia status a 'converted'), así que esto no
+    // requiere ninguna migración en pedidos.
+    async findByPaymentIntentId(paymentIntentId) {
+      const [rows] = await pool.query('SELECT * FROM checkout_drafts WHERE stripe_payment_intent_id = ? LIMIT 1', [paymentIntentId]);
       return rows[0] || null;
     },
     // La condición de estado forma parte de la propia escritura (no de un
@@ -348,12 +361,22 @@ const CUSTOMER_DATA_FIELDS = ['name', 'email', 'phone', 'address', 'city', 'zip'
 const CUSTOMER_FIELD_LIMITS = { name: 150, email: 150, phone: 30, address: 255, city: 120, zip: 20, country: 2 };
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// "locale" (informe "persistir locale del comprador"): a propósito NO vive
+// en CUSTOMER_DATA_FIELDS ni en el bucle de campos obligatorios de abajo --
+// drafts/clientes anteriores a este cambio nunca lo enviarán, y exigirlo
+// como el resto de campos rompería esos checkouts. En vez de eso se
+// normaliza de forma tolerante (config/locales.js#normalizeLocale): ausente
+// o inválido -> 'es', nunca un 400. pedidos.customer_country no es un
+// sustituto válido (CH es DE/FR/IT) -- por eso viaja como campo propio,
+// nunca derivado de country.
+const ALLOWED_CUSTOMER_DATA_KEYS = [...CUSTOMER_DATA_FIELDS, 'locale'];
+
 function validateCustomerData(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new DraftValidationError('customerData debe ser un objeto');
   }
   for (const key of Object.keys(raw)) {
-    if (!CUSTOMER_DATA_FIELDS.includes(key)) {
+    if (!ALLOWED_CUSTOMER_DATA_KEYS.includes(key)) {
       throw new DraftValidationError(`Campo no permitido en customerData: "${key}"`, { field: key });
     }
   }
@@ -385,6 +408,7 @@ function validateCustomerData(raw) {
       { field: 'country' }
     );
   }
+  normalized.locale = normalizeLocale(raw.locale);
   return normalized;
 }
 
@@ -519,6 +543,21 @@ async function getDraftByAccessToken(accessToken, options = {}) {
   const dataAccess = resolveDataAccess(options);
   const hash = hashAccessToken(accessToken);
   const row = await dataAccess.findByAccessTokenHash(hash);
+  return row ? rowToDraft(row) : null;
+}
+
+// Informe "persistir locale del comprador" (sección 4): permite a
+// routes/admin.js (cambio de estado, potencialmente días después del pago)
+// recuperar el draft/snapshot original de un pedido YA finalizado a partir
+// de su stripe_payment_intent_id -- ver pedidos.stripe_payment_intent_id en
+// database/schema.sql. Devuelve null si no hay paymentIntentId (pedido
+// legacy anterior a P0E-B4B) o si, por cualquier motivo, no hay draft
+// asociado: el llamante debe tratar null igual que "sin locale conocido"
+// (fallback 'es'), nunca como un error.
+async function getDraftByPaymentIntentId(paymentIntentId, options = {}) {
+  if (typeof paymentIntentId !== 'string' || paymentIntentId.length === 0) return null;
+  const dataAccess = resolveDataAccess(options);
+  const row = await dataAccess.findByPaymentIntentId(paymentIntentId);
   return row ? rowToDraft(row) : null;
 }
 
@@ -694,6 +733,7 @@ module.exports = {
   getDraftById,
   getDraftByIdempotencyKey,
   getDraftByAccessToken,
+  getDraftByPaymentIntentId,
   verifyAccessToken,
   updateCustomerDataByAccessToken,
   attachPaymentIntent,

@@ -26,6 +26,18 @@ function getLang() {
   return document.documentElement.lang || 'es';
 }
 
+// --- Locale del comprador (informe "persistir locale del comprador") -----------
+// Mismo allowlist/fallback que config/locales.js#normalizeLocale (server-side):
+// no hay build/bundler compartido entre cliente y servidor en este proyecto,
+// así que esta es la copia cliente de esa MISMA fuente de verdad -- igual
+// que config/checkout-countries.js se refleja a mano en los <option> de los
+// 3 checkout.html. Cualquier valor fuera de es/de/fr cae a 'es', nunca se
+// deriva del país de envío (CH es DE/FR/IT; un FR puede comprar desde CH).
+const ALLOWED_CUSTOMER_LOCALES = ['es', 'de', 'fr'];
+function normalizeCustomerLocale(lang) {
+  return ALLOWED_CUSTOMER_LOCALES.includes(lang) ? lang : 'es';
+}
+
 function getCheckoutPath() {
   const lang = getLang();
   if (lang === 'de') return '/checkout-de';
@@ -540,7 +552,12 @@ function getCustomerData(form) {
     address: form?.customer_address?.value || '',
     city: form?.customer_city?.value || '',
     zip: form?.customer_zip?.value || '',
-    country: form?.customer_country?.value || ''
+    country: form?.customer_country?.value || '',
+    // Idioma real de la página de checkout que el comprador está usando
+    // (ES/DE/FR), NUNCA inferido de "country": viaja al draft para que la
+    // confirmación de pedido y el cambio de estado posterior salgan en el
+    // mismo idioma (ver services/checkout-drafts.js#validateCustomerData).
+    locale: normalizeCustomerLocale(document.documentElement.lang)
   };
 }
 

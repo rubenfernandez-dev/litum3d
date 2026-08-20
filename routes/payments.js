@@ -524,11 +524,14 @@ async function sendConfirmationEmails(orderId, customerData, cart, total, select
     const hasPhotos = attachments.length > 0;
 
     const customerEmail = buildOrderConfirmationEmail({
-      // El idioma real del comprador no se persiste hoy en ningún sitio
-      // fiable (ver services/order-emails.js, cabecera, y el informe de
-      // saneamiento de emails, sección "ES/DE/FR"): fallback explícito y
-      // previsible a 'es', NUNCA inferido del país de envío.
-      locale: 'es',
+      // customerData.locale viene del checkout (document.documentElement.lang,
+      // normalizado y persistido en el draft -- ver
+      // services/checkout-drafts.js#validateCustomerData). NUNCA se deriva
+      // de customerData.country. buildOrderConfirmationEmail normaliza de
+      // nuevo internamente (config/locales.js#normalizeLocale), así que un
+      // pedido legacy sin locale (o un valor corrupto) cae a 'es' aquí sin
+      // lanzar.
+      locale: customerData.locale,
       orderId, orderDate, customerData, items, totals, currency: selectedCurrency
     });
     const adminEmail = buildAdminNewOrderEmail({

@@ -7,16 +7,20 @@
   totals.shippingCents que ya calculó services/pricing.js (VAT_PERCENT=0,
   ver informe de saneamiento fiscal). Sin desglose fiscal de ningún tipo.
 
-  Locale: ver sección 12 del informe de saneamiento de emails. El idioma del
-  comprador NO se persiste hoy en ningún sitio fiable (ni checkout_drafts ni
-  pedidos guardan un campo locale/lang; document.documentElement.lang en
-  checkout.js es solo cliente, nunca viaja al servidor) y el país de envío
-  NO es un proxy fiable del idioma (CH es DE/FR/IT; un FR puede comprar
-  estando en CH, etc.) -- así que estos builders SÍ soportan locale='de'/'fr'
-  para cuando exista una fuente fiable, pero los call-sites reales (hoy)
-  siempre pasan 'es' explícitamente como fallback previsible, nunca infieren
-  el idioma del país. Ver informe final, sección "ES/DE/FR", para la
-  propuesta no destructiva de persistir el locale real en el futuro.
+  Locale (informe "persistir locale del comprador"): document.documentElement.lang
+  (public/js/checkout.js) se normaliza a es/de/fr y viaja como
+  customerData.locale -> PATCH /api/checkout-draft/customer-data ->
+  services/checkout-drafts.js#validateCustomerData (normalizado con
+  config/locales.js#normalizeLocale) -> snapshot_json persistido en
+  checkout_drafts. routes/payments.js lee snapshot.customerData.locale para
+  la confirmación inmediata; routes/admin.js lo recupera más tarde (cambio
+  de estado, días después) vía checkoutDrafts.getDraftByPaymentIntentId()
+  uniendo pedidos.stripe_payment_intent_id <-> checkout_drafts (la fila del
+  draft nunca se borra, solo cambia de status). El país de envío NUNCA es
+  un proxy del idioma (CH es DE/FR/IT; un FR puede comprar estando en CH):
+  el locale siempre viene del valor explícito normalizado, nunca inferido
+  de customerData.country. Pedidos/drafts anteriores a este cambio no
+  tienen customerData.locale -- normalizeLocale(undefined) cae a 'es'.
 */
 const {
   escapeHtml,
@@ -24,6 +28,7 @@ const {
   getBaseUrl,
   SUPPORT_INFO
 } = require('./email-template');
+const { normalizeLocale } = require('../config/locales');
 
 // --- Utilidades de formato ---------------------------------------------------
 
@@ -156,9 +161,8 @@ const COPY = {
   }
 };
 
-function normalizeLocale(locale) {
-  return COPY[locale] ? locale : 'es';
-}
+// normalizeLocale ahora se importa de config/locales.js (normalizador
+// central); COPY usa las mismas 3 claves (es/de/fr) que ALLOWED_LOCALES.
 
 // --- Tabla de artículos (compartida entre email cliente y email Admin) ------
 

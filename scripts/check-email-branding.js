@@ -192,13 +192,19 @@ function checkStatusChangeEmail() {
 // 9) Fallback de locale: los call-sites reales NUNCA infieren el idioma
 //    del país -- pasan 'es' explícito (sección 12 del informe)
 // =======================================================================
-function checkLocaleFallbackNeverInferredFromCountry() {
+// Nota: el locale YA se persiste (informe "persistir locale del
+// comprador", ver scripts/check-email-locale-persistence.js para la
+// cobertura completa del flujo checkout->draft->email). Esta comprobación
+// solo verifica el invariante de seguridad que sigue vigente: el locale
+// nunca se deriva de customerData.country.
+function checkLocaleNeverInferredFromCountry() {
   const paymentsSrc = readFile('routes/payments.js');
   const adminSrc = readFile('routes/admin.js');
-  ok(/locale:\s*'es'/.test(paymentsSrc), "routes/payments.js: pasa locale:'es' explícito (fallback previsible, no infiere del país)");
-  ok(/locale:\s*'es'/.test(adminSrc), "routes/admin.js: pasa locale:'es' explícito (fallback previsible, no infiere del país)");
+  ok(/locale:\s*customerData\.locale/.test(paymentsSrc), 'routes/payments.js: el email de confirmación usa el locale persistido en customerData (no un valor fijo)');
   ok(!/customerData\.country[\s\S]{0,60}locale/.test(paymentsSrc) && !/locale[\s\S]{0,60}customerData\.country/.test(paymentsSrc),
     'routes/payments.js: el locale del email nunca se deriva de customerData.country (CH/FR no son un idioma)');
+  ok(!/customer_country[\s\S]{0,80}locale/i.test(adminSrc) && !/locale[\s\S]{0,80}customer_country/i.test(adminSrc),
+    'routes/admin.js: el locale del cambio de estado nunca se deriva de customer_country');
 }
 
 // =======================================================================
@@ -279,7 +285,7 @@ async function main() {
   checkOrderConfirmationEmail();
   checkAdminNewOrderEmail();
   checkStatusChangeEmail();
-  checkLocaleFallbackNeverInferredFromCountry();
+  checkLocaleNeverInferredFromCountry();
   checkReplyToWiring();
   checkNoDuplicatedTemplatesOrTransporters();
   checkNoVatReintroducedAnywhereInEmailStack();
